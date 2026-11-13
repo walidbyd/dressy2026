@@ -34,14 +34,9 @@ yarn-error.log*
 *.rar
 *.7z
 
-# Flutter / Dart
-**/Mobile Source/dressy/.dart_tool/
-**/Mobile Source/dressy/.flutter-plugins
-**/Mobile Source/dressy/.flutter-plugins-dependencies
-**/Mobile Source/dressy/build/
-**/Mobile Source/dressy/.pub-cache/
-**/Mobile Source/dressy/.pub/
-**/.packages
+# Flutter Mobile App (Local Only - Untracked from Git)
+Mobile Source/
+**/Mobile Source/**
 
 # IDE & OS
 .idea/
