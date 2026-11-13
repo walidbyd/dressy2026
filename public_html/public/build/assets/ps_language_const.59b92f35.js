@@ -1,0 +1,1 @@
+var a=Object.defineProperty;var i=(t,E,c)=>E in t?a(t,E,{enumerable:!0,configurable:!0,writable:!0,value:c}):t[E]=c;var F=(t,E,c)=>(i(t,typeof E!="symbol"?E+"":E,c),c);class R{}F(R,"BE_PREFIT",""),F(R,"FE_PREFIT",""),F(R,"VENDOR_PREFIT","");export{R as P};

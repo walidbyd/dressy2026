@@ -1,0 +1,1 @@
+var a=Object.defineProperty;var m=(t,e,r)=>e in t?a(t,e,{enumerable:!0,configurable:!0,writable:!0,value:r}):t[e]=r;var s=(t,e,r)=>(m(t,typeof e!="symbol"?e+"":e,r),r);class o{constructor(){s(this,"ids",[])}DeleteItemsFromCartParameterHolder(){this.ids=[]}toMap(){const e={};return e.cart_item_ids=this.ids,e}}export{o as D};

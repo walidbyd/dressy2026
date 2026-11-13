@@ -1,0 +1,1 @@
+var o=Object.defineProperty;var t=(a,r,s)=>r in a?o(a,r,{enumerable:!0,configurable:!0,writable:!0,value:s}):a[r]=s;var e=(a,r,s)=>(t(a,typeof r!="symbol"?r+"":r,s),s);class m{constructor(){e(this,"userEmail","")}ForgotpasswordParameterHolder(){this.userEmail=""}toMap(){const r={};return r.email=this.userEmail,r}}export{m as F};

@@ -1,0 +1,59 @@
+# Environment & Secrets
+**/.env
+**/.env.*
+!**/.env.example
+
+# Composer & Vendor
+**/vendor/
+
+# Node & NPM
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Laravel Storage & Cache
+**/storage/**
+!**/storage/**/.gitignore
+**/bootstrap/cache/*
+!**/bootstrap/cache/.gitignore
+**/public/hot
+**/public/storage
+
+# Database Dumps (keep clean migration SQL in database/sql/)
+**/database/*.sql
+!**/database/sql/*.sql
+
+
+# Keep Compiled Assets
+!**/public/build/**
+
+# Archives & Backups
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Flutter / Dart
+**/Mobile Source/dressy/.dart_tool/
+**/Mobile Source/dressy/.flutter-plugins
+**/Mobile Source/dressy/.flutter-plugins-dependencies
+**/Mobile Source/dressy/build/
+**/Mobile Source/dressy/.pub-cache/
+**/Mobile Source/dressy/.pub/
+**/.packages
+
+# IDE & OS
+.idea/
+.vscode/
+**/.idea/
+**/.vscode/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+__MACOSX/
+**/__MACOSX/**
+._*
+**/._*
+

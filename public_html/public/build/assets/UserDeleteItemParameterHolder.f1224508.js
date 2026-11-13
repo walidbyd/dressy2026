@@ -1,0 +1,1 @@
+var d=Object.defineProperty;var i=(t,e,r)=>e in t?d(t,e,{enumerable:!0,configurable:!0,writable:!0,value:r}):t[e]=r;var s=(t,e,r)=>(i(t,typeof e!="symbol"?e+"":e,r),r);class m{constructor(){s(this,"itemId","");s(this,"userId","")}UserDeleteItemParameterHolder(){this.itemId="",this.userId=""}toMap(){const e={};return e.id=this.itemId,e.user_id=this.userId,e}}export{m as U};
