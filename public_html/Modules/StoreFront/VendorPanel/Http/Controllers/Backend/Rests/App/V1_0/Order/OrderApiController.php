@@ -111,6 +111,43 @@ class OrderApiController extends Controller
         return $this->orderService->dispatchOrderFromApi($request);
     }
 
+    public function sendToDelivery(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'order_id' => 'required|exists:psx_orders,id',
+        ]);
+
+        if ($request->language_symbol) {
+            $this->translator->setLocale($request->language_symbol);
+            $validator->setTranslator($this->translator);
+        }
+
+        if ($validator->fails()) {
+            return responseMsgApi(implode("\n", Arr::flatten($validator->getMessageBag()->getMessages())), Constants::badRequestStatusCode);
+        }
+
+        return $this->orderService->sendToDeliveryOrderFromApi($request);
+    }
+
+    public function cancelOrder(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'order_id' => 'required|exists:psx_orders,id',
+            'cancel_reason' => 'required_without_all:status_reason,reason|string|min:3',
+        ]);
+
+        if ($request->language_symbol) {
+            $this->translator->setLocale($request->language_symbol);
+            $validator->setTranslator($this->translator);
+        }
+
+        if ($validator->fails()) {
+            return responseMsgApi(implode("\n", Arr::flatten($validator->getMessageBag()->getMessages())), Constants::badRequestStatusCode);
+        }
+
+        return $this->orderService->cancelOrderFromApi($request);
+    }
+
     public function markOrderPaid(Request $request)
     {
         $validator = Validator::make($request->all(), [

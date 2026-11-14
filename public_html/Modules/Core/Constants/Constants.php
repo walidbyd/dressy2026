@@ -874,6 +874,10 @@ class Constants
 
     const orderDeliveredStatus = 4;
 
+    const orderCancelledStatus = 5;
+
+    const orderReturnedStatus = 6;
+
     // Offline Payment Setting
     const offlinePaymentFileKey = 'icon';
 

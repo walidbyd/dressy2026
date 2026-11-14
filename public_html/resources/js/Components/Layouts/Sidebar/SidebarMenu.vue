@@ -83,6 +83,13 @@
                     {{ $t('dressy_finance_group') || 'Dressy Finance & Escrow' }}
                 </ps-label>
                 <div class="space-y-1">
+                    <Link :href="route('admin.orders.index')" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-secondary-700 dark:text-secondary-300 hover:bg-primary-100 dark:hover:bg-secondary-800"
+                        :class="{ 'bg-primary-500 !text-white font-semibold shadow-sm': route().current('admin.orders.*') }">
+                        <ps-icon name="list" w="18" h="18" />
+                        <span :class="{ 'inline': sideMenuStore.isFullSideMenu, 'hidden xl:hidden': !sideMenuStore.isFullSideMenu }">
+                            {{ $t('dressy_orders_module') || 'Orders Management' }}
+                        </span>
+                    </Link>
                     <Link :href="route('admin.escrow.index')" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-secondary-700 dark:text-secondary-300 hover:bg-primary-100 dark:hover:bg-secondary-800"
                         :class="{ 'bg-primary-500 !text-white font-semibold shadow-sm': route().current('admin.escrow.*') }">
                         <ps-icon name="cash" w="18" h="18" />

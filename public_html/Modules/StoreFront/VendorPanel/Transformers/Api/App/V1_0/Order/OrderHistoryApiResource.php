@@ -35,18 +35,22 @@ class OrderHistoryApiResource extends JsonResource
 
         return [
             'id' => (string) $this->id,
+            'order_status_id' => (string) $this->order_status_id,
             'order_code' => (string) $this->order_code,
             'order_date' => (string) \Carbon\Carbon::parse($this->order_date)->format('M d, Y'),
             'payment_status' => (string) $this->vendorTransaction?->vendorPaymentStatus?->name,
             'payment_status_color' => (string) $this->vendorTransaction?->vendorPaymentStatus?->colour,
             'order_status' => (string) $this->orderStatus?->name,
             'order_status_color' => (string) $this->orderStatus?->colour,
+            'status_reason' => (string) ($this->status_reason ?? ''),
             'payment_date' => isset($this->vendorTransaction?->payment_date) ? (string) \Carbon\Carbon::parse($this->vendorTransaction?->payment_date)->format('M d, Y') : '',
             'vendor_name' => (string) $this->vendor?->name,
             'item_info' => $itemInfoArr,
             'item_count' => count($itemInfoArr),
             'total' => (string) $totalAmount,
+            'delivery_fee' => (string) ($this->delivery_fee ?? '0'),
             'yalidine_tracking' => (string) ($this->yalidine_tracking ?? ''),
+            'yalidine_status' => (string) ($this->yalidine_status ?? ''),
         ];
 
     }

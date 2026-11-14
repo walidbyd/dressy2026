@@ -284,6 +284,8 @@ Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])-
         Route::match(['get', 'post'], 'get_seller_order_detail', 'getSellerOrderDetail');
         Route::post('order/accept', 'acceptOrder');
         Route::post('order/dispatch', 'dispatchOrder');
+        Route::post('order/send-to-delivery', 'sendToDelivery');
+        Route::post('order/cancel', 'cancelOrder');
         Route::post('order/mark_paid', 'markOrderPaid');
         Route::match(['get', 'post'], 'wallet/balance', 'getWalletBalance');
         Route::match(['get', 'post'], 'wallet/transactions', 'getWalletTransactions');

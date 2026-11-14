@@ -76,6 +76,7 @@ class OrderSummaryApiResource extends JsonResource
         $orderSummaryObj->yalidine_tracking = (string) ($this->yalidine_tracking ?? '');
         $orderSummaryObj->yalidine_parcel_id = (string) ($this->yalidine_parcel_id ?? '');
         $orderSummaryObj->yalidine_status = (string) ($this->yalidine_status ?? '');
+        $orderSummaryObj->status_reason = (string) ($this->status_reason ?? '');
         $orderSummaryObj->is_wallet_credited = (string) ($this->is_wallet_credited ?? '0');
         $orderSummaryObj->wallet_credited_at = isset($this->wallet_credited_at) ? (string) \Carbon\Carbon::parse($this->wallet_credited_at)->format('M d, Y H:i') : '';
 

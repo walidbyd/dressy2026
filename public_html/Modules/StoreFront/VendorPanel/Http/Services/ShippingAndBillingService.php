@@ -45,12 +45,46 @@ class ShippingAndBillingService extends PsService
         }
         // / check permission end
 
+        // Ensure vendor_id is properly populated from items or seller's vendor
+        if (empty($request->vendor_id) || $request->vendor_id == 0) {
+            if (!empty($request->order_summary) && is_array($request->order_summary)) {
+                $firstSummary = (object) $request->order_summary[0];
+                $firstItem = DB::table('psx_items')->where('id', $firstSummary->item_id ?? null)->first();
+                if ($firstItem) {
+                    if (!empty($firstItem->vendor_id) && $firstItem->vendor_id > 0) {
+                        $request->merge(['vendor_id' => $firstItem->vendor_id]);
+                    } elseif (!empty($firstItem->added_user_id)) {
+                        $sellerVendor = DB::table('psx_vendors')->where('owner_user_id', $firstItem->added_user_id)->first();
+                        if ($sellerVendor) {
+                            $request->merge(['vendor_id' => $sellerVendor->id]);
+                        } else {
+                            $sellerUser = DB::table('users')->where('id', $firstItem->added_user_id)->first();
+                            $sellerName = $sellerUser ? ($sellerUser->name ?? 'Seller Store') : 'Seller Store';
+                            $newVendorId = DB::table('psx_vendors')->insertGetId([
+                                'name' => $sellerName,
+                                'owner_user_id' => $firstItem->added_user_id,
+                                'status' => 2, // active
+                                'currency_id' => 16, // DZD
+                                'added_date' => Carbon::now(),
+                                'added_user_id' => $firstItem->added_user_id,
+                            ]);
+                            $request->merge(['vendor_id' => $newVendorId]);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (empty($request->vendor_id)) {
+            $firstVendor = DB::table('psx_vendors')->first();
+            $request->merge(['vendor_id' => $firstVendor ? $firstVendor->id : 1]);
+        }
+
         // check vendor currency
         $vendor = $this->vendorService->getVendor($request->vendor_id);
-        if ($vendor->currency_id == null) {
-            $msg = __('this_vendor_does_not_have_default_currency', [], $request->language_symbol);
-
-            return responseMsgApi($msg, Constants::badRequestStatusCode);
+        if ($vendor && empty($vendor->currency_id)) {
+            $vendor->currency_id = 16;
+            $vendor->save();
         }
 
         // check quantity enough or not start

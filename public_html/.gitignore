@@ -16,7 +16,8 @@ Homestead.json
 vagrantfile
 /public/css/custom_color_*.css
 /public/document
-/lang
+!/lang/
+!/lang/**
 /Modules/Template/*
 !/Modules/Template/index.html
 /storage/installed

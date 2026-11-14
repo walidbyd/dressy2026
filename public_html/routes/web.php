@@ -1071,7 +1071,12 @@ Route::middleware(['isInstall'])->group(function () {
         // mobile color
         Route::resource('/color', ColorController::class);
 
-        // Dressy C2C Finance & Escrow Routes
+        // Dressy C2C Orders & Escrow Routes
+        Route::prefix('orders')->controller(\Modules\StoreFront\VendorPanel\Http\Controllers\Backend\Controllers\Order\AdminOrderController::class)->group(function () {
+            Route::get('/', 'index')->name('admin.orders.index');
+            Route::post('/{id}/status', 'updateStatus')->name('admin.orders.updateStatus');
+        });
+
         Route::prefix('escrow')->controller(\Modules\StoreFront\VendorPanel\Http\Controllers\Backend\Controllers\Finance\AdminEscrowController::class)->group(function () {
             Route::get('/', 'index')->name('admin.escrow.index');
             Route::post('/{id}/mark-paid', 'markPaid')->name('admin.escrow.markPaid');

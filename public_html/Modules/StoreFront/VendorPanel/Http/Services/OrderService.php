@@ -452,13 +452,28 @@ class OrderService extends PsService
     {
         $userId = $request->login_user_id;
         $vendor = Vendor::where('owner_user_id', $userId)->first();
-        if (! $vendor) {
+
+        // Check if seller has any orders either via vendor_id or via owned items
+        $hasAnyOrders = Order::where('is_payment_fail', 0)
+            ->where(function ($query) use ($vendor, $userId) {
+                if ($vendor) {
+                    $query->where('vendor_id', $vendor->id);
+                }
+                $query->orWhereHas('orderItems.item', function ($q) use ($userId) {
+                    $q->where('added_user_id', $userId);
+                });
+            })
+            ->exists();
+
+        if (! $vendor && ! $hasAnyOrders) {
             $data = [
                 'all_order_count' => 0,
                 'pending_order_count' => 0,
                 'approved_order_count' => 0,
                 'delivering_order_count' => 0,
                 'delivered_order_count' => 0,
+                'cancelled_order_count' => 0,
+                'returned_order_count' => 0,
                 'order_history' => [],
                 'meta' => [
                     'current_page' => 1,
@@ -505,7 +520,15 @@ class OrderService extends PsService
         $conds['order_by'] = $request->order_by;
         $conds['order_type'] = $request->order_type;
 
-        $ordersQuery = Order::where(['vendor_id' => $vendor->id, 'is_payment_fail' => 0])
+        $ordersQuery = Order::where('is_payment_fail', 0)
+            ->where(function ($query) use ($vendor, $userId) {
+                if ($vendor) {
+                    $query->where('vendor_id', $vendor->id);
+                }
+                $query->orWhereHas('orderItems.item', function ($q) use ($userId) {
+                    $q->where('added_user_id', $userId);
+                });
+            })
             ->when($relations, function ($query, $relations) {
                 $query->with($relations);
             })
@@ -527,7 +550,16 @@ class OrderService extends PsService
             $orders = $ordersQuery->get();
         }
 
-        $totalOrders = Order::where(['vendor_id' => $vendor->id, 'is_payment_fail' => 0])->get();
+        $totalOrders = Order::where('is_payment_fail', 0)
+            ->where(function ($query) use ($vendor, $userId) {
+                if ($vendor) {
+                    $query->where('vendor_id', $vendor->id);
+                }
+                $query->orWhereHas('orderItems.item', function ($q) use ($userId) {
+                    $q->where('added_user_id', $userId);
+                });
+            })
+            ->get();
 
         if ($noPagination) {
             $data = OrderHistoryApiResource::collection($orders);
@@ -538,6 +570,8 @@ class OrderService extends PsService
                 'approved_order_count' => $totalOrders->where('order_status_id', Constants::orderApprovedStatus)->count(),
                 'delivering_order_count' => $totalOrders->where('order_status_id', Constants::orderDeliveringStatus)->count(),
                 'delivered_order_count' => $totalOrders->where('order_status_id', Constants::orderDeliveredStatus)->count(),
+                'cancelled_order_count' => $totalOrders->where('order_status_id', Constants::orderCancelledStatus)->count(),
+                'returned_order_count' => $totalOrders->where('order_status_id', Constants::orderReturnedStatus)->count(),
                 'order_history' => OrderHistoryApiResource::collection($orders),
                 'meta' => [
                     'current_page' => $orders->currentPage(),
@@ -559,16 +593,22 @@ class OrderService extends PsService
     {
         $userId = $request->login_user_id;
         $vendor = Vendor::where('owner_user_id', $userId)->first();
-        if (! $vendor) {
-            return responseMsgApi(__('Unauthorized: No vendor found for user.'), Constants::forbiddenStatusCode);
-        }
 
         $order = Order::find($request->order_id);
         if (! $order) {
             return responseMsgApi(__('Order not found.'), Constants::notFoundStatusCode);
         }
 
-        if ($order->vendor_id != $vendor->id) {
+        $isOwner = false;
+        if ($vendor && $order->vendor_id == $vendor->id) {
+            $isOwner = true;
+        } else {
+            $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
+                $q->where('added_user_id', $userId);
+            })->exists();
+        }
+
+        if (! $isOwner) {
             return responseMsgApi(__('Unauthorized: You do not own this order.'), Constants::forbiddenStatusCode);
         }
 
@@ -577,7 +617,9 @@ class OrderService extends PsService
             'shippingAndBilling',
             'vendorTransaction' => [
                 'vendorPaymentStatus' => function ($query) use ($vendor) {
-                    $query->where('vendor_id', $vendor->id);
+                    if ($vendor) {
+                        $query->where('vendor_id', $vendor->id);
+                    }
                 },
                 'currency', 'vendor',
             ],
@@ -593,16 +635,22 @@ class OrderService extends PsService
     {
         $userId = $request->login_user_id;
         $vendor = Vendor::where('owner_user_id', $userId)->first();
-        if (! $vendor) {
-            return responseMsgApi(__('Unauthorized: No vendor found for user.'), Constants::forbiddenStatusCode);
-        }
 
         $order = Order::find($request->order_id);
         if (! $order) {
             return responseMsgApi(__('Order not found.'), Constants::notFoundStatusCode);
         }
 
-        if ($order->vendor_id != $vendor->id) {
+        $isOwner = false;
+        if ($vendor && $order->vendor_id == $vendor->id) {
+            $isOwner = true;
+        } else {
+            $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
+                $q->where('added_user_id', $userId);
+            })->exists();
+        }
+
+        if (! $isOwner) {
             return responseMsgApi(__('Unauthorized: You do not own this order.'), Constants::forbiddenStatusCode);
         }
 
@@ -620,21 +668,27 @@ class OrderService extends PsService
     {
         $userId = $request->login_user_id;
         $vendor = Vendor::where('owner_user_id', $userId)->first();
-        if (! $vendor) {
-            return responseMsgApi(__('Unauthorized: No vendor found for user.'), Constants::forbiddenStatusCode);
-        }
 
         $order = Order::find($request->order_id);
         if (! $order) {
             return responseMsgApi(__('Order not found.'), Constants::notFoundStatusCode);
         }
 
-        if ($order->vendor_id != $vendor->id) {
+        $isOwner = false;
+        if ($vendor && $order->vendor_id == $vendor->id) {
+            $isOwner = true;
+        } else {
+            $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
+                $q->where('added_user_id', $userId);
+            })->exists();
+        }
+
+        if (! $isOwner) {
             return responseMsgApi(__('Unauthorized: You do not own this order.'), Constants::forbiddenStatusCode);
         }
 
-        if ((int) $order->order_status_id !== (int) Constants::orderApprovedStatus) {
-            return responseMsgApi(__('Only accepted orders can be dispatched.'), Constants::badRequestStatusCode);
+        if ((int) $order->order_status_id !== (int) Constants::orderApprovedStatus && (int) $order->order_status_id !== (int) Constants::orderPendingStatus) {
+            return responseMsgApi(__('Only pending or accepted orders can be dispatched.'), Constants::badRequestStatusCode);
         }
 
         // Load relations needed for shipment creation
@@ -658,6 +712,50 @@ class OrderService extends PsService
         $order->save();
 
         return responseMsgApi(__('Order has been dispatched and Yalidine shipment created.'), Constants::okStatusCode, Constants::successStatus);
+    }
+
+    public function sendToDeliveryOrderFromApi($request)
+    {
+        return $this->dispatchOrderFromApi($request);
+    }
+
+    public function cancelOrderFromApi($request)
+    {
+        $userId = $request->login_user_id;
+        $vendor = Vendor::where('owner_user_id', $userId)->first();
+
+        $order = Order::find($request->order_id);
+        if (! $order) {
+            return responseMsgApi(__('Order not found.'), Constants::notFoundStatusCode);
+        }
+
+        $isOwner = false;
+        if ($vendor && $order->vendor_id == $vendor->id) {
+            $isOwner = true;
+        } else {
+            $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
+                $q->where('added_user_id', $userId);
+            })->exists();
+        }
+
+        if (! $isOwner) {
+            return responseMsgApi(__('Unauthorized: You do not own this order.'), Constants::forbiddenStatusCode);
+        }
+
+        $reason = $request->cancel_reason ?? $request->status_reason ?? $request->reason;
+        if (empty($reason)) {
+            return responseMsgApi(__('Please provide a cancellation reason.'), Constants::badRequestStatusCode);
+        }
+
+        if ((int) $order->order_status_id === (int) Constants::orderDeliveredStatus) {
+            return responseMsgApi(__('Delivered orders cannot be cancelled.'), Constants::badRequestStatusCode);
+        }
+
+        $order->order_status_id = Constants::orderCancelledStatus;
+        $order->status_reason = $reason;
+        $order->save();
+
+        return responseMsgApi(__('Order has been cancelled successfully.'), Constants::okStatusCode, Constants::successStatus);
     }
 
     public function markOrderPaidFromApi($request)
