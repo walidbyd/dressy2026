@@ -12,17 +12,12 @@ class CacheKeyService extends PsService implements CacheKeyServiceInterface
 {
     public function save($cacheKeyData)
     {
-        DB::beginTransaction();
         try {
-            $cacheKey = $this->get($cacheKeyData['id']);
-
-            if (! $cacheKey) {
-                $this->saveCacheKey($cacheKeyData);
-            }
-
-            DB::commit();
+            return $this->saveCacheKey($cacheKeyData);
         } catch (\Throwable $e) {
-            DB::rollback();
+            if ($e instanceof \Illuminate\Database\QueryException && isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062) {
+                return CacheKey::find($cacheKeyData['id']);
+            }
             throw $e;
         }
     }
@@ -151,11 +146,10 @@ class CacheKeyService extends PsService implements CacheKeyServiceInterface
     // =================================================================
     private function saveCacheKey($cacheKeyData)
     {
-        $cacheKey = new CacheKey;
-        $cacheKey->fill($cacheKeyData);
-        $cacheKey->save();
-
-        return $cacheKey;
+        return CacheKey::updateOrCreate(
+            ['id' => $cacheKeyData['id']],
+            $cacheKeyData
+        );
     }
 
     private function updateCacheKey($id, $cacheKeyData)

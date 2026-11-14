@@ -28,3 +28,9 @@ class GetItemByIdItemApiRequest extends FormRequest
         return true;
     }
 }
+
+if (!class_exists('Modules\Core\Http\Requests\Item\GetItembyIdItemApiRequest', false)) {
+    class GetItembyIdItemApiRequest extends GetItemByIdItemApiRequest
+    {
+    }
+}

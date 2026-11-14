@@ -55,7 +55,8 @@ class DynamicLinkService extends PsService implements DynamicLinkServiceInterfac
     public function getDynamicLinkRedirectData($shortCode)
     {
         // Dynamic Link Configs from psx backend settings + psx settings table
-        $dynamicLinkSetting = json_decode($this->settingService->get(env: ps_constant::DYNAMIC_LINK_CONFIG)['setting'], true);
+        $settingData = $this->settingService->get(env: ps_constant::DYNAMIC_LINK_CONFIG);
+        $dynamicLinkSetting = !empty($settingData['setting']) ? json_decode($settingData['setting'], true) : [];
 
         // Default Web URL
         $webUrl = route('dashboard');
@@ -66,22 +67,23 @@ class DynamicLinkService extends PsService implements DynamicLinkServiceInterfac
             return redirect()->to($webUrl);
         }
 
-        $appName = $dynamicLinkSetting['scheme_name'];
+        $appName = $dynamicLinkSetting['scheme_name'] ?? 'dressy';
         $appRedirect = "$appName://open";
 
-        if ($dynamicLink->parameters) {
-            $parameters = json_decode($dynamicLink->parameters, true);
+        $parameters = [];
+        if (!empty($dynamicLink->parameters)) {
+            $parameters = json_decode($dynamicLink->parameters, true) ?: [];
             $appRedirect .= '?'.http_build_query($parameters);
         }
 
-        if (ps_constant::DYNAMIC_LINKS[$dynamicLink->type]) {
+        if (!empty($dynamicLink->type) && !empty(ps_constant::DYNAMIC_LINKS[$dynamicLink->type])) {
             $webUrl = route(ps_constant::DYNAMIC_LINKS[$dynamicLink->type], $parameters);
         }
 
         return [
             'appRedirect' => $appRedirect,
-            'iosPackageId' => $dynamicLinkSetting['apple_id'],
-            'appPackageId' => $dynamicLinkSetting['android_package'],
+            'iosPackageId' => $dynamicLinkSetting['apple_id'] ?? '',
+            'appPackageId' => $dynamicLinkSetting['android_package'] ?? '',
             'webRedirect' => $webUrl,
         ];
     }

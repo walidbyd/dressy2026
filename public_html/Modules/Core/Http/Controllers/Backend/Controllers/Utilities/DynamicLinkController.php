@@ -21,10 +21,17 @@ class DynamicLinkController extends Controller
 
         $dataArr = $this->dynamicLinkService->getDynamicLinkRedirectData($shortCode);
 
+        if ($dataArr instanceof \Symfony\Component\HttpFoundation\Response) {
+            return $dataArr;
+        }
+
         if (Str::contains($userAgent, ['iPhone', 'iPad', 'Android'])) {
-            return renderView(self::indexPath, $dataArr);
+            return renderView(self::indexPath, is_array($dataArr) ? $dataArr : []);
         } else {
-            return redirect()->to($dataArr['webRedirect']);
+            $webRedirect = is_array($dataArr) && !empty($dataArr['webRedirect'])
+                ? $dataArr['webRedirect']
+                : route('dashboard');
+            return redirect()->to($webRedirect);
         }
     }
 }
