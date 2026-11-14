@@ -395,7 +395,7 @@ class OrderService extends PsService
         $orders = $this->getOrderHistoryFromApi($userId, $relations, $conds, $limit, $offset, $noPagination, $perPage);
         $totalOrders = Order::where([Order::userId => $userId, Order::isPaymentFail => 0])->get();
         $data = [];
-        if ($noPagination) {
+        if ($noPagination || $request->has('noPagination') || (isset($request->noPagination) && $request->noPagination)) {
             $data = OrderHistoryApiResource::collection($orders);
         } else {
             $data = [
@@ -466,6 +466,9 @@ class OrderService extends PsService
             ->exists();
 
         if (! $vendor && ! $hasAnyOrders) {
+            if ($request->has('noPagination') || (isset($request->noPagination) && $request->noPagination)) {
+                return responseDataApi([]);
+            }
             $data = [
                 'all_order_count' => 0,
                 'pending_order_count' => 0,
@@ -561,7 +564,7 @@ class OrderService extends PsService
             })
             ->get();
 
-        if ($noPagination) {
+        if ($noPagination || $request->has('noPagination') || (isset($request->noPagination) && $request->noPagination)) {
             $data = OrderHistoryApiResource::collection($orders);
         } else {
             $data = [

@@ -808,7 +808,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "resources/js/Pages/API/Partials/ApiTokenManager.vue": {
@@ -1065,7 +1065,7 @@
       "_plugin-vue_export-helper.21dcd24c.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsTextButton.a125a3e1.js": {
@@ -2368,7 +2368,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsInput.c76dd0db.js": {
@@ -3064,7 +3064,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "resources/js/Components/Core/Banners/PsBannerIcon.vue": {
@@ -3125,7 +3125,7 @@
       "_Modal.77abf6f8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "resources/js/Pages/admin/orders/Index.vue": {
@@ -3167,7 +3167,7 @@
       "_Modal.77abf6f8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "resources/js/Pages/admin/wallets/History.vue": {
@@ -3205,7 +3205,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "resources/js/Pages/admin/wallets/Index.vue": {
@@ -3247,7 +3247,7 @@
       "_Modal.77abf6f8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "resources/js/Pages/admin/withdrawals/Index.vue": {
@@ -3289,7 +3289,7 @@
       "_Modal.77abf6f8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/about/Create.vue": {
@@ -3338,7 +3338,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsTextarea.f04e998b.js": {
@@ -3453,7 +3453,7 @@
       "_PsLabelTitle3.8dbbcb4a.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsImageIconModal.a045a82a.js": {
@@ -3533,7 +3533,7 @@
       "_Modal.77abf6f8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/api_token/Edit.vue": {
@@ -3584,7 +3584,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/api_token/Index.vue": {
@@ -3637,7 +3637,7 @@
       "_Modal.77abf6f8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsTable2.60f44b14.js": {
@@ -3775,7 +3775,7 @@
       "resources/js/Components/Core/Modals/PsColorPickerModal.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/components/FlashMessage.vue": {
@@ -3907,7 +3907,7 @@
       "resources/js/Components/Core/Modals/PsColorPickerModal.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsAccordion.b6d83a37.js": {
@@ -3974,7 +3974,7 @@
       "_PsLabelHeader4.d3d15ba2.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/components/CheckBox.vue": {
@@ -4072,7 +4072,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsRating.cf3fa0d1.js": {
@@ -4130,7 +4130,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/blog/Edit.vue": {
@@ -4183,7 +4183,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/blog/Index.vue": {
@@ -4233,7 +4233,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/bluemarkuser/Edit.vue": {
@@ -4290,7 +4290,7 @@
       "_PsLabelHeader4.d3d15ba2.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/bluemarkuser/Index.vue": {
@@ -4340,7 +4340,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/builder_setting/Edit.vue": {
@@ -4389,7 +4389,7 @@
       "_format.min.46cb3b39.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsDangerDialogWithInput.5e46e6af.js": {
@@ -4452,7 +4452,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/components/RoleCheckbox.vue": {
@@ -4511,7 +4511,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/category/Create.vue": {
@@ -4576,7 +4576,7 @@
       "resources/js/Components/Core/Card/PsMessageCard.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_CategoryStore.8dea0fe3.js": {
@@ -4665,7 +4665,7 @@
       "resources/js/Components/Core/Card/PsMessageCard.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_ImageStore.88a11ed6.js": {
@@ -4735,7 +4735,7 @@
       "_PsDangerDialog.96648fc3.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_TableColumnAndFilterStore.c58334fe.js": {
@@ -4795,7 +4795,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/category_report/Index.vue": {
@@ -4844,7 +4844,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/components/BlogCard.vue": {
@@ -4877,7 +4877,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/components/LanguageModal.vue": {
@@ -4899,7 +4899,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/components/LanguageUpdateModal.vue": {
@@ -4923,7 +4923,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/components/TableFieldHideShowModal.vue": {
@@ -4945,7 +4945,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/components/Text.vue": {
@@ -5009,7 +5009,7 @@
       "_stringify.08548e91.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/contact_us_message/Edit.vue": {
@@ -5059,7 +5059,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/contact_us_message/Index.vue": {
@@ -5102,7 +5102,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/coreKeyType/Create.vue": {
@@ -5148,7 +5148,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/coreKeyType/Index.vue": {
@@ -5194,7 +5194,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/currency/Create.vue": {
@@ -5239,7 +5239,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/currency/Edit.vue": {
@@ -5284,7 +5284,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/currency/Index.vue": {
@@ -5330,7 +5330,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/currency_available/Create.vue": {
@@ -5375,7 +5375,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/currency_available/Edit.vue": {
@@ -5420,7 +5420,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/currency_available/Index.vue": {
@@ -5466,7 +5466,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/customize_theme/Index.vue": {
@@ -5511,7 +5511,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/daily_active_report/Edit.vue": {
@@ -5562,7 +5562,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/daily_active_report/Index.vue": {
@@ -5607,7 +5607,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsDataTable.cc8f4336.js": {
@@ -5676,7 +5676,7 @@
       "_PsLoading.34dbffdd.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsLabelHeader3.ec72549a.js": {
@@ -5758,7 +5758,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/data_deletion_policy/Edit.vue": {
@@ -5806,7 +5806,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/deeplink_generator/Edit.vue": {
@@ -5850,7 +5850,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/demo_data_deletion/Index.vue": {
@@ -5897,7 +5897,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/disabled_item_approval/Edit.vue": {
@@ -5958,7 +5958,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsLabelHeader5.b37c9a61.js": {
@@ -6015,7 +6015,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsBadge.6e5517a7.js": {
@@ -6069,7 +6069,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/favourite/Index.vue": {
@@ -6112,7 +6112,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/frontend_languages/Create.vue": {
@@ -6157,7 +6157,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/frontend_languages/Edit.vue": {
@@ -6202,7 +6202,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/frontend_languages/Index.vue": {
@@ -6248,7 +6248,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/frontend_languages_strings/Create.vue": {
@@ -6294,7 +6294,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_ps_language_const.59b92f35.js": {
@@ -6342,7 +6342,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/frontend_languages_strings/Index.vue": {
@@ -6393,7 +6393,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_NewPsDataTable.f2512c15.js": {
@@ -6465,7 +6465,7 @@
       "_PsLabelTitle3.8dbbcb4a.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsCheckbox.975c2d95.js": {
@@ -6543,7 +6543,7 @@
       "resources/js/Components/Core/Modals/PsColorPickerModal.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsColorSeriesGenerator.eec11251.js": {
@@ -6664,7 +6664,7 @@
     ],
     "css": [
       "assets/Create.306cdd23.css",
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_filepond-plugin-image-preview.esm.e94ff1db.js": {
@@ -6791,7 +6791,7 @@
     ],
     "css": [
       "assets/Edit.8426ba6e.css",
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "resources/js/Components/Core/Map/OpenStreetMapPinPicker.vue": {
@@ -6880,7 +6880,7 @@
     "css": [
       "assets/Index.98da0c9e.css",
       "assets/splide-core.min.3815bcb8.css",
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_vue-splide.esm.82586ffa.js": {
@@ -6947,7 +6947,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/item_report/Index.vue": {
@@ -6998,7 +6998,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/landing_page/Create.vue": {
@@ -7050,7 +7050,7 @@
       "_PsLabelTitle3.8dbbcb4a.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/landing_page/Edit.vue": {
@@ -7105,7 +7105,7 @@
       "resources/js/Components/Core/Modals/PsColorPickerModal.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/landing_page/Show.vue": {
@@ -7162,7 +7162,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/language/Edit.vue": {
@@ -7207,7 +7207,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/language/Index.vue": {
@@ -7257,7 +7257,7 @@
       "_stringify.08548e91.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/language_string/Create.vue": {
@@ -7303,7 +7303,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/language_string/Edit.vue": {
@@ -7348,7 +7348,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/language_string/Index.vue": {
@@ -7399,7 +7399,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/location_city/Create.vue": {
@@ -7460,7 +7460,7 @@
       "resources/js/Components/Core/Map/OpenStreetMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/location_city/Edit.vue": {
@@ -7521,7 +7521,7 @@
       "resources/js/Components/Core/Map/OpenStreetMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/location_city/Index.vue": {
@@ -7571,7 +7571,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/location_township/Create.vue": {
@@ -7625,7 +7625,7 @@
       "resources/js/Components/Core/Map/OpenStreetMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/location_township/Edit.vue": {
@@ -7679,7 +7679,7 @@
       "resources/js/Components/Core/Map/OpenStreetMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/location_township/Index.vue": {
@@ -7731,7 +7731,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/menu/Create.vue": {
@@ -7778,7 +7778,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/menu/Edit.vue": {
@@ -7825,7 +7825,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/menu/Index.vue": {
@@ -7874,7 +7874,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/menu_group/Create.vue": {
@@ -7921,7 +7921,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/menu_group/Edit.vue": {
@@ -7968,7 +7968,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/menu_group/Index.vue": {
@@ -8017,7 +8017,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/message/Edit.vue": {
@@ -8067,7 +8067,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/mobile_language/Create.vue": {
@@ -8112,7 +8112,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/mobile_language/Edit.vue": {
@@ -8157,7 +8157,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/mobile_language/Index.vue": {
@@ -8203,7 +8203,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/mobile_language_string/Create.vue": {
@@ -8248,7 +8248,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/mobile_language_string/Edit.vue": {
@@ -8293,7 +8293,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/mobile_language_string/Index.vue": {
@@ -8343,7 +8343,7 @@
       "_vue-neat-modal.2b596e81.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/mobile_setting/Create.vue": {
@@ -8396,7 +8396,7 @@
       "resources/js/Components/Core/Modals/PsColorPickerModal.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/mobile_setting/Edit.vue": {
@@ -8453,7 +8453,7 @@
       "resources/js/Components/Core/Modals/PsColorPickerModal.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/module/Create.vue": {
@@ -8500,7 +8500,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/module/Edit.vue": {
@@ -8547,7 +8547,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/module/Index.vue": {
@@ -8596,7 +8596,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/notification/Edit.vue": {
@@ -8646,7 +8646,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/offline_package/Edit.vue": {
@@ -8701,7 +8701,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/offline_package/Index.vue": {
@@ -8748,7 +8748,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/package_report/Edit.vue": {
@@ -8804,7 +8804,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/package_report/Index.vue": {
@@ -8854,7 +8854,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/payment_status/Create.vue": {
@@ -8897,7 +8897,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/payment_status/Edit.vue": {
@@ -8940,7 +8940,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/payment_status/Index.vue": {
@@ -8983,7 +8983,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/pending_item/Edit.vue": {
@@ -9044,7 +9044,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/pending_item/Index.vue": {
@@ -9093,7 +9093,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/phone_country_code/Create.vue": {
@@ -9138,7 +9138,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/phone_country_code/Edit.vue": {
@@ -9183,7 +9183,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/phone_country_code/Index.vue": {
@@ -9229,7 +9229,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/privacy_policy/Create.vue": {
@@ -9277,7 +9277,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/privacy_policy/Edit.vue": {
@@ -9325,7 +9325,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/profile/Edit.vue": {
@@ -9377,7 +9377,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/push_notification_message/Create.vue": {
@@ -9427,7 +9427,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/push_notification_message/Index.vue": {
@@ -9472,7 +9472,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/query_test/Index.vue": {
@@ -9511,7 +9511,7 @@
     ],
     "css": [
       "assets/Index.ee0cb964.css",
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/reject_item/Edit.vue": {
@@ -9572,7 +9572,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/reject_item/Index.vue": {
@@ -9621,7 +9621,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/seller_report/Edit.vue": {
@@ -9672,7 +9672,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/seller_report/Index.vue": {
@@ -9721,7 +9721,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/shipping/Create.vue": {
@@ -9764,7 +9764,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/shipping/Edit.vue": {
@@ -9807,7 +9807,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/shipping/Index.vue": {
@@ -9850,7 +9850,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/shop/AddNewField.vue": {
@@ -9893,7 +9893,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/shop/Create.vue": {
@@ -9937,7 +9937,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/shop/Customization.vue": {
@@ -9981,7 +9981,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/shop/CustomizationDetailCreate.vue": {
@@ -10024,7 +10024,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/shop/CustomizationDetailEdit.vue": {
@@ -10067,7 +10067,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/shop/CustomizationDetailIndex.vue": {
@@ -10109,7 +10109,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/shop/Edit.vue": {
@@ -10153,7 +10153,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/shop/Index.vue": {
@@ -10196,7 +10196,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/sold_out_item_report/Edit.vue": {
@@ -10262,7 +10262,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/sold_out_item_report/Index.vue": {
@@ -10313,7 +10313,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/subcategory/Create.vue": {
@@ -10376,7 +10376,7 @@
       "resources/js/Components/Core/Card/PsMessageCard.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_SubCategoryStore.eb9b8677.js": {
@@ -10452,7 +10452,7 @@
       "resources/js/Components/Core/Card/PsMessageCard.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/subcategory/Index.vue": {
@@ -10516,7 +10516,7 @@
       "_PsDangerDialog.96648fc3.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/sub_menu_group/Create.vue": {
@@ -10563,7 +10563,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/sub_menu_group/Edit.vue": {
@@ -10610,7 +10610,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/sub_menu_group/Index.vue": {
@@ -10659,7 +10659,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/successful_deal_count_report/Edit.vue": {
@@ -10722,7 +10722,7 @@
       "_PsPagination.78b46df4.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/successful_deal_count_report/Index.vue": {
@@ -10773,7 +10773,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/system_config/Create.vue": {
@@ -10828,7 +10828,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/system_config/Create1.vue": {
@@ -10883,7 +10883,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/system_config/Create2.vue": {
@@ -10938,7 +10938,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/system_config/Edit.vue": {
@@ -10998,7 +10998,7 @@
       "resources/js/Components/Core/Map/OpenStreetMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/table/Index.vue": {
@@ -11048,7 +11048,7 @@
       "_PsLoading.34dbffdd.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/transaction/Edit.vue": {
@@ -11092,7 +11092,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/transaction/Index.vue": {
@@ -11140,7 +11140,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/transaction_status/Create.vue": {
@@ -11183,7 +11183,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/transaction_status/Edit.vue": {
@@ -11228,7 +11228,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/transaction_status/Index.vue": {
@@ -11269,7 +11269,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/user/Create.vue": {
@@ -11331,7 +11331,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/user/Edit.vue": {
@@ -11389,7 +11389,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/user/Index.vue": {
@@ -11439,7 +11439,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/user_report/Edit.vue": {
@@ -11498,7 +11498,7 @@
       "_PsLabelHeader4.d3d15ba2.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/user_report/Index.vue": {
@@ -11548,7 +11548,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/user_role/Create.vue": {
@@ -11605,7 +11605,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/user_role/Edit.vue": {
@@ -11662,7 +11662,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/user_role/Index.vue": {
@@ -11712,7 +11712,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor/Edit.vue": {
@@ -11765,7 +11765,7 @@
       "_PsRadioValue.f412dec3.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor/components/VendorDetailVendorInfo.vue": {
@@ -11889,7 +11889,7 @@
       "resources/js/Components/Core/Banners/PsBannerIcon.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_VendorStore.757872c4.js": {
@@ -11942,7 +11942,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_approval/Index.vue": {
@@ -11990,7 +11990,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_languages/Create.vue": {
@@ -12035,7 +12035,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_languages/Edit.vue": {
@@ -12080,7 +12080,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_languages/Index.vue": {
@@ -12126,7 +12126,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_languages_strings/Create.vue": {
@@ -12172,7 +12172,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_languages_strings/Edit.vue": {
@@ -12217,7 +12217,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_languages_strings/Index.vue": {
@@ -12268,7 +12268,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_menu/Create.vue": {
@@ -12315,7 +12315,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_menu/Edit.vue": {
@@ -12362,7 +12362,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_menu/Index.vue": {
@@ -12411,7 +12411,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_menu_group/Create.vue": {
@@ -12458,7 +12458,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_menu_group/Edit.vue": {
@@ -12505,7 +12505,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_menu_group/Index.vue": {
@@ -12554,7 +12554,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_module/Create.vue": {
@@ -12601,7 +12601,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_module/Edit.vue": {
@@ -12648,7 +12648,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_module/Index.vue": {
@@ -12697,7 +12697,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_reject/Edit.vue": {
@@ -12739,7 +12739,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_reject/Index.vue": {
@@ -12787,7 +12787,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_role/Create.vue": {
@@ -12844,7 +12844,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_role/Edit.vue": {
@@ -12901,7 +12901,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_role/Index.vue": {
@@ -12951,7 +12951,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_setting/Edit.vue": {
@@ -13006,7 +13006,7 @@
       "_format.min.46cb3b39.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_subscription_report/Edit.vue": {
@@ -13062,7 +13062,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_subscription_report/Index.vue": {
@@ -13112,7 +13112,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_sub_menu_group/Create.vue": {
@@ -13159,7 +13159,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_sub_menu_group/Edit.vue": {
@@ -13206,7 +13206,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/vendor_sub_menu_group/Index.vue": {
@@ -13255,7 +13255,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/version_update/Index.vue": {
@@ -13305,7 +13305,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Installer/Resources/Pages/installer/updateWizard/AddNewFeLangString.vue": {
@@ -13553,7 +13553,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/offline_payment_setting/Edit.vue": {
@@ -13605,7 +13605,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/offline_payment_setting/Index.vue": {
@@ -13655,7 +13655,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/package_in_app_purchase/Create.vue": {
@@ -13703,7 +13703,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/package_in_app_purchase/Edit.vue": {
@@ -13755,7 +13755,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/package_in_app_purchase/Index.vue": {
@@ -13801,7 +13801,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/payment/Create.vue": {
@@ -13848,7 +13848,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/payment/Edit.vue": {
@@ -13898,7 +13898,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/payment/Index.vue": {
@@ -13944,7 +13944,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/payment_setting/Index.vue": {
@@ -13991,7 +13991,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/promotion_in_app_purchase/Create.vue": {
@@ -14039,7 +14039,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/promotion_in_app_purchase/Edit.vue": {
@@ -14091,7 +14091,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/promotion_in_app_purchase/Index.vue": {
@@ -14137,7 +14137,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/vendor_subscription_plan/Create.vue": {
@@ -14185,7 +14185,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/vendor_subscription_plan/Edit.vue": {
@@ -14237,7 +14237,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/vendor_subscription_plan/Index.vue": {
@@ -14283,7 +14283,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/complaint_item/complaint_report/Edit.vue": {
@@ -14343,7 +14343,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/complaint_item/complaint_report/Index.vue": {
@@ -14393,7 +14393,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/configuration/table_field/Create.vue": {
@@ -14446,7 +14446,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/configuration/table_field/Edit.vue": {
@@ -14499,7 +14499,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/configuration/table_field/Index.vue": {
@@ -14556,7 +14556,7 @@
     "css": [
       "assets/Index.60784329.css",
       "assets/splide-core.min.3815bcb8.css",
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/image_generation_for_thumbnail/image_list/Index.vue": {
@@ -14606,7 +14606,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/image_generation_for_thumbnail/thumbnail_generator/Index.vue": {
@@ -14649,7 +14649,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/item_promotion/offline_paid_item/Edit.vue": {
@@ -14704,7 +14704,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/item_promotion/offline_paid_item/Index.vue": {
@@ -14753,7 +14753,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/item_promotion/promotion_report/Edit.vue": {
@@ -14805,7 +14805,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/item_promotion/promotion_report/Index.vue": {
@@ -14858,7 +14858,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/item_promotion/promotion_report/Promote.vue": {
@@ -14907,7 +14907,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/slow_moving_items/components/CheckBox.vue": {
@@ -14987,7 +14987,7 @@
       "resources/js/Components/Core/Map/OpenStreetMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/slow_moving_items/slow_moving_item/Index.vue": {
@@ -15039,7 +15039,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/slow_moving_items/slow_moving_item_report/Edit.vue": {
@@ -15100,7 +15100,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/slow_moving_items/slow_moving_item_report/Index.vue": {
@@ -15151,7 +15151,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/utilities/custom_field_attribute/Create.vue": {
@@ -15196,7 +15196,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/utilities/custom_field_attribute/Edit.vue": {
@@ -15241,7 +15241,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/utilities/custom_field_attribute/Index.vue": {
@@ -15291,7 +15291,7 @@
       "_PsDraggable.72cb0666.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Core/Resources/Pages/core/utilities/fallback/Index.vue": {
@@ -15346,7 +15346,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Payment/Resources/Pages/payment/payment/core_key/Edit.vue": {
@@ -15396,7 +15396,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/admin/commission/Index.vue": {
@@ -15436,7 +15436,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/admin/escrow/Index.vue": {
@@ -15478,7 +15478,7 @@
       "_Modal.77abf6f8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/admin/wallets/History.vue": {
@@ -15516,7 +15516,7 @@
       "_Icons.42e9ca61.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/admin/wallets/Index.vue": {
@@ -15558,7 +15558,7 @@
       "_Modal.77abf6f8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/admin/withdrawals/Index.vue": {
@@ -15600,7 +15600,7 @@
       "_Modal.77abf6f8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/components/CheckBox.vue": {
@@ -15656,7 +15656,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "_PsVendorLayout.01407c27.js": {
@@ -15704,7 +15704,7 @@
       "_toggle.cd8b7f1d.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/components/layouts/sidebar/SidebarMenu.vue": {
@@ -15774,7 +15774,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/delivery_setting/Edit.vue": {
@@ -15822,7 +15822,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/item/ItemDetail.vue": {
@@ -15884,7 +15884,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/item/ItemList.vue": {
@@ -15974,7 +15974,7 @@
     "css": [
       "assets/ItemList.757f5fea.css",
       "assets/splide-core.min.3815bcb8.css",
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Template/PSXFETemplate/Resources/Pages/vendor/components/core/dialog/PsLoadingDialog.vue": {
@@ -16039,7 +16039,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/order_list/Index.vue": {
@@ -16087,7 +16087,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/order_status/Create.vue": {
@@ -16138,7 +16138,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/order_status/Edit.vue": {
@@ -16189,7 +16189,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/order_status/Index.vue": {
@@ -16236,7 +16236,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/order_transaction_report/Edit.vue": {
@@ -16300,7 +16300,7 @@
       "resources/js/Components/Core/Map/GoogleMapPinPicker.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/order_transaction_report/Index.vue": {
@@ -16355,7 +16355,7 @@
       "_index.b577b985.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/order_transaction_report/Promote.vue": {
@@ -16404,7 +16404,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/payment_lists/Edit.vue": {
@@ -16455,7 +16455,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/payment_lists/Index.vue": {
@@ -16502,7 +16502,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/payment_settings/Index.vue": {
@@ -16550,7 +16550,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/payment_status/Create.vue": {
@@ -16601,7 +16601,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/payment_status/Edit.vue": {
@@ -16652,7 +16652,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/payment_status/Index.vue": {
@@ -16699,7 +16699,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/subscriptionHistory/Index.vue": {
@@ -16746,7 +16746,7 @@
       "_PsIcon1.3fae1ed8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/upgrade_subscription/Index.vue": {
@@ -16794,7 +16794,7 @@
       "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/upgrade_subscription/components/PaymentModal.vue"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/upgrade_subscription/components/SubscriptionPlanHorizontalPlan.vue": {
@@ -16866,7 +16866,7 @@
       "_PsLoading.34dbffdd.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/vendor/components/VendorDetailVendorInfo.vue": {
@@ -16976,7 +16976,7 @@
       "_NotiUnRegisterHolder.250d8dc8.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Template/PSXFETemplate/Resources/Pages/vendor/views/about/About.vue": {
@@ -25908,7 +25908,7 @@
       "_moment.9709ab41.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/StoreFront/VendorPanel/Resources/Pages/vendor/views/upgrade_subscription/components/PaymentModal.vue": {
@@ -26336,7 +26336,7 @@
       "_plugin-vue_export-helper.21dcd24c.js"
     ],
     "css": [
-      "assets/PsToggle.efb0eb20.css"
+      "assets/default.css_vue_type_style_index_0_src_7fc0e84c_lang.3770b575.css"
     ]
   },
   "Modules/Template/PSXFETemplate/Resources/Pages/vendor/components/core/uploads/PsFileUpload.vue": {

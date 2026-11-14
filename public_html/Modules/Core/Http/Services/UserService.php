@@ -461,6 +461,9 @@ class UserService extends PsService
         }
 
         $user->save();
+        if (! empty($user->user_cover_photo)) {
+            self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+        }
 
         $this->storeOrUpdateUserPermission($user->id, $user->role_id);
 
@@ -587,6 +590,9 @@ class UserService extends PsService
         }
 
         $user->update();
+        if (! empty($user->user_cover_photo)) {
+            self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+        }
 
         $this->storeOrUpdateUserPermission($user->id, $user->role_id);
 
@@ -689,6 +695,9 @@ class UserService extends PsService
         }
 
         $user->update();
+        if (! empty($user->user_cover_photo)) {
+            self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+        }
 
         return $user;
     }
@@ -1082,6 +1091,10 @@ class UserService extends PsService
                 $fileName = $this->imageService->insertImageToStorage($file, $user->user_cover_photo);
                 $user->user_cover_photo = $fileName;
                 $user->update();
+        if (! empty($user->user_cover_photo)) {
+            self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+        }
+                self::syncUserProfileImageToVendor($user->id, $fileName);
             }
 
             DB::commit();
@@ -1302,6 +1315,9 @@ class UserService extends PsService
         $user->user_cover_photo = null;
 
         $user->update();
+        if (! empty($user->user_cover_photo)) {
+            self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+        }
 
         $this->imageService->deleteImage($request->user_cover_photo);
     }
@@ -1315,6 +1331,9 @@ class UserService extends PsService
             $fileName = $this->imageService->insertImageToStorage($file, $user->user_cover_photo);
             $user->user_cover_photo = $fileName;
             $user->update();
+        if (! empty($user->user_cover_photo)) {
+            self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+        }
         }
     }
 
@@ -1340,6 +1359,9 @@ class UserService extends PsService
             }
 
             $user->update();
+        if (! empty($user->user_cover_photo)) {
+            self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+        }
 
             DB::commit();
         } catch (\Throwable $e) {
@@ -1387,6 +1409,9 @@ class UserService extends PsService
                             return responseMsgApi('invalid password', $this->internalServerErrorStatusCode);
                         }
                         $user->update();
+        if (! empty($user->user_cover_photo)) {
+            self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+        }
                     } else {
                         return responseMsgApi(__('core__api_incorrect_old_password', [], $request->language_symbol), $this->badRequestStatusCode);
                     }
@@ -1436,6 +1461,13 @@ class UserService extends PsService
                     $user->user_cover_photo = $img;
                 }
                 $user->update();
+        if (! empty($user->user_cover_photo)) {
+            self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+        }
+
+                if (! empty($user->user_cover_photo)) {
+                    self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+                }
 
                 DB::commit();
                 $user = new UserApiResource($user);
@@ -1921,6 +1953,9 @@ class UserService extends PsService
         }
         $user->updated_user_id = Auth::user()->id;
         $user->update();
+        if (! empty($user->user_cover_photo)) {
+            self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+        }
     }
 
     // ----------------custom fields----------------------------
@@ -2364,8 +2399,14 @@ class UserService extends PsService
 
             if (isset($request->id)) {
                 $user->update();
+        if (! empty($user->user_cover_photo)) {
+            self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+        }
             } else {
                 $user->save();
+        if (! empty($user->user_cover_photo)) {
+            self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
+        }
             }
 
             $this->storeOrUpdateUserPermission($user->id, $user->role_id);
@@ -3470,6 +3511,11 @@ class UserService extends PsService
                 }
             }
 
+            // Automatically sync user profile photo to vendor
+            if (! empty($userModel->user_cover_photo)) {
+                self::syncUserProfileImageToVendor($userId, $userModel->user_cover_photo);
+            }
+
             // Vendor delivery setting
             $deliverySetting = \Modules\StoreFront\VendorPanel\Entities\VendorDeliverySetting::where('vendor_id', $vendor->id)->first();
             if (! $deliverySetting) {
@@ -3547,6 +3593,60 @@ class UserService extends PsService
             return $vendor;
         } catch (\Throwable $e) {
             return null;
+        }
+    }
+
+    public static function syncUserProfileImageToVendor($userId, $imgPath)
+    {
+        if (empty($userId) || empty($imgPath)) {
+            return;
+        }
+
+        try {
+            $vendor = \Modules\Core\Entities\Vendor\Vendor::where('owner_user_id', $userId)->first();
+            if (! $vendor) {
+                return;
+            }
+
+            // Sync vendor logo
+            $existingLogo = \Modules\Core\Entities\CoreImage::where('img_parent_id', $vendor->id)
+                ->where('img_type', Constants::vendorLogoImgType)
+                ->first();
+
+            if ($existingLogo) {
+                $existingLogo->img_path = $imgPath;
+                $existingLogo->updated_user_id = $userId;
+                $existingLogo->save();
+            } else {
+                \Modules\Core\Entities\CoreImage::create([
+                    'img_parent_id' => $vendor->id,
+                    'img_type' => Constants::vendorLogoImgType,
+                    'img_path' => $imgPath,
+                    'added_user_id' => $userId,
+                ]);
+            }
+
+            // Sync vendor banner 1
+            $existingBanner = \Modules\Core\Entities\CoreImage::where('img_parent_id', $vendor->id)
+                ->where('img_type', Constants::vendorBanner1ImgType)
+                ->first();
+
+            if ($existingBanner) {
+                $existingBanner->img_path = $imgPath;
+                $existingBanner->updated_user_id = $userId;
+                $existingBanner->save();
+            } else {
+                \Modules\Core\Entities\CoreImage::create([
+                    'img_parent_id' => $vendor->id,
+                    'img_type' => Constants::vendorBanner1ImgType,
+                    'img_path' => $imgPath,
+                    'added_user_id' => $userId,
+                ]);
+            }
+
+            \Modules\Core\Http\Facades\PsCache::clear(\App\Config\Cache\VendorCache::BASE);
+        } catch (\Throwable $e) {
+            \Log::error('Error syncing user profile photo to vendor: '.$e->getMessage());
         }
     }
 }

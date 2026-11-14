@@ -4,7 +4,12 @@
 !**/.env.example
 
 # Composer & Vendor
-**/vendor/
+/vendor/
+public_html/vendor/
+!**/Modules/**/Vendor/
+!**/Modules/**/Vendor/**
+!**/Modules/**/vendor/
+!**/Modules/**/vendor/**
 
 # Node & NPM
 **/node_modules/
