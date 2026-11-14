@@ -117,18 +117,47 @@ class VendorItemBoughtTransactionService extends PsService
         // update decreasing quantity
         foreach ($getItemOrders as $getItemOrder) {
             $itemId = $getItemOrder->item_id;
-            $getItemInfo = ItemInfo::where(ItemInfo::itemId, $itemId)
-                ->where(ItemInfo::coreKeysId, 'ps-itm00046')
-                ->first();
-            $getItemInfo->value = availableQuantityFromItem($itemId) - (int) $getItemOrder->quantity;
-            $getItemInfo->update();
+            if (! $itemId) {
+                continue;
+            }
+            $requestedQty = max(1, (int) ($getItemOrder->quantity ?? 1));
+            $currentAvailable = availableQuantityFromItem($itemId);
+            $newQty = max(0, $currentAvailable - $requestedQty);
 
-            // if this item of quantity will be zero, item will be sold out
-            $availableQuantity = $getItemInfo->value;
-            if (! $availableQuantity || (int) $availableQuantity < 1) {
-                $orderedItem = $this->itemService->getItem($itemId);
-                $orderedItem->is_sold_out = 1;
-                $orderedItem->update();
+            // Find existing ItemInfo record or create one
+            $getItemInfo = ItemInfo::where('item_id', $itemId)
+                ->whereIn('core_keys_id', ['ps-itm00046', 'itm00046', 'ps-itm00010', 'itm00010'])
+                ->first();
+
+            if (! $getItemInfo) {
+                $getItemInfo = new ItemInfo();
+                $getItemInfo->item_id = $itemId;
+                $getItemInfo->core_keys_id = 'ps-itm00046';
+                $getItemInfo->ui_type_id = 'uit00007';
+                $getItemInfo->added_user_id = $userId ?? 1;
+            }
+
+            $getItemInfo->value = (string) $newQty;
+            $getItemInfo->save();
+
+            // Update item sold out status and direct quantity if column exists
+            $orderedItem = $this->itemService->getItem($itemId);
+            if ($orderedItem) {
+                if ($newQty <= 0) {
+                    $orderedItem->is_sold_out = 1;
+                } else {
+                    $orderedItem->is_sold_out = 0;
+                }
+                if (isset($orderedItem->quantity)) {
+                    $orderedItem->quantity = $newQty;
+                }
+                if (isset($orderedItem->stock)) {
+                    $orderedItem->stock = $newQty;
+                }
+                if (isset($orderedItem->available_quantity)) {
+                    $orderedItem->available_quantity = $newQty;
+                }
+                $orderedItem->save();
             }
         }
 
@@ -171,7 +200,20 @@ class VendorItemBoughtTransactionService extends PsService
             // check quantity enough or not start
             foreach ($getItemOrders as $getItemOrder) {
                 $itemId = $getItemOrder->item_id;
-                if (availableQuantityFromItem($itemId) < (int) $getItemOrder->quantity) {
+                if (! $itemId) {
+                    continue;
+                }
+                $requestedQty = max(1, (int) ($getItemOrder->quantity ?? 1));
+                $availableQty = availableQuantityFromItem($itemId);
+
+                $item = DB::table('psx_items')->where('id', $itemId)->first();
+                if ($item && (int) ($item->is_sold_out ?? 0) === 1) {
+                    $msg = __('this_item_does_not_have_quantity_you_want', [], $request->language_symbol);
+
+                    return responseMsgApi($msg, Constants::badRequestStatusCode);
+                }
+
+                if ($availableQty < $requestedQty) {
                     $msg = __('this_item_does_not_have_quantity_you_want', [], $request->language_symbol);
 
                     return responseMsgApi($msg, Constants::badRequestStatusCode);

@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Modules\Core\Constants\Constants;
 use Modules\Core\Entities\Favourite;
+use Modules\Core\Entities\ItemInfo;
 use Modules\Core\Entities\Item\PaidItemHistory;
 use Modules\Core\Transformers\Api\App\V1_0\Category\CategoryApiResource;
 use Modules\Core\Transformers\Api\App\V1_0\Category\SubcategoryApiResource;
@@ -30,6 +31,28 @@ class ItemApiResource extends JsonResource
 
     public function toArray($request)
     {
+        $availableQty = isset($this->id) ? availableQuantityFromItem($this->id) : 0;
+
+        // Ensure productRelation contains a ps-itm00046 relation with the accurate available quantity
+        $relations = collect($this->itemRelation ?? []);
+        $hasQtyRelation = false;
+        foreach ($relations as $rel) {
+            if (isset($rel->core_keys_id) && in_array($rel->core_keys_id, ['ps-itm00046', 'itm00046', 'ps-itm00010', 'itm00010'])) {
+                $rel->core_keys_id = 'ps-itm00046';
+                $rel->value = (string) $availableQty;
+                $hasQtyRelation = true;
+                break;
+            }
+        }
+        if (! $hasQtyRelation && isset($this->id)) {
+            $qtyInfo = new ItemInfo();
+            $qtyInfo->id = 0;
+            $qtyInfo->item_id = $this->id;
+            $qtyInfo->core_keys_id = 'ps-itm00046';
+            $qtyInfo->value = (string) $availableQty;
+            $qtyInfo->ui_type_id = 'uit00007';
+            $relations->push($qtyInfo);
+        }
 
         return [
             'id' => checkAndGetValue($this, 'id'),
@@ -55,6 +78,8 @@ class ItemApiResource extends JsonResource
             'ordering' => checkAndGetValue($this, 'ordering'),
             'is_available' => checkAndGetValue($this, 'is_available'),
             'is_discount' => checkAndGetValue($this, 'is_discount'),
+            'quantity' => (string) $availableQty,
+            'available_quantity' => (string) $availableQty,
             'item_touch_count' => checkAndGetValue($this, 'item_touch_count'),
             'favourite_count' => checkAndGetValue($this, 'favourite_count'),
             'added_date' => checkAndGetValue($this, 'added_date'),
@@ -66,7 +91,7 @@ class ItemApiResource extends JsonResource
             'paid_status' => (string) $this->getPaidStatus(),
             'photo_count' => (string) $this->getPhotoCount(),
             'video_count' => (string) $this->getVideoCount(),
-            'productRelation' => ItemInfoApiResource::collection($this->itemRelation ?? []),
+            'productRelation' => ItemInfoApiResource::collection($relations),
             'default_photo' => new CoreImageApiResource($this->cover[0] ?? []),
             'default_video' => new CoreImageApiResource($this->video[0] ?? []),
             'default_video_icon' => new CoreImageApiResource($this->icon[0] ?? []),

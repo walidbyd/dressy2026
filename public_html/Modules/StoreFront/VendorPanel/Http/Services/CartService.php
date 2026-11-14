@@ -80,12 +80,8 @@ class CartService extends PsService
         $itemId = $request->item_id;
         $isSelect = $request->is_select;
 
-        $getItemInfo = ItemInfo::where(ItemInfo::itemId, $itemId)
-            ->where(ItemInfo::coreKeysId, 'ps-itm00046')
-            ->first();
-
-        $availableQty = ! empty($getItemInfo->value) ? $getItemInfo->value : 0;
-        if ($quantity > $availableQty) {
+        $availableQty = availableQuantityFromItem($itemId);
+        if ((int) $quantity > $availableQty) {
             $msg = __('item_qty_insufficient', [], $request->language_symbol).' '.$availableQty;
 
             return responseMsgApi($msg, Constants::badRequestStatusCode);

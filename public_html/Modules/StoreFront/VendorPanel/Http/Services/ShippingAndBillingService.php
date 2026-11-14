@@ -88,13 +88,28 @@ class ShippingAndBillingService extends PsService
         }
 
         // check quantity enough or not start
-        foreach ($request->order_summary as $orderSummary) {
-            $orderSummary = (object) $orderSummary;
-            $itemId = $orderSummary->item_id;
-            if (availableQuantityFromItem($itemId) < (int) $orderSummary->quantity) {
-                $msg = __('this_item_does_not_have_quantity_you_want', [], $request->language_symbol);
+        if (! empty($request->order_summary) && is_array($request->order_summary)) {
+            foreach ($request->order_summary as $orderSummary) {
+                $orderSummary = (object) $orderSummary;
+                $itemId = $orderSummary->item_id ?? null;
+                if (! $itemId) {
+                    continue;
+                }
+                $requestedQty = max(1, (int) ($orderSummary->quantity ?? 1));
+                $availableQty = availableQuantityFromItem($itemId);
 
-                return responseMsgApi($msg, Constants::badRequestStatusCode);
+                $item = DB::table('psx_items')->where('id', $itemId)->first();
+                if ($item && (int) ($item->is_sold_out ?? 0) === 1) {
+                    $msg = __('this_item_does_not_have_quantity_you_want', [], $request->language_symbol);
+
+                    return responseMsgApi($msg, Constants::badRequestStatusCode);
+                }
+
+                if ($availableQty < $requestedQty) {
+                    $msg = __('this_item_does_not_have_quantity_you_want', [], $request->language_symbol);
+
+                    return responseMsgApi($msg, Constants::badRequestStatusCode);
+                }
             }
         }
         // check quantity enough or not end

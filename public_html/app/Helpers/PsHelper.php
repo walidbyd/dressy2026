@@ -1962,12 +1962,70 @@ if (! function_exists('convertMonthFromStringToNumber')) {
 if (! function_exists('availableQuantityFromItem')) {
     function availableQuantityFromItem($itemId)
     {
-        $getItemInfo = ItemInfo::where(ItemInfo::itemId, $itemId)
-            ->where(ItemInfo::coreKeysId, 'ps-itm00046')
-            ->first();
-        $availableQuantity = (int) $getItemInfo->value;
+        if (empty($itemId)) {
+            return 0;
+        }
 
-        return $availableQuantity;
+        // 1. Check direct columns on Item model / psx_items
+        $item = DB::table('psx_items')->where('id', $itemId)->first();
+        if (! $item) {
+            return 0;
+        }
+
+        // If explicitly marked as sold out, quantity is 0
+        if (! empty($item->is_sold_out) && (int) $item->is_sold_out === 1) {
+            return 0;
+        }
+
+        // Check if direct column exists on psx_items (quantity, stock, available_quantity)
+        if (isset($item->quantity) && is_numeric($item->quantity)) {
+            return max(0, (int) $item->quantity);
+        }
+        if (isset($item->stock) && is_numeric($item->stock)) {
+            return max(0, (int) $item->stock);
+        }
+        if (isset($item->available_quantity) && is_numeric($item->available_quantity)) {
+            return max(0, (int) $item->available_quantity);
+        }
+
+        // 2. Check psx_item_infos by known core_keys_id variants
+        $qtyKeys = ['ps-itm00046', 'itm00046', 'ps-itm00010', 'itm00010'];
+        $itemInfo = DB::table('psx_item_infos')
+            ->where('item_id', $itemId)
+            ->whereIn('core_keys_id', $qtyKeys)
+            ->whereNotNull('value')
+            ->where('value', '!=', '')
+            ->first();
+
+        if ($itemInfo && is_numeric(trim((string) $itemInfo->value))) {
+            return max(0, (int) trim((string) $itemInfo->value));
+        }
+
+        // 3. Check psx_item_infos joined with psx_customize_ui
+        $customFieldInfo = DB::table('psx_item_infos as ii')
+            ->join('psx_customize_ui as cu', 'ii.core_keys_id', '=', 'cu.core_keys_id')
+            ->where('ii.item_id', $itemId)
+            ->where(function ($q) {
+                $q->where('cu.core_keys_id', 'like', '%itm00046%')
+                  ->orWhere('cu.core_keys_id', 'like', '%itm00010%')
+                  ->orWhere('cu.name', 'like', '%qty%')
+                  ->orWhere('cu.name', 'like', '%quant%');
+            })
+            ->whereNotNull('ii.value')
+            ->where('ii.value', '!=', '')
+            ->select('ii.value')
+            ->first();
+
+        if ($customFieldInfo && is_numeric(trim((string) $customFieldInfo->value))) {
+            return max(0, (int) trim((string) $customFieldInfo->value));
+        }
+
+        // 4. Fallback: If item is active and not sold out, default to 1
+        if ((int) ($item->is_sold_out ?? 0) === 0 && (int) ($item->is_available ?? 1) === 1) {
+            return 1;
+        }
+
+        return 0;
     }
 }
 
