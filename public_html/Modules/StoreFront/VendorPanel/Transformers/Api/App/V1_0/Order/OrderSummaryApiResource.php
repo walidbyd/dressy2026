@@ -79,6 +79,10 @@ class OrderSummaryApiResource extends JsonResource
         $orderSummaryObj->status_reason = (string) ($this->status_reason ?? '');
         $orderSummaryObj->is_wallet_credited = (string) ($this->is_wallet_credited ?? '0');
         $orderSummaryObj->wallet_credited_at = isset($this->wallet_credited_at) ? (string) \Carbon\Carbon::parse($this->wallet_credited_at)->format('M d, Y H:i') : '';
+        $orderSummaryObj->user_id = (string) $this->user_id;
+        $orderSummaryObj->buyer_user_id = (string) $this->user_id;
+        $orderSummaryObj->seller_user_id = (string) ($this->vendor?->owner_user_id ?? '');
+        $orderSummaryObj->vendor_id = (string) ($this->vendor_id ?? '');
 
         return [
             'order_summary' => $orderSummaryObj,

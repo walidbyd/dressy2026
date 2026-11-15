@@ -185,6 +185,10 @@ class VendorService extends PsService implements VendorServiceInterface
                     ->when($ids !== null, function ($query) use ($ids) {
                         $query->whereIn(Vendor::tableName.'.'.Vendor::id, $ids);
                     })
+                    ->when(isset($conds['has_items']) && $conds['has_items'], function ($query) {
+                        $vendorIds = \Modules\Core\Entities\Item::where('status', 1)->whereNotNull('vendor_id')->where('vendor_id', '!=', 0)->distinct()->pluck('vendor_id');
+                        $query->whereIn(Vendor::tableName.'.'.Vendor::id, $vendorIds);
+                    })
                     ->when($conds, function ($query, $conds) {
                         $query = $this->searching($query, $conds);
                     })->when($limit, function ($query, $limit) {

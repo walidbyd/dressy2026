@@ -1524,17 +1524,15 @@ class UserApiController extends Controller
 
         $user = $this->userService->getUser($request->user_id);
 
-        if ($user->email != $request->email) {
+        if (!empty($request->email) && $user->email != $request->email) {
             // if email changed, check email
-            $checkEmail['email'] = $request->email;
-            if ($this->userService->exists($checkEmail)) {
+            if (\App\Models\User::where('email', $request->email)->where('id', '!=', $user->id)->exists()) {
                 return responseMsgApi(__('core__api_email_already_existed', [], $request->language_symbol), $this->badRequestStatusCode);
             }
         }
-        if ($user->user_phone != '' && $user->user_phone != $request->user_phone) {
-            // if email changed, check email
-            $checkPhone['user_phone'] = $request->user_phone;
-            if ($this->userService->exists($checkPhone)) {
+        if (!empty($request->user_phone) && $user->user_phone != $request->user_phone) {
+            // if phone changed, check phone
+            if (\App\Models\User::where('user_phone', $request->user_phone)->where('id', '!=', $user->id)->exists()) {
                 return responseMsgApi(__('core__api_phone_already_existed', [], $request->language_symbol), $this->badRequestStatusCode);
             }
         }

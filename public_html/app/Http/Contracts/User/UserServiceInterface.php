@@ -41,5 +41,7 @@ interface UserServiceInterface extends PsInterface
 
     public function addFreeAdPostCount($userId);
 
+    public function exists($conds);
+
     public function userHasUploadPermission($uploadSetting, $userRoleId, $userHasBlueMark, $vendorId = null);
 }

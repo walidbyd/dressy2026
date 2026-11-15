@@ -51,6 +51,10 @@ class OrderHistoryApiResource extends JsonResource
             'delivery_fee' => (string) ($this->delivery_fee ?? '0'),
             'yalidine_tracking' => (string) ($this->yalidine_tracking ?? ''),
             'yalidine_status' => (string) ($this->yalidine_status ?? ''),
+            'user_id' => (string) $this->user_id,
+            'buyer_user_id' => (string) $this->user_id,
+            'seller_user_id' => (string) ($this->vendor?->owner_user_id ?? ''),
+            'vendor_id' => (string) ($this->vendor_id ?? ''),
         ];
 
     }

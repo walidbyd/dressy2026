@@ -500,6 +500,11 @@ class UserService extends PsService implements UserServiceInterface
         return $query;
     }
 
+    public function exists($conds)
+    {
+        return User::where($conds)->exists();
+    }
+
     private function saveProfilePhoto($userId, $userCoverPhoto)
     {
         if ($userId != null) {
