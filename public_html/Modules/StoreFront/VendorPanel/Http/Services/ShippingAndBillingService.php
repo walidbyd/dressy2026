@@ -120,6 +120,17 @@ class ShippingAndBillingService extends PsService
             $shippingInfoForNextTime = $request->is_save_shipping_info_for_next_time;
             $billingInfoForNextTime = $request->is_save_billing_info_for_next_time;
 
+            // Determine delivery type, origin & destination Wilayas
+            $deliveryType = $request->delivery_type ?? (filter_var($request->is_stop_desk ?? false, FILTER_VALIDATE_BOOLEAN) ? 'stop_desk' : 'home');
+            $vendor = DB::table('psx_vendors')->where('id', $request->vendor_id)->first();
+            $fromWilayaRaw = $request->from_wilaya_id ?? ($vendor ? ($vendor->address ?? $vendor->name ?? 16) : 16);
+            $toWilayaRaw = $request->to_wilaya_id ?? $request->shipping_city ?? $request->shipping_state ?? 16;
+            $yalidineService = app(\App\Services\YalidineService::class);
+            $fromWilayaId = $yalidineService->normalizeWilayaId($fromWilayaRaw);
+            $toWilayaId = $yalidineService->normalizeWilayaId($toWilayaRaw);
+            $toCommuneName = $request->to_commune_name ?? $request->shipping_city ?? $yalidineService->getWilayaNameById($toWilayaId);
+            $stopDeskId = !empty($request->yalidine_stop_desk_id) ? (int) $request->yalidine_stop_desk_id : null;
+
             if ($request->has('delivery_fee') && is_numeric($request->delivery_fee) && (float) $request->delivery_fee > 0) {
                 $deliveryFee = (float) $request->delivery_fee;
             } else {
@@ -128,12 +139,7 @@ class ShippingAndBillingService extends PsService
                     $deliveryFee = (float) $VendorDeliverySetting->delivery_charges;
                 } else {
                     // Compute dynamic Yalidine delivery fee
-                    $vendor = DB::table('psx_vendors')->where('id', $request->vendor_id)->first();
-                    $fromWilaya = $vendor ? ($vendor->address ?? $vendor->name ?? 16) : 16;
-                    $toWilaya = $request->shipping_city ?? $request->shipping_state ?? 16;
-                    $isStopDesk = filter_var($request->is_stop_desk ?? false, FILTER_VALIDATE_BOOLEAN);
-                    $yalidineService = app(YalidineService::class);
-                    $calc = $yalidineService->calculateDeliveryFee($fromWilaya, $toWilaya, $isStopDesk);
+                    $calc = $yalidineService->calculateDeliveryFee($fromWilayaId, $toWilayaId, $deliveryType);
                     $deliveryFee = (float) ($calc['delivery_fee'] ?? 400.00);
                 }
             }
@@ -160,6 +166,11 @@ class ShippingAndBillingService extends PsService
             $order->order_status_id = ps_constant::pendingStatusOfVendorOrder;
             $order->order_code = rand(100000, 999999);
             $order->delivery_fee = $deliveryFee;
+            $order->delivery_type = $deliveryType;
+            $order->from_wilaya_id = $fromWilayaId;
+            $order->to_wilaya_id = $toWilayaId;
+            $order->to_commune_name = $toCommuneName;
+            $order->yalidine_stop_desk_id = $stopDeskId;
             $order->is_payment_fail = 1; // update it after transaction success
             $order->order_date = Carbon::now();
             $order->added_user_id = $userId;

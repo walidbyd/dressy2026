@@ -35,10 +35,21 @@ class ItemInfoApiResource extends JsonResource
         if (! empty($this->value)) {
             if (in_array($this->ui_type_id, $uiTypeForAttrs)) {
                 $obj = CustomFieldAttribute::where(CustomFieldAttribute::id, $this->value)->first();
+                if (! $obj) {
+                    $obj = CustomFieldAttribute::where(CustomFieldAttribute::name, $this->value)
+                        ->where(CustomFieldAttribute::coreKeysId, $this->core_keys_id)
+                        ->first();
+                }
                 if ($obj) {
                     $changedObj = [
                         'id' => (string) $obj->id,
                         'value' => (string) $obj->name,
+                    ];
+                    $data = [$changedObj];
+                } else {
+                    $changedObj = [
+                        'id' => (string) $this->value,
+                        'value' => (string) $this->value,
                     ];
                     $data = [$changedObj];
                 }

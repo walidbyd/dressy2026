@@ -95,6 +95,9 @@ class AdminOrderController extends PsController
 
             $order->delivery_fee_formatted = number_format((float) ($order->delivery_fee ?? 0), 2);
             $order->total_price_formatted = number_format((float) ($order->total_price ?? 0), 2);
+            $order->delivery_type = $order->delivery_type ?? 'home';
+            $order->yalidine_label_url = $order->yalidine_label_url ?? '';
+            $order->yalidine_status = $order->yalidine_parcel_status ?? $order->yalidine_status ?? '';
 
             return $order;
         });
@@ -148,5 +151,35 @@ class AdminOrderController extends PsController
             'flag' => Constants::success,
             'msg' => __("Order #{$order->order_code} status updated successfully!"),
         ]);
+    }
+
+    public function generateParcel(Request $request, $id)
+    {
+        $order = Order::with(['shippingAndBilling', 'orderItems.item', 'user', 'vendorTransaction'])->findOrFail($id);
+        $yalidineService = app(\App\Services\YalidineService::class);
+        $result = $yalidineService->createParcelForOrder($order);
+
+        if (empty($result['success'])) {
+            return redirect()->back()->withErrors([
+                'msg' => $result['error'] ?? __('Failed to generate Yalidine parcel.')
+            ]);
+        }
+
+        return redirect()->back()->with('status', [
+            'flag' => Constants::success,
+            'msg' => __("Yalidine parcel generated successfully! Tracking: :tracking", ['tracking' => $result['tracking']]),
+        ]);
+    }
+
+    public function printLabel(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        if (!empty($order->yalidine_label_url)) {
+            return redirect()->away($order->yalidine_label_url);
+        }
+        if (!empty($order->yalidine_tracking)) {
+            return redirect()->away("https://api.yalidine.app/v1/parcels/print/?tracking={$order->yalidine_tracking}");
+        }
+        return redirect()->back()->withErrors(['msg' => __('No shipping label available for this order.')]);
     }
 }

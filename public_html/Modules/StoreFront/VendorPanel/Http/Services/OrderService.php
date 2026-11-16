@@ -661,10 +661,27 @@ class OrderService extends PsService
             return responseMsgApi(__('Only pending orders can be accepted.'), Constants::badRequestStatusCode);
         }
 
+        // Generate Yalidine parcel on seller order approval
+        $order->load(['shippingAndBilling', 'orderItems.item', 'vendorTransaction', 'user']);
+        $yalidineService = app(\App\Services\YalidineService::class);
+        $yalResult = $yalidineService->createParcelForOrder($order);
+
         $order->order_status_id = Constants::orderApprovedStatus;
+        if (!empty($yalResult['success'])) {
+            $order->yalidine_tracking = $yalResult['tracking'] ?? null;
+            $order->yalidine_parcel_id = $yalResult['parcel_id'] ?? null;
+            $order->yalidine_label_url = $yalResult['label_url'] ?? null;
+            $order->yalidine_parcel_status = $yalResult['status'] ?? 'dispatched';
+            $order->yalidine_status = $yalResult['status'] ?? 'dispatched';
+        }
         $order->save();
 
-        return responseMsgApi(__('Order has been accepted successfully.'), Constants::okStatusCode, Constants::successStatus);
+        return response()->json([
+            'status' => 'success',
+            'message' => __('Order has been accepted and Yalidine parcel created.'),
+            'tracking' => $order->yalidine_tracking,
+            'label_url' => $order->yalidine_label_url,
+        ], Constants::okStatusCode);
     }
 
     public function dispatchOrderFromApi($request)
@@ -695,26 +712,35 @@ class OrderService extends PsService
         }
 
         // Load relations needed for shipment creation
-        $order->load(['shippingAndBilling', 'orderItems', 'vendorTransaction']);
+        $order->load(['shippingAndBilling', 'orderItems.item', 'vendorTransaction', 'user']);
 
-        // Call Yalidine parcel creation service
-        $yalidineService = app(YalidineService::class);
-        $yalidineResult = $yalidineService->createParcelForOrder($order);
+        // Call Yalidine parcel creation service if not already generated
+        if (empty($order->yalidine_tracking)) {
+            $yalidineService = app(\App\Services\YalidineService::class);
+            $yalidineResult = $yalidineService->createParcelForOrder($order);
 
-        if (empty($yalidineResult['success'])) {
-            $errorMessage = $yalidineResult['error'] ?? __('Failed to create Yalidine shipment.');
+            if (empty($yalidineResult['success'])) {
+                $errorMessage = $yalidineResult['error'] ?? __('Failed to create Yalidine shipment.');
 
-            return responseMsgApi($errorMessage, Constants::badRequestStatusCode);
+                return responseMsgApi($errorMessage, Constants::badRequestStatusCode);
+            }
+
+            $order->yalidine_tracking = $yalidineResult['tracking'] ?? null;
+            $order->yalidine_parcel_id = $yalidineResult['parcel_id'] ?? null;
+            $order->yalidine_label_url = $yalidineResult['label_url'] ?? null;
+            $order->yalidine_parcel_status = $yalidineResult['status'] ?? 'dispatched';
+            $order->yalidine_status = $yalidineResult['status'] ?? 'dispatched';
         }
 
-        // Save tracking information and transition status to Delivering / Dispatched
-        $order->yalidine_tracking = $yalidineResult['tracking'] ?? null;
-        $order->yalidine_parcel_id = $yalidineResult['parcel_id'] ?? null;
-        $order->yalidine_status = $yalidineResult['status'] ?? 'dispatched';
         $order->order_status_id = Constants::orderDeliveringStatus;
         $order->save();
 
-        return responseMsgApi(__('Order has been dispatched and Yalidine shipment created.'), Constants::okStatusCode, Constants::successStatus);
+        return response()->json([
+            'status' => 'success',
+            'message' => __('Order has been dispatched and Yalidine shipment created.'),
+            'tracking' => $order->yalidine_tracking,
+            'label_url' => $order->yalidine_label_url,
+        ], Constants::okStatusCode);
     }
 
     public function sendToDeliveryOrderFromApi($request)

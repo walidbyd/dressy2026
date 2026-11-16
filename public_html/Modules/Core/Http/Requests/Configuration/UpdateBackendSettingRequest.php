@@ -46,6 +46,14 @@ class UpdateBackendSettingRequest extends FormRequest
                 'rules' => 'nullable',
             ],
             [
+                'fieldName' => 'yalidine_api_id',
+                'rules' => 'nullable',
+            ],
+            [
+                'fieldName' => 'yalidine_api_token',
+                'rules' => 'nullable',
+            ],
+            [
                 'fieldName' => 'app_token',
                 'rules' => 'nullable',
             ],

@@ -22,6 +22,8 @@ class BackendSetting extends Model
         'receive_email',
         'fcm_api_key',
         'map_key',
+        'yalidine_api_id',
+        'yalidine_api_token',
         'app_token',
         'topics',
         'topics_fe',

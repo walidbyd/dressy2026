@@ -366,6 +366,25 @@
                                     
                                     </div>
 
+                                    <div class="px-4 py-3">
+                                        <ps-accordion class="w-130 md:items-right">
+                                            <template #title>
+                                                <ps-label-header-5>🚚 Yalidine Express Logistics API</ps-label-header-5>
+                                            </template>
+                                            <template #description>
+                                                <ps-label class="text-base text-secondary-500 mb-2">Configure Yalidine Express API credentials for real-time rates and automatic shipping parcel creation.</ps-label>
+                                                <div class="px-4 py-3">
+                                                    <ps-label class="text-base mb-1">Yalidine API ID (X-API-ID)</ps-label>
+                                                    <ps-input ref="yalidine_api_id" type="text" v-model:value="form.yalidine_api_id" placeholder="e.g., 294817294" />
+                                                </div>
+                                                <div class="px-4 py-3">
+                                                    <ps-label class="text-base mb-1">Yalidine API Token (X-API-TOKEN)</ps-label>
+                                                    <ps-input ref="yalidine_api_token" type="password" v-model:value="form.yalidine_api_token" placeholder="Enter Yalidine token" />
+                                                </div>
+                                            </template>
+                                        </ps-accordion>
+                                    </div>
+
                                 </div>
                                 <!-- End Map Configuration -->
 
@@ -1723,6 +1742,8 @@ export default defineComponent({
                 receive_email: props.backend_setting.receive_email,
                 fcm_api_key: props.backend_setting.fcm_api_key,
                 map_key: props.backend_setting.map_key,
+                yalidine_api_id: props.backend_setting.yalidine_api_id || '',
+                yalidine_api_token: props.backend_setting.yalidine_api_token || '',
                 app_token: props.backend_setting.app_token,
                 topics: props.backend_setting.topics,
                 topics_fe: props.backend_setting.topics_fe,

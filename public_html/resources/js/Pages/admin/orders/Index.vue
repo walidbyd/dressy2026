@@ -154,18 +154,39 @@
                                 </div>
                             </td>
 
-                            <!-- Yalidine Tracking -->
+                            <!-- Yalidine Tracking & Mode -->
                             <td class="px-5 py-4">
-                                <div v-if="order.yalidine_tracking" class="flex flex-col gap-1">
-                                    <span class="inline-flex items-center gap-1 font-mono font-bold text-xs text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded">
-                                        📦 {{ order.yalidine_tracking }}
+                                <div class="flex flex-col gap-1.5 items-start">
+                                    <!-- Delivery Mode Badge -->
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                                        :class="order.delivery_type === 'stop_desk' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-900' : 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-900'">
+                                        <span v-if="order.delivery_type === 'stop_desk'">🏢 Stop Desk (Relais)</span>
+                                        <span v-else>🏠 Domicile (Home)</span>
                                     </span>
-                                    <span v-if="order.yalidine_status" class="text-[11px] text-secondary-500 capitalize">
-                                        {{ order.yalidine_status }}
-                                    </span>
-                                </div>
-                                <div v-else class="text-xs text-secondary-400 italic">
-                                    Not dispatched yet
+
+                                    <!-- Tracking Info or Generate Button -->
+                                    <div v-if="order.yalidine_tracking" class="flex flex-col gap-1 w-full">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="inline-flex items-center gap-1 font-mono font-bold text-xs text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded">
+                                                📦 {{ order.yalidine_tracking }}
+                                            </span>
+                                            <a v-if="order.yalidine_label_url" :href="order.yalidine_label_url" target="_blank"
+                                                title="Print Shipping Label (PDF)"
+                                                class="p-1 text-gray-500 hover:text-primary-600 bg-gray-100 dark:bg-secondary-700 rounded transition-colors">
+                                                🖨️
+                                            </a>
+                                        </div>
+                                        <span v-if="order.yalidine_status" class="text-[11px] text-secondary-500 capitalize">
+                                            Status: {{ order.yalidine_status }}
+                                        </span>
+                                    </div>
+                                    <div v-else class="flex flex-col gap-1">
+                                        <span class="text-xs text-secondary-400 italic">Not dispatched yet</span>
+                                        <button @click="generateYalidineParcel(order)" :disabled="generatingOrder === order.id"
+                                            class="inline-flex items-center gap-1 px-2 py-1 bg-primary-50 hover:bg-primary-100 text-primary-700 border border-primary-200 dark:bg-primary-950/40 dark:text-primary-300 dark:border-primary-800 rounded text-[11px] font-semibold transition-colors disabled:opacity-50">
+                                            <span>{{ generatingOrder === order.id ? 'Generating...' : '+ Generate Yalidine' }}</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </td>
 
@@ -184,10 +205,16 @@
 
                             <!-- Actions -->
                             <td class="px-5 py-4 text-right">
-                                <button @click="openStatusModal(order)"
-                                    class="px-3 py-1.5 bg-secondary-100 hover:bg-secondary-200 dark:bg-secondary-700 dark:hover:bg-secondary-600 text-secondary-800 dark:text-white rounded-lg text-xs font-semibold transition-colors">
-                                    Update Status
-                                </button>
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <a v-if="order.yalidine_label_url" :href="order.yalidine_label_url" target="_blank"
+                                        class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1">
+                                        <span>🖨️ Label</span>
+                                    </a>
+                                    <button @click="openStatusModal(order)"
+                                        class="px-3 py-1.5 bg-secondary-100 hover:bg-secondary-200 dark:bg-secondary-700 dark:hover:bg-secondary-600 text-secondary-800 dark:text-white rounded-lg text-xs font-semibold transition-colors">
+                                        Update Status
+                                    </button>
+                                </div>
                             </td>
                         </tr>
 
@@ -319,6 +346,7 @@ export default defineComponent({
         const showModal = ref(false);
         const selectedOrder = ref(null);
         const submitting = ref(false);
+        const generatingOrder = ref(null);
 
         const form = ref({
             order_status_id: 1,
@@ -333,6 +361,16 @@ export default defineComponent({
             'Item defective / not as described',
             'Buyer refused package',
         ];
+
+        const generateYalidineParcel = (order) => {
+            if (!order || generatingOrder.value) return;
+            generatingOrder.value = order.id;
+            router.post(route('admin.orders.generateParcel', order.id), {}, {
+                onFinish: () => {
+                    generatingOrder.value = null;
+                }
+            });
+        };
 
         const applyStatusFilter = (status) => {
             router.get(route('admin.orders.index'), {
@@ -381,6 +419,8 @@ export default defineComponent({
             showModal,
             selectedOrder,
             submitting,
+            generatingOrder,
+            generateYalidineParcel,
             form,
             reasonPresets,
             applyStatusFilter,

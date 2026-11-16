@@ -435,4 +435,11 @@ Route::prefix('firebase')->controller(FirebaseCloudMessagingApiController::class
 // Public Dynamic Yalidine Delivery Fee calculation
 Route::match(['get', 'post'], 'vendor/calculate_delivery_fee', [OrderApiController::class, 'calculateDeliveryFee'])->name('vendor.calculateDeliveryFee');
 
+// Dedicated Yalidine Logistics Endpoints
+Route::prefix('yalidine')->controller(\App\Http\Controllers\Api\V1_0\YalidineApiController::class)->group(function () {
+    Route::get('/locations', 'locations')->name('yalidine.locations');
+    Route::match(['get', 'post'], '/calculate-fee', 'calculateFee')->name('yalidine.calculateFee');
+    Route::post('/create-parcel/{orderId}', 'createParcel')->name('yalidine.createParcel');
+});
+
 // Route::prefix('generate/short_code',);

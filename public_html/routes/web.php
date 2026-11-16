@@ -1075,6 +1075,8 @@ Route::middleware(['isInstall'])->group(function () {
         Route::prefix('orders')->controller(\Modules\StoreFront\VendorPanel\Http\Controllers\Backend\Controllers\Order\AdminOrderController::class)->group(function () {
             Route::get('/', 'index')->name('admin.orders.index');
             Route::post('/{id}/status', 'updateStatus')->name('admin.orders.updateStatus');
+            Route::post('/{id}/generate-parcel', 'generateParcel')->name('admin.orders.generateParcel');
+            Route::get('/{id}/print-label', 'printLabel')->name('admin.orders.printLabel');
         });
 
         Route::prefix('escrow')->controller(\Modules\StoreFront\VendorPanel\Http\Controllers\Backend\Controllers\Finance\AdminEscrowController::class)->group(function () {
@@ -1144,5 +1146,53 @@ Route::get('/run-migration', function () {
 
     return redirect()->route('dashboard');
 })->middleware(['auth', 'isAdmin']);
+
+// Store-Compliant Public Legal Pages (Apple & Google Play)
+Route::get('/account-deletion', function () {
+    return view('legal.account_deletion');
+})->name('public.account_deletion');
+
+Route::post('/account-deletion', function (\Illuminate\Http\Request $request) {
+    $request->validate([
+        'identifier' => 'required|string|max:255',
+        'reason' => 'nullable|string|max:1000',
+    ]);
+
+    \Illuminate\Support\Facades\Log::info('Public Account Deletion Request Received:', [
+        'identifier' => $request->identifier,
+        'reason' => $request->reason,
+        'ip' => $request->ip(),
+        'date' => now()->toDateTimeString(),
+    ]);
+
+    // Send email to admin support
+    try {
+        \Illuminate\Support\Facades\Mail::raw(
+            "Nouvelle demande de suppression de compte Dressy :\n\nIdentifiant (Email / Téléphone) : {$request->identifier}\nMotif : {$request->reason}\nIP : {$request->ip()}\nDate : " . now()->toDateTimeString(),
+            function ($message) {
+                $message->to('biadwalid@gmail.com')
+                    ->subject('[Dressy] Demande de suppression de compte utilisateur');
+            }
+        );
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::warning('Failed sending account deletion notification email: ' . $e->getMessage());
+    }
+
+    return redirect()->back()->with('success', 'Votre demande de suppression de compte et d\'effacement de vos données personnelles a bien été enregistrée. Elle sera traitée sous 48 heures ouvrées.');
+})->name('public.account_deletion.submit');
+
+Route::get('/privacy-policy', function () {
+    $policy = \Illuminate\Support\Facades\DB::table('psx_core_privacy_policies')->first();
+    return view('legal.privacy', [
+        'content' => $policy ? $policy->content : 'Politique de confidentialité en cours de mise à jour.',
+    ]);
+})->name('public.privacy_policy');
+
+Route::get('/terms-and-conditions', function () {
+    $about = \Illuminate\Support\Facades\DB::table('psx_core_abouts')->first();
+    return view('legal.terms', [
+        'content' => $about ? $about->terms_and_conditions : 'Conditions Générales d\'Utilisation en cours de mise à jour.',
+    ]);
+})->name('public.terms_and_conditions');
 
 Route::get('/{shortCode}', [DynamicLinkController::class, 'redirect'])->name('shortcode');

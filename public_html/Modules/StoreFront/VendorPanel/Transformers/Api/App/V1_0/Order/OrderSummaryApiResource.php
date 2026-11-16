@@ -75,7 +75,14 @@ class OrderSummaryApiResource extends JsonResource
         $orderSummaryObj->total = (string) $totalAmount;
         $orderSummaryObj->yalidine_tracking = (string) ($this->yalidine_tracking ?? '');
         $orderSummaryObj->yalidine_parcel_id = (string) ($this->yalidine_parcel_id ?? '');
-        $orderSummaryObj->yalidine_status = (string) ($this->yalidine_status ?? '');
+        $orderSummaryObj->yalidine_status = (string) ($this->yalidine_parcel_status ?? $this->yalidine_status ?? '');
+        $orderSummaryObj->yalidine_parcel_status = (string) ($this->yalidine_parcel_status ?? $this->yalidine_status ?? '');
+        $orderSummaryObj->yalidine_label_url = (string) ($this->yalidine_label_url ?? '');
+        $orderSummaryObj->delivery_type = (string) ($this->delivery_type ?? 'home');
+        $orderSummaryObj->from_wilaya_id = (string) ($this->from_wilaya_id ?? '');
+        $orderSummaryObj->to_wilaya_id = (string) ($this->to_wilaya_id ?? '');
+        $orderSummaryObj->to_commune_name = (string) ($this->to_commune_name ?? '');
+        $orderSummaryObj->yalidine_stop_desk_id = (string) ($this->yalidine_stop_desk_id ?? '');
         $orderSummaryObj->status_reason = (string) ($this->status_reason ?? '');
         $orderSummaryObj->is_wallet_credited = (string) ($this->is_wallet_credited ?? '0');
         $orderSummaryObj->wallet_credited_at = isset($this->wallet_credited_at) ? (string) \Carbon\Carbon::parse($this->wallet_credited_at)->format('M d, Y H:i') : '';
