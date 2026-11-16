@@ -38,6 +38,8 @@ class ItemFromCartApiResource extends JsonResource
             $itemInfoObj->sub_total = (string) round($originalPrice * $quantity, 2);
             $itemInfoObj->is_sold_out = (string) $cartItem->item->is_sold_out;
             $itemInfoObj->is_select = (string) $cartItem->is_select;
+            $itemInfoObj->item_location_id = (string) ($cartItem->item->item_location_id ?? $cartItem->item->location_city_id ?? '');
+            $itemInfoObj->location_city_id = (string) ($cartItem->item->location_city_id ?? $cartItem->item->item_location_id ?? '');
             $itemInfoObj->default_photo = new CoreImageApiResource(isset($cartItem->item->cover[0]) && $cartItem->item->cover[0] ? $cartItem->item->cover[0] : []);
 
             if (empty($cartItem->item->is_sold_out)) {
