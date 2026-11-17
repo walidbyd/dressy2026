@@ -311,6 +311,9 @@ Route::middleware(['isInstall'])->group(function () {
     require_once __DIR__.'/fortify.php';
 
     require base_path('Modules/Template/PSXFETemplate/Resources/Pages/vendor/routes/web.php');
+    Route::get('/', function () {
+        return view('landing.app_download');
+    })->name('dashboard');
     require base_path('Modules/StoreFront/VendorPanel/Resources/Pages/vendor/routes/web.php');
 
     Route::middleware(['isVendorSettingOn'])->group(function () {
