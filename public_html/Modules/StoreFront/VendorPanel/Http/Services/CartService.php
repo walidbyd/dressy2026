@@ -92,9 +92,30 @@ class CartService extends PsService
         try {
 
             $existingCart = $this->getCart(null, $userId);
-            if (! empty($this->getCart(null, $userId))) {
-                if ((int) $existingCart->vendor_id !== (int) $vendorId) {
-                    $existingCart->delete();
+            if (! empty($existingCart)) {
+                $existingItemsCount = CartItem::where('cart_id', $existingCart->id)->count();
+                if ($existingItemsCount > 0) {
+                    $cartVendorMismatch = (int) $existingCart->vendor_id !== (int) $vendorId;
+
+                    $existingSellerMismatch = false;
+                    $item = \Modules\Core\Entities\Item::find($itemId);
+                    if ($item && $item->added_user_id) {
+                        $existingItemIds = CartItem::where('cart_id', $existingCart->id)->pluck('item_id');
+                        $existingSellers = \Modules\Core\Entities\Item::whereIn('id', $existingItemIds)
+                            ->where('added_user_id', '!=', $item->added_user_id)
+                            ->exists();
+                        if ($existingSellers) {
+                            $existingSellerMismatch = true;
+                        }
+                    }
+
+                    if ($cartVendorMismatch || $existingSellerMismatch) {
+                        $msg = 'Panier réservé aux articles d\'un même vendeur (expédition Yalidine séparée). Utilisez Acheter maintenant pour cet article.';
+                        return responseMsgApi($msg, Constants::badRequestStatusCode);
+                    }
+                } else {
+                    $existingCart->vendor_id = $vendorId;
+                    $existingCart->save();
                 }
             }
 
