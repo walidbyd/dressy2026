@@ -66,7 +66,7 @@ return [
     |
     */
 
-    'home' => RouteServiceProvider::getRoot(),
+    'home' => '/admin',
     // ## Updated due to, config are not allow to do callback.
     // function(){
     //     if(checkForDashboardPermission()){

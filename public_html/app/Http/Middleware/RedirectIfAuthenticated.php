@@ -6,6 +6,7 @@ use App\Providers\RouteServiceProvider;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Modules\Core\Constants\Constants;
 
 class RedirectIfAuthenticated
 {
@@ -22,6 +23,10 @@ class RedirectIfAuthenticated
 
         foreach ($guards as $guard) {
             if (Auth::guard($guard)->check()) {
+                $user = Auth::guard($guard)->user();
+                if ($user && ($user->role_id == 1 || $user->role_id == Constants::superAdminRoleId || checkForDashboardPermission() || ($user->role_id && $user->role_id != Constants::normalUserRoleId))) {
+                    return redirect()->route('admin.index');
+                }
                 return redirect(RouteServiceProvider::getRoot());
             }
         }

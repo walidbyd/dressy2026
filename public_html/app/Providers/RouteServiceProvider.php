@@ -6,8 +6,10 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Modules\Core\Constants\Constants;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -18,7 +20,7 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    public const HOME = '/';
+    public const HOME = '/admin';
 
     public static function getAppDir()
     {
@@ -31,17 +33,16 @@ class RouteServiceProvider extends ServiceProvider
 
     public static function getRoot()
     {
+        if (Auth::check()) {
+            $user = Auth::user();
+            if ($user && ($user->role_id == 1 || $user->role_id == Constants::superAdminRoleId || checkForDashboardPermission() || ($user->role_id && $user->role_id != Constants::normalUserRoleId))) {
+                return RouteServiceProvider::getAppDir().'/admin';
+            }
+        }
 
         $home = '/';
 
         return RouteServiceProvider::getAppDir().$home;
-        // if(App::environment('production')) {
-        // // if(config('app.env') != 'local') {
-        //     return config('app.dir') . $home;
-        // } else {
-        //     return $home;
-        // }
-
     }
 
     /**

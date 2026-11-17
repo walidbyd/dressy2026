@@ -1392,20 +1392,21 @@ if (! function_exists('checkForDashboardPermission')) {
         if (Auth::check()) {
             $authUserId = Auth::id();
             $user = User::select('id', 'role_id')->with(['user_permissions', 'role', 'role_permissions'])->where('id', $authUserId)->first();
-            if ($user->role->can_access_admin_panel) {
-
-                $userPermission = $user->user_permissions;
-                $rolePermission = $user->role_permissions;
-
-                if ($rolePermission->isNotEmpty()) {
+            if ($user) {
+                if ($user->role_id == 1 || $user->role_id == Constants::superAdminRoleId) {
                     return $havePermission;
-                } else {
-                    return $haveNoPermission;
                 }
-            } else {
-                return $haveNoPermission;
+                if ($user->role && $user->role->can_access_admin_panel) {
+                    $rolePermission = $user->role_permissions;
+                    if ($rolePermission && $rolePermission->isNotEmpty()) {
+                        return $havePermission;
+                    }
+                }
             }
+            return $haveNoPermission;
         }
+
+        return $haveNoPermission;
     }
 }
 

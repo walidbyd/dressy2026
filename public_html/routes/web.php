@@ -287,16 +287,6 @@ Route::group(['prefix' => 'nextUpdateV3', 'as' => 'NextLaravelUpdater::', 'names
     ]);
 });
 
-Route::middleware(['auth:sanctum'])->get('/admin', function () {
-    if (Auth::check()) {
-        if (Auth::user()->role_id != Constants::normalUserRoleId) {
-            return redirect()->route('admin.index');
-        } else {
-            return back();
-        }
-    }
-})->name('admin.index');
-
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy']);
 Route::post('/CreateLogin', [CustomLoginController::class, 'CreateLogin'])->name('CreateLogin');
 Route::get('/phoneLogin', [CustomLoginController::class, 'phoneLogin'])->name('Phonelogin');
@@ -312,6 +302,12 @@ Route::middleware(['isInstall'])->group(function () {
 
     require base_path('Modules/Template/PSXFETemplate/Resources/Pages/vendor/routes/web.php');
     Route::get('/', function () {
+        if (Auth::check()) {
+            $user = Auth::user();
+            if ($user && ($user->role_id == 1 || $user->role_id == Constants::superAdminRoleId || checkForDashboardPermission() || ($user->role_id && $user->role_id != Constants::normalUserRoleId))) {
+                return redirect()->route('admin.index');
+            }
+        }
         return view('landing.app_download');
     })->name('dashboard');
     require base_path('Modules/StoreFront/VendorPanel/Resources/Pages/vendor/routes/web.php');
@@ -1197,5 +1193,9 @@ Route::get('/terms-and-conditions', function () {
         'content' => $about ? $about->terms_and_conditions : 'Conditions Générales d\'Utilisation en cours de mise à jour.',
     ]);
 })->name('public.terms_and_conditions');
+
+Route::get('/terms', function () {
+    return redirect('/terms-and-conditions');
+})->name('public.terms');
 
 Route::get('/{shortCode}', [DynamicLinkController::class, 'redirect'])->name('shortcode');
