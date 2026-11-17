@@ -62,6 +62,8 @@ class OrderHistoryApiResource extends JsonResource
             'buyer_user_id' => (string) $this->user_id,
             'seller_user_id' => (string) ($this->vendor?->owner_user_id ?? ''),
             'vendor_id' => (string) ($this->vendor_id ?? ''),
+            'is_reviewed' => (string) ($this->is_reviewed ?? '0'),
+            'review_rating' => (string) ($this->review_rating ?? ''),
         ];
 
     }

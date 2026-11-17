@@ -90,6 +90,8 @@ class OrderSummaryApiResource extends JsonResource
         $orderSummaryObj->buyer_user_id = (string) $this->user_id;
         $orderSummaryObj->seller_user_id = (string) ($this->vendor?->owner_user_id ?? '');
         $orderSummaryObj->vendor_id = (string) ($this->vendor_id ?? '');
+        $orderSummaryObj->is_reviewed = (string) ($this->is_reviewed ?? '0');
+        $orderSummaryObj->review_rating = (string) ($this->review_rating ?? '');
 
         return [
             'order_summary' => $orderSummaryObj,

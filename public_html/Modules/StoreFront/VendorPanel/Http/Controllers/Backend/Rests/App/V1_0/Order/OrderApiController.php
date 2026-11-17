@@ -193,4 +193,108 @@ class OrderApiController extends Controller
     {
         return $this->orderService->calculateDeliveryFeeFromApi($request);
     }
+
+    public function submitReview(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'order_id' => 'required|exists:psx_orders,id',
+            'from_user_id' => 'required|exists:users,id',
+            'rating' => 'required|numeric|min:1|max:5',
+            'title' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        if ($request->language_symbol) {
+            $this->translator->setLocale($request->language_symbol);
+            $validator->setTranslator($this->translator);
+        }
+
+        if ($validator->fails()) {
+            return responseMsgApi(implode("\n", Arr::flatten($validator->getMessageBag()->getMessages())), Constants::badRequestStatusCode);
+        }
+
+        $order = \Modules\StoreFront\VendorPanel\Entities\Order::with(['orderStatus', 'vendor'])->find($request->order_id);
+        if (!$order) {
+            return responseMsgApi(__('Commande introuvable.'), Constants::notFoundStatusCode);
+        }
+
+        // Verify that the order belongs to the buyer
+        if ((int) $order->user_id !== (int) $request->from_user_id) {
+            return responseMsgApi(__('Cette commande n\'appartient pas à cet acheteur.'), Constants::badRequestStatusCode);
+        }
+
+        // Verify order is Delivered
+        $isDelivered = ((int) $order->order_status_id === (int) Constants::orderDeliveredStatus)
+            || in_array(strtolower($order->orderStatus?->name ?? ''), ['delivered', 'livrée', 'livree', 'livré'])
+            || in_array(strtolower($order->yalidine_status ?? ''), ['livré', 'livre', 'delivered']);
+
+        if (!$isDelivered) {
+            return responseMsgApi(__('L\'avis ne peut être déposé qu\'après la livraison de la commande.'), Constants::badRequestStatusCode);
+        }
+
+        // Verify not already reviewed
+        if ((int) ($order->is_reviewed ?? 0) === 1) {
+            return responseMsgApi(__('Cette commande a déjà été évaluée.'), Constants::badRequestStatusCode);
+        }
+
+        // Determine seller user ID
+        $toUserId = $request->to_user_id ?: ($order->vendor?->owner_user_id ?: $order->vendor_id);
+
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            // Save review in psx_ratings
+            $rating = new \Modules\Core\Entities\User\Rating();
+            $rating->from_user_id = $request->from_user_id;
+            $rating->to_user_id = $toUserId;
+            $rating->rating = (float) $request->rating;
+            $rating->title = $request->title ?: ('Avis commande #' . $order->order_code);
+            $rating->description = $request->description ?: '';
+            $rating->type = Constants::ratingUserType;
+            $rating->transaction_header_id = $order->id;
+            $rating->added_date = \Carbon\Carbon::now();
+            $rating->added_user_id = $request->from_user_id;
+            $rating->save();
+
+            // Update order record
+            $order->is_reviewed = 1;
+            $order->review_rating = (float) $request->rating;
+            $order->review_id = $rating->id;
+            $order->save();
+
+            // Automatically recalculate the seller's rating note & count
+            $allSellerRatings = \Modules\Core\Entities\User\Rating::where('to_user_id', $toUserId)->get();
+            $totalCount = $allSellerRatings->count();
+            $sumRating = $allSellerRatings->sum('rating');
+            $avgRating = $totalCount > 0 ? number_format((float) ($sumRating / $totalCount), 1, '.', '') : '0.0';
+
+            $sellerUser = \App\Models\User::find($toUserId);
+            if ($sellerUser) {
+                $sellerUser->overall_rating = $avgRating;
+                $sellerUser->save();
+            }
+
+            if ($order->vendor_id) {
+                $vendor = \Modules\Core\Entities\Vendor\Vendor::find($order->vendor_id);
+                if ($vendor) {
+                    $vendor->overall_rating = $avgRating;
+                    $vendor->save();
+                }
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return responseDataApi([
+                'status' => 'success',
+                'message' => 'Merci pour votre avis !',
+                'order_id' => (string) $order->id,
+                'is_reviewed' => '1',
+                'review_rating' => (string) $rating->rating,
+                'overall_rating' => (string) $avgRating,
+                'rating_count' => (string) $totalCount,
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return responseMsgApi($e->getMessage(), Constants::internalServerErrorStatusCode);
+        }
+    }
 }

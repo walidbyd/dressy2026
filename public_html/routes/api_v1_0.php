@@ -291,7 +291,10 @@ Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])-
         Route::match(['get', 'post'], 'wallet/transactions', 'getWalletTransactions');
         Route::post('wallet/withdraw_request', 'submitWithdrawRequest');
         Route::match(['get', 'post'], 'calculate_delivery_fee', 'calculateDeliveryFee');
+        Route::post('order/submit-review', 'submitReview');
     });
+
+    Route::post('order/submit-review', [OrderApiController::class, 'submitReview']);
 
     Route::prefix('vendor')->controller(VendorInfoApiController::class)->group(function () {
         Route::get('info', 'getVendorInfo');
