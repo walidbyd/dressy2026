@@ -117,14 +117,34 @@ class ChatApiController extends PsApiController
 
     public function unreadCount(UnreadCountChatApiRequest $request)
     {
-
         $validatedData = $request->validated();
         $loginUserId = $request->query('login_user_id');
+        if (empty($loginUserId) || $loginUserId === 'nologinuser') {
+            $loginUserId = $validatedData['user_id'] ?? $request->input('user_id') ?? $request->user()?->id;
+        }
+
         $langSymbol = $request->query('language_symbol');
         $headerToken = $request->header(ps_constant::deviceTokenKeyFromApi);
 
+        if (empty($loginUserId) || $loginUserId === 'nologinuser') {
+            $count_object = new \stdClass;
+            $count_object->buyer_unread_count = 0;
+            $count_object->seller_unread_count = 0;
+            $count_object->noti_unread_count = 0;
+            return responseDataApi(new \Modules\Core\Transformers\Api\App\V1_0\Notification\UnreadCountApiResource($count_object), \Modules\Core\Constants\Constants::okStatusCode, \Modules\Core\Constants\Constants::successStatus);
+        }
+
         // check permission start
-        $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        try {
+            $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        } catch (\Throwable $e) {
+            // When token verification fails for unread counts, return clean 0 count instead of breaking mobile app
+            $count_object = new \stdClass;
+            $count_object->buyer_unread_count = 0;
+            $count_object->seller_unread_count = 0;
+            $count_object->noti_unread_count = 0;
+            return responseDataApi(new \Modules\Core\Transformers\Api\App\V1_0\Notification\UnreadCountApiResource($count_object), \Modules\Core\Constants\Constants::okStatusCode, \Modules\Core\Constants\Constants::successStatus);
+        }
         // check permission end
 
         return $this->chatService->unreadCountFromApi($validatedData, $langSymbol, $loginUserId);
