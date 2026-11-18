@@ -953,10 +953,10 @@ class ItemService extends PsService
                             }
                         }
 
-                        // if qty will null, will save as zero start
+                        // if qty will null, default to 1 for marketplace listings
                         if ($coreKeysId == Constants::itemQty) {
-                            if (empty($valueFromReq)) {
-                                $itemRelation->value = 0;
+                            if (empty($valueFromReq) || (int)$valueFromReq <= 0) {
+                                $itemRelation->value = 1;
                             }
                         }
                         // if qty will null, will save as zero end
@@ -967,12 +967,27 @@ class ItemService extends PsService
                             $itemRelation->added_user_id = 0;
                         }
 
-                        if ($valueFromReq != null) {
+                        if ($itemRelation->value !== null) {
                             $itemRelation->save();
                         }
                     }
                 }
             }
+        }
+
+        // Ensure default stock quantity is at least 1 for active marketplace items
+        $qtyRelation = ItemInfo::where('item_id', $item->id)
+            ->whereIn('core_keys_id', [Constants::itemQty, 'itm00046', 'ps-itm00010', 'itm00010'])
+            ->first();
+
+        if (empty($qtyRelation)) {
+            $qtyRelation = new ItemInfo;
+            $qtyRelation->item_id = $item->id;
+            $qtyRelation->core_keys_id = Constants::itemQty;
+            $qtyRelation->ui_type_id = 'uit00007';
+            $qtyRelation->value = 1;
+            $qtyRelation->added_user_id = Auth::id() ?? 0;
+            $qtyRelation->save();
         }
     }
 
@@ -1350,13 +1365,12 @@ class ItemService extends PsService
                             $itemRelation->item_id = $item->id;
                             $itemRelation->value = $valueFromReq;
 
-                            // if qty will null, will save as zero start
+                            // if qty will null, default to 1 if not sold out
                             if ($coreKeysIdFromReq == Constants::itemQty) {
-                                if (empty($valueFromReq)) {
-                                    $itemRelation->value = 0;
+                                if (empty($valueFromReq) && $item->is_sold_out != 1) {
+                                    $itemRelation->value = 1;
                                 }
                             }
-                            // if qty will null, will save as zero end
 
                             $customizeHeaders = CustomField::where($this->customUiModuleName, $this->code)->get();
                             foreach ($customizeHeaders as $key2 => $customizeHeader) {

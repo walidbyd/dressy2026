@@ -143,7 +143,7 @@ class ProductApiResource extends JsonResource
             'location_city_id' => isset($this->location_city_id) ? (string) $this->location_city_id : '',
             'location_township_id' => isset($this->location_township_id) ? (string) $this->location_township_id : '',
             'shop_id' => isset($this->shop_id) ? (string) $this->shop_id : '',
-            'phone' => isset($this->phone) ? (string) $this->phone : '',
+            'phone' => ((string) $this->added_user_id == $request->login_user_id && !empty($request->login_user_id) && $request->login_user_id != 'nologinuser') ? (string) ($this->phone ?? '') : '',
             'percent' => isset($this->percent) ? (string) $this->percent : '',
             'price' => isset($this->price) ? (string) $this->price : '',
             'original_price' => isset($this->price) ? (string) $this->original_price : '',

@@ -23,19 +23,30 @@ class UserApiResource extends JsonResource
      */
     public function toArray($request)
     {
+        $loginUserId = $request->login_user_id ?? $request->query('login_user_id') ?? $request->user()?->id;
+        $isOwner = !empty($loginUserId) && $loginUserId != 'nologinuser' && (string)$loginUserId === (string)checkAndGetValue($this, 'id');
+
+        $filteredRelations = collect($this->userRelation ?? [])->filter(function($relation) use ($isOwner) {
+            if ($isOwner) {
+                return true;
+            }
+            $key = strtolower($relation->core_keys_id ?? '');
+            return !in_array($key, ['ps-usr00012', 'ps-usr00007', 'ps-usr00008', 'ps-usr00009', 'ps-usr00010', 'ps-usr00011']);
+        });
+
         return [
             'id' => checkAndGetValue($this, 'id'),
             'user_is_sys_admin' => checkAndGetValue($this, 'user_is_sys_admin'),
             'email_verified_at' => checkAndGetValue($this, 'email_verified_at'),
-            'facebook_id' => checkAndGetValue($this, 'facebook_id'),
-            'google_id' => checkAndGetValue($this, 'google_id'),
-            'phone_id' => checkAndGetValue($this, 'phone_id'),
-            'apple_id' => checkAndGetValue($this, 'apple_id'),
+            'facebook_id' => $isOwner ? checkAndGetValue($this, 'facebook_id') : '',
+            'google_id' => $isOwner ? checkAndGetValue($this, 'google_id') : '',
+            'phone_id' => $isOwner ? checkAndGetValue($this, 'phone_id') : '',
+            'apple_id' => $isOwner ? checkAndGetValue($this, 'apple_id') : '',
             'name' => checkAndGetValue($this, 'name'),
             'username' => checkAndGetValue($this, 'username'),
-            'email' => checkAndGetValue($this, 'email'),
-            'user_phone' => checkAndGetValue($this, 'user_phone'),
-            'user_address' => checkAndGetValue($this, 'user_address'),
+            'email' => $isOwner ? checkAndGetValue($this, 'email') : '',
+            'user_phone' => $isOwner ? checkAndGetValue($this, 'user_phone') : '',
+            'user_address' => $isOwner ? checkAndGetValue($this, 'user_address') : '',
             'user_about_me' => checkAndGetValue($this, 'user_about_me'),
             'user_cover_photo' => checkAndGetValue($this, 'user_cover_photo'),
             'role_id' => checkAndGetValue($this, 'role_id'),
@@ -45,8 +56,8 @@ class UserApiResource extends JsonResource
             'need_verify' => $this->needVerify(),
             'hasPassword' => $this->hasPassword(),
             'overall_rating' => checkAndGetValue($this, 'overall_rating'),
-            'is_show_email' => checkAndGetValue($this, 'is_show_email'),
-            'is_show_phone' => checkAndGetValue($this, 'is_show_phone'),
+            'is_show_email' => $isOwner ? checkAndGetValue($this, 'is_show_email') : '0',
+            'is_show_phone' => $isOwner ? checkAndGetValue($this, 'is_show_phone') : '0',
             'is_shop_admin' => checkAndGetValue($this, 'is_shop_admin'),
             'is_city_admin' => checkAndGetValue($this, 'is_city_admin'),
             'user_lat' => checkAndGetValue($this, 'user_lat'),
@@ -64,7 +75,7 @@ class UserApiResource extends JsonResource
             'is_followed' => $this->isFollowed($request->login_user_id),
             'is_blocked' => $this->isBlocked($request->login_user_id),
             'is_verify_blue_mark' => $this->isVerifyBlueMark(),
-            'userRelation' => UserInfoApiResource::collection($this->userRelation ?? []),
+            'userRelation' => UserInfoApiResource::collection($filteredRelations),
             'added_date_str' => $this->getAddedDateStr(),
             'is_empty_object' => checkAndGetValue($this, 'id', '1'),
 

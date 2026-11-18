@@ -85,18 +85,20 @@ class VendorApiResource extends JsonResource
             ]);
         }
 
+        $isOwner = !empty($loginUserId) && $loginUserId != 'nologinuser' && (string)$loginUserId === (string)$ownerId;
+
         return [
             'id' => checkAndGetValue($this, 'id'),
             'owner_user_id' => checkAndGetValue($this, 'owner_user_id'),
             'status' => checkAndGetValue($this, 'status'),
             'name' => checkAndGetValue($this, 'name'),
-            'phone' => checkAndGetValue($this, 'phone'),
-            'email' => checkAndGetValue($this, 'email'),
+            'phone' => $isOwner ? checkAndGetValue($this, 'phone') : '',
+            'email' => $isOwner ? checkAndGetValue($this, 'email') : '',
             'address' => checkAndGetValue($this, 'address'),
             'description' => checkAndGetValue($this, 'description'),
-            'website' => checkAndGetValue($this, 'website'),
-            'facebook' => checkAndGetValue($this, 'facebook'),
-            'instagram' => checkAndGetValue($this, 'instagram'),
+            'website' => $isOwner ? checkAndGetValue($this, 'website') : '',
+            'facebook' => $isOwner ? checkAndGetValue($this, 'facebook') : '',
+            'instagram' => $isOwner ? checkAndGetValue($this, 'instagram') : '',
             'product_count' => (string) $product_count,
             'currency_id' => checkAndGetValue($this, 'currency_id'),
             'added_date' => checkAndGetValue($this, 'added_date'),

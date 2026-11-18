@@ -71,6 +71,37 @@ class ChatService extends PsService implements ChatServiceInterface
         $chatNotiMessage = 'chatting__api_new_message_received';
 
         if (empty($chatHistory)) {
+            // Guard: Require an existing order for this item between buyer and seller
+            $buyerId = $chatData['buyer_user_id'] ?? null;
+            $sellerId = $chatData['seller_user_id'] ?? null;
+            $itemId = $chatData['item_id'] ?? null;
+
+            $hasOrder = \Illuminate\Support\Facades\DB::table('psx_orders')
+                ->join('psx_order_items', 'psx_orders.id', '=', 'psx_order_items.order_id')
+                ->where('psx_order_items.item_id', $itemId)
+                ->where(function ($query) use ($buyerId, $sellerId) {
+                    $query->where('psx_orders.user_id', $buyerId)
+                          ->orWhere('psx_orders.user_id', $sellerId);
+                })
+                ->exists();
+
+            if (!$hasOrder && !empty($item) && !empty($item->vendor_id)) {
+                $hasOrder = \Illuminate\Support\Facades\DB::table('psx_orders')
+                    ->where('vendor_id', $item->vendor_id)
+                    ->where(function ($query) use ($buyerId, $sellerId) {
+                        $query->where('user_id', $buyerId)
+                              ->orWhere('user_id', $sellerId);
+                    })
+                    ->exists();
+            }
+
+            if (!$hasOrder) {
+                $message = __('chatting__order_required_before_chat', [], $langSymbol);
+                if ($message === 'chatting__order_required_before_chat') {
+                    $message = 'Vous devez passer une commande avant de pouvoir contacter le vendeur.';
+                }
+                throw new PsApiException($message, Constants::badRequestStatusCode);
+            }
 
             if ($chatData['is_user_online'] == 1) {
                 // if user is online, no need to send noti and no need to add unread count
@@ -157,6 +188,37 @@ class ChatService extends PsService implements ChatServiceInterface
         }
 
         if (empty($chatHistory)) {
+            // Guard: Require an existing order for this item between buyer and seller
+            $buyerId = $chatData['buyer_user_id'] ?? null;
+            $sellerId = $chatData['seller_user_id'] ?? null;
+            $itemId = $chatData['item_id'] ?? null;
+
+            $hasOrder = \Illuminate\Support\Facades\DB::table('psx_orders')
+                ->join('psx_order_items', 'psx_orders.id', '=', 'psx_order_items.order_id')
+                ->where('psx_order_items.item_id', $itemId)
+                ->where(function ($query) use ($buyerId, $sellerId) {
+                    $query->where('psx_orders.user_id', $buyerId)
+                          ->orWhere('psx_orders.user_id', $sellerId);
+                })
+                ->exists();
+
+            if (!$hasOrder && !empty($item) && !empty($item->vendor_id)) {
+                $hasOrder = \Illuminate\Support\Facades\DB::table('psx_orders')
+                    ->where('vendor_id', $item->vendor_id)
+                    ->where(function ($query) use ($buyerId, $sellerId) {
+                        $query->where('user_id', $buyerId)
+                              ->orWhere('user_id', $sellerId);
+                    })
+                    ->exists();
+            }
+
+            if (!$hasOrder) {
+                $message = __('chatting__order_required_before_chat', [], $langSymbol);
+                if ($message === 'chatting__order_required_before_chat') {
+                    $message = 'Vous devez passer une commande avant de pouvoir contacter le vendeur.';
+                }
+                throw new PsApiException($message, Constants::badRequestStatusCode);
+            }
 
             if ($chatData['is_user_online'] == 1) {
                 // if user is online, no need to send noti and no need to add unread count

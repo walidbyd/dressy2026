@@ -54,6 +54,9 @@ class ItemApiResource extends JsonResource
             $relations->push($qtyInfo);
         }
 
+        $loginUserId = $request->login_user_id ?? $request->query('login_user_id') ?? $request->user()?->id;
+        $isOwner = !empty($loginUserId) && $loginUserId != 'nologinuser' && (string)$loginUserId === (string)$this->added_user_id;
+
         return [
             'id' => checkAndGetValue($this, 'id'),
             'title' => checkAndGetValue($this, 'title'),
@@ -63,7 +66,7 @@ class ItemApiResource extends JsonResource
             'location_city_id' => checkAndGetValue($this, 'location_city_id'),
             'location_township_id' => checkAndGetValue($this, 'location_township_id'),
             'shop_id' => checkAndGetValue($this, 'shop_id'),
-            'phone' => checkAndGetValue($this, 'phone'),
+            'phone' => $isOwner ? checkAndGetValue($this, 'phone') : '',
             'percent' => checkAndGetValue($this, 'percent'),
             'price' => checkAndGetValue($this, 'price'),
             'original_price' => checkAndGetValue($this, 'original_price'),
