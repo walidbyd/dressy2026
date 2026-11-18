@@ -139,7 +139,8 @@ class YalidineApiController extends Controller
             ], 404);
         }
 
-        $result = $this->yalidineService->createParcelForOrder($order);
+        $dzshipService = app(\App\Services\DzshipYalidineService::class);
+        $result = $dzshipService->createShipment($order);
 
         if (empty($result['success'])) {
             return response()->json([

@@ -661,10 +661,10 @@ class OrderService extends PsService
             return responseMsgApi(__('Only pending orders can be accepted.'), Constants::badRequestStatusCode);
         }
 
-        // Generate Yalidine parcel on seller order approval
+        // Generate Yalidine parcel on seller order approval via DZBuild dzship
         $order->load(['shippingAndBilling', 'orderItems.item', 'vendorTransaction', 'user']);
-        $yalidineService = app(\App\Services\YalidineService::class);
-        $yalResult = $yalidineService->createParcelForOrder($order);
+        $dzshipService = app(\App\Services\DzshipYalidineService::class);
+        $yalResult = $dzshipService->createShipment($order);
 
         $order->order_status_id = Constants::orderApprovedStatus;
         if (!empty($yalResult['success'])) {
@@ -714,10 +714,10 @@ class OrderService extends PsService
         // Load relations needed for shipment creation
         $order->load(['shippingAndBilling', 'orderItems.item', 'vendorTransaction', 'user']);
 
-        // Call Yalidine parcel creation service if not already generated
+        // Call Yalidine parcel creation service via DZBuild dzship if not already generated
         if (empty($order->yalidine_tracking)) {
-            $yalidineService = app(\App\Services\YalidineService::class);
-            $yalidineResult = $yalidineService->createParcelForOrder($order);
+            $dzshipService = app(\App\Services\DzshipYalidineService::class);
+            $yalidineResult = $dzshipService->createShipment($order);
 
             if (empty($yalidineResult['success'])) {
                 $errorMessage = $yalidineResult['error'] ?? __('Failed to create Yalidine shipment.');

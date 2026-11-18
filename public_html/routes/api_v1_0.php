@@ -445,6 +445,13 @@ Route::prefix('yalidine')->controller(\App\Http\Controllers\Api\V1_0\YalidineApi
     Route::post('/create-parcel/{orderId}', 'createParcel')->name('yalidine.createParcel');
 });
 
+// DZBuild dzship Yalidine Shipping Endpoints (Wilayas, Communes & Address-Free Quote)
+Route::prefix('shipping')->controller(\App\Http\Controllers\Api\V1_0\ShippingApiController::class)->group(function () {
+    Route::get('/wilayas', 'wilayas')->name('shipping.wilayas');
+    Route::get('/communes', 'communes')->name('shipping.communes');
+    Route::match(['get', 'post'], '/yalidine-quote', 'yalidineQuote')->name('shipping.yalidineQuote');
+});
+
 // Chabit AI Assistant & Order Quick-Reply Endpoints (strictly per-user authenticated)
 Route::prefix('chabit')->controller(\App\Http\Controllers\Api\V1_0\ChabitApiController::class)->group(function () {
     Route::get('/threads', 'threads')->name('chabit.threads');
