@@ -3692,6 +3692,12 @@ class ItemService extends PsService
         $item = $this->getItem($id);
         if ($request->status == 'accept') {
             $item->status = $this->publishItem;
+            if (\Illuminate\Support\Facades\Schema::hasColumn('psx_items', 'approved_by_admin')) {
+                $item->approved_by_admin = 1;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('psx_items', 'ai_moderation_status')) {
+                $item->ai_moderation_status = 'approved';
+            }
             $msg = __('core__be_item_accepted');
             $flag = $this->successFlag;
         } elseif ($request->status == 'reject') {

@@ -56,6 +56,10 @@ class Item extends PsModel
         'updated_date',
         'updated_user_id',
         'updated_flag',
+        'ai_moderation_status',
+        'ai_moderation_reason',
+        'ai_confidence',
+        'approved_by_admin',
     ];
 
     protected $table = 'psx_items';

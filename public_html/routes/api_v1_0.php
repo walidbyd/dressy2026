@@ -445,4 +445,12 @@ Route::prefix('yalidine')->controller(\App\Http\Controllers\Api\V1_0\YalidineApi
     Route::post('/create-parcel/{orderId}', 'createParcel')->name('yalidine.createParcel');
 });
 
+// Chabit AI Assistant & Order Quick-Reply Endpoints (strictly per-user authenticated)
+Route::prefix('chabit')->controller(\App\Http\Controllers\Api\V1_0\ChabitApiController::class)->group(function () {
+    Route::get('/threads', 'threads')->name('chabit.threads');
+    Route::get('/threads/{id}/messages', 'messages')->name('chabit.threads.messages');
+    Route::post('/threads/{id}/messages', 'sendMessage')->name('chabit.threads.send');
+    Route::post('/threads/{id}/language', 'setLanguage')->name('chabit.threads.language');
+});
+
 // Route::prefix('generate/short_code',);

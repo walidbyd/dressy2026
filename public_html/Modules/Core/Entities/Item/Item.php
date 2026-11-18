@@ -61,6 +61,10 @@ class Item extends PsModel
         'percent',
         'phone',
         'updated_flag',
+        'ai_moderation_status',
+        'ai_moderation_reason',
+        'ai_confidence',
+        'approved_by_admin',
 
     ];
 

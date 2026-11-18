@@ -167,6 +167,10 @@ class ItemWithKeyResource extends JsonResource
             'subcategory' => $this->subcategory,
             'item_relation' => $this->itemRelation,
             'vendor' => $this->vendor,
+            'ai_moderation_status' => $this->ai_moderation_status ?? null,
+            'ai_moderation_reason' => $this->ai_moderation_reason ?? null,
+            'ai_confidence' => $this->ai_confidence ?? null,
+            'approved_by_admin' => (bool) ($this->approved_by_admin ?? false),
         ] + $changedCustomFieldFormat;
     }
 }

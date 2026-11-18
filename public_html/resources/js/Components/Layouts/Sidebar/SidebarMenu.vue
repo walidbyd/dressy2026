@@ -120,6 +120,29 @@
                     </Link>
                 </div>
             </div>
+
+            <!-- Chabit AI Assistant & Vision Moderation Navigation -->
+            <div class="mt-4 pt-3 border-t border-gray-200 dark:border-secondary-700">
+                <ps-label :class="{ 'flex': sideMenuStore.isFullSideMenu, 'hidden' : !sideMenuStore.isFullSideMenu }" class="mb-2 font-bold text-xs uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                    Chabit AI
+                </ps-label>
+                <div class="space-y-1">
+                    <Link :href="route('admin.chabit.settings')" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-secondary-700 dark:text-secondary-300 hover:bg-primary-100 dark:hover:bg-secondary-800"
+                        :class="{ 'bg-primary-500 !text-white font-semibold shadow-sm': route().current('admin.chabit.settings*') }">
+                        <ps-icon name="cog" w="18" h="18" />
+                        <span :class="{ 'inline': sideMenuStore.isFullSideMenu, 'hidden xl:hidden': !sideMenuStore.isFullSideMenu }">
+                            Chabit AI Settings
+                        </span>
+                    </Link>
+                    <Link :href="route('admin.chabit.messages')" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-secondary-700 dark:text-secondary-300 hover:bg-primary-100 dark:hover:bg-secondary-800"
+                        :class="{ 'bg-primary-500 !text-white font-semibold shadow-sm': route().current('admin.chabit.messages*') }">
+                        <ps-icon name="chat" w="18" h="18" />
+                        <span :class="{ 'inline': sideMenuStore.isFullSideMenu, 'hidden xl:hidden': !sideMenuStore.isFullSideMenu }">
+                            Chabit Messages
+                        </span>
+                    </Link>
+                </div>
+            </div>
         </div>
         <div class="flex items-center justify-center py-2 my-2 ">
                     <ps-label

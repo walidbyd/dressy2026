@@ -425,7 +425,7 @@
 
                                 <!-- custom field start -->
                                 <div v-for="(custom_field_header) in customizeHeaders.filter((custom) => custom.core_keys_id != 'ps-itm00009' && custom.core_keys_id != 'ps-itm00046')"
-                                    :key="custom_field_header.id" class="px-4">
+                                    :key="custom_field_header.id + '_' + (isSizeCustomField(custom_field_header) ? form.subcategory_id : '')" class="px-4">
                                     <!-- dropdown-->
                                     <div class="md:me-6 sm:me-0"
                                         v-if="custom_field_header.ui_type_id === 'uit00001' && custom_field_header.enable === 1 && custom_field_header.is_delete === 0">
@@ -447,13 +447,13 @@
                                                     class="rounded-md shadow-xs w-full bg-background dark:bg-backgroundDark">
                                                     <div class="z-30">
                                                         <div
-                                                            v-if="customizeDetails.filter((customizeDetail) => customizeDetail.core_keys_id === custom_field_header.core_keys_id).length === 0">
+                                                            v-if="getFilteredCustomizeDetails(custom_field_header).length === 0">
                                                             <ps-label class="p-2 flex"
                                                                 @click="route('currency.index')">{{ $t('core__be_create_new') }}
                                                                 {{ $t(custom_field_header.name) }}</ps-label>
                                                         </div>
                                                         <div v-else>
-                                                            <div v-for="detail in customizeDetails.filter((customizeDetail) => customizeDetail.core_keys_id === custom_field_header.core_keys_id)"
+                                                            <div v-for="detail in getFilteredCustomizeDetails(custom_field_header)"
                                                                 :key="detail.id"
                                                                 class="w-96 flex py-4 px-2 hover:bg-primary-000 dark:hover:bg-secondary-700 cursor-pointer items-center"
                                                                 @click="[(form.product_relation[custom_field_header.core_keys_id] = detail.id), validateEmptyInput('currency_id', form.product_relation[custom_field_header.core_keys_id])]">
@@ -1204,7 +1204,7 @@
 
 
 import axios from 'axios';
-import { defineComponent, defineAsyncComponent, ref } from "vue";
+import { defineComponent, defineAsyncComponent, ref, watch } from "vue";
 import PsLayout from "@/Components/PsLayout.vue";
 import DatePicker from "@/Components/Core/DateTime/DatePicker.vue";
 import { Head, useForm,usePage } from "@inertiajs/vue3";
@@ -1370,6 +1370,56 @@ export default defineComponent({
             });
         });
 
+
+        // Reactive Subcategory-to-Size Sync
+        function isSizeCustomField(header) {
+            if (!header) return false;
+            const k = (header.core_keys_id || '').toLowerCase();
+            const n = (header.name || '').toLowerCase();
+            return k === 'itm00037' || n.includes('size') || n.includes('taille') || n.includes('pointure');
+        }
+
+        function getAllowedSizeLabelsForSubcategory() {
+            const subId = String(form.subcategory_id || '');
+            const catId = String(form.category_id || '');
+            const subObj = (props.subcategories || []).find((s) => String(s.id) === subId);
+            const subName = (subObj?.name || '').toLowerCase();
+
+            const isBagsOrAcc = ['12', '13', '22', '23'].includes(subId) ||
+                ['bag', 'sac', 'accessor', 'bijou', 'jewel', 'stroller', 'poussette', 'gear', 'chapeau', 'hat', 'bib'].some((w) => subName.includes(w));
+            if (isBagsOrAcc) return ['Standard', 'Taille Unique'];
+
+            const isWomenShoes = (catId === '1' || catId === '') && (subId === '11' || subName.includes('shoe') || subName.includes('chaussure'));
+            if (isWomenShoes) return ['35', '36', '37', '38', '39', '40', '41', '42', '43'];
+
+            const isBabyShoes = (catId === '2' || subId === '21' || subName.includes('baby') || subName.includes('bébé')) &&
+                (subId === '21' || subName.includes('shoe') || subName.includes('chaussure') || subName.includes('chaussette') || subName.includes('sock'));
+            if (isBabyShoes) return ['16', '17', '18', '19', '20', '21', '22', '23', '24'];
+
+            const isBabyClothes = catId === '2' || (parseInt(subId) >= 14 && parseInt(subId) <= 20) || subName.includes('baby') || subName.includes('bébé');
+            if (isBabyClothes) return ['0-3M', '3-6M', '6-12M', '12-18M', '18-24M', '2-3Y', '3-4Y'];
+
+            return ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Standard'];
+        }
+
+        function getFilteredCustomizeDetails(header) {
+            const allDetails = (props.customizeDetails || []).filter((d) => d.core_keys_id === header.core_keys_id);
+            if (!isSizeCustomField(header)) return allDetails;
+            const allowed = getAllowedSizeLabelsForSubcategory();
+            const allowedLower = allowed.map((s) => s.toLowerCase());
+            const matched = allDetails.filter((d) => allowedLower.includes((d.name || '').toLowerCase().trim()));
+            if (matched.length > 0) return matched;
+            return allowed.map((label) => ({ id: label, name: label, core_keys_id: header.core_keys_id }));
+        }
+
+        watch(() => form.subcategory_id, (newVal, oldVal) => {
+            if (newVal === oldVal) return;
+            (props.customizeHeaders || []).forEach((header) => {
+                if (isSizeCustomField(header)) {
+                    form.product_relation[header.core_keys_id] = '';
+                }
+            });
+        });
 
         // Client Side Validation
         const { isEmpty, isPrice, isNum, isLatitude, isLongitude  } = useValidators();
@@ -1942,7 +1992,9 @@ export default defineComponent({
             openStreetMapRef,
             clearCustomTimeField,
             visible,
-            handleImageUpload
+            handleImageUpload,
+            isSizeCustomField,
+            getFilteredCustomizeDetails
         };
     },
 

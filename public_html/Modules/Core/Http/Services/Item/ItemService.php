@@ -606,6 +606,8 @@ class ItemService extends PsService implements ItemServiceInterface
 
             DB::commit();
 
+            \App\Services\Chabit\ChabitItemModerator::dispatchForItem($item->id);
+
             return $item;
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -632,6 +634,10 @@ class ItemService extends PsService implements ItemServiceInterface
             PsCache::clear(VendorCache::BASE);
 
             DB::commit();
+
+            if (empty($item->approved_by_admin)) {
+                \App\Services\Chabit\ChabitItemModerator::dispatchForItem($item->id);
+            }
 
             return $item;
 

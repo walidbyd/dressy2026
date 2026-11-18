@@ -330,6 +330,18 @@ Route::middleware(['isInstall'])->group(function () {
             Route::get('/omni-search', 'omniSearch')->name('admin.dashboard.omniSearch');
         });
 
+        // Chabit AI Admin Settings & Unified Message Center
+        Route::prefix('chabit')->controller(\App\Http\Controllers\Backend\ChabitAdminController::class)->name('admin.chabit.')->group(function () {
+            Route::get('/settings', 'settings')->name('settings');
+            Route::post('/settings', 'updateSettings')->name('settings.update');
+            Route::post('/settings/test', 'testConnection')->name('settings.test');
+            Route::get('/messages', 'messages')->name('messages');
+            Route::get('/threads/{id}', 'showThread')->name('threads.show');
+            Route::post('/threads/{id}/toggle-pause', 'togglePause')->name('threads.togglePause');
+            Route::post('/threads/{id}/reply', 'reply')->name('threads.reply');
+            Route::post('/items/{id}/approve', 'approveItem')->name('items.approve');
+        });
+
         Route::resource('/landing_page', LandingPageController::class);
 
         Route::middleware([])->group(function () {

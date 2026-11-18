@@ -129,6 +129,8 @@ class ItemImageApiController extends PsApiController
 
             DB::commit();
 
+            \App\Services\Chabit\ChabitItemModerator::dispatchForItem($itemId);
+
             return responseDataApi($data);
         } catch (\Throwable $e) {
             DB::rollBack();

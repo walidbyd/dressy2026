@@ -526,15 +526,37 @@
                         rowProps.row[itmConditionOfItem + '@@name'] }}</ps-badge>
                 </span>
 
-                <div v-if="rowProps.field == 'status' && reRenderToogle">
-                    <ps-toggle v-if="reRenderToogle" :disabled="!rowProps.row.authorizations.update"
-                        :selectedValue="rowProps.row.status == 1 ? true : false"
-                        @click="handlePublish(rowProps.row.id, rowProps.row.authorizations.update)"></ps-toggle>
-                    <!-- <ps-toggle @updateToggle="handlePublish(rowProps.row.id)" :disabled="!rowProps.row.authorizations.update" v-if="rowProps.field == 'status'" :selectedValue="rowProps.row.status == 1 ? true : false"
-                   ></ps-toggle> -->
-                    <!-- <div v-if="rowProps.field == 'status'">
-                {{rowProps.row.status}}
-                </div> -->
+                <div v-if="rowProps.field == 'status' && reRenderToogle" class="flex flex-col gap-1.5">
+                    <div class="flex items-center gap-2">
+                        <ps-toggle v-if="reRenderToogle" :disabled="!rowProps.row.authorizations.update"
+                            :selectedValue="rowProps.row.status == 1 ? true : false"
+                            @click="handlePublish(rowProps.row.id, rowProps.row.authorizations.update)"></ps-toggle>
+                        <button
+                            v-if="rowProps.row.status != 1 && (rowProps.row.ai_moderation_status === 'rejected' || rowProps.row.ai_moderation_status === 'manual_review')"
+                            type="button"
+                            @click="handleAdminApproveOverride(rowProps.row.id)"
+                            class="px-2 py-0.5 text-[11px] font-semibold rounded bg-emerald-600 text-white hover:bg-emerald-700 transition">
+                            Approve
+                        </button>
+                    </div>
+                    <div v-if="rowProps.row.ai_moderation_status" class="flex flex-col gap-0.5">
+                        <span
+                            :title="rowProps.row.ai_moderation_reason || ''"
+                            class="inline-flex items-center w-fit px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                            :class="{
+                                'bg-emerald-100 text-emerald-800': rowProps.row.ai_moderation_status === 'approved',
+                                'bg-rose-100 text-rose-800': rowProps.row.ai_moderation_status === 'rejected',
+                                'bg-amber-100 text-amber-800': rowProps.row.ai_moderation_status === 'manual_review' || rowProps.row.ai_moderation_status === 'pending'
+                            }">
+                            <template v-if="rowProps.row.approved_by_admin">Admin Approved</template>
+                            <template v-else-if="rowProps.row.ai_moderation_status === 'approved'">AI Approved{{ rowProps.row.ai_confidence ? ' (' + rowProps.row.ai_confidence + '%)' : '' }}</template>
+                            <template v-else-if="rowProps.row.ai_moderation_status === 'rejected'">AI Rejected</template>
+                            <template v-else>AI Review</template>
+                        </span>
+                        <span v-if="rowProps.row.ai_moderation_reason" class="text-[10px] text-gray-500 max-w-[180px] truncate" :title="rowProps.row.ai_moderation_reason">
+                            {{ rowProps.row.ai_moderation_reason }}
+                        </span>
+                    </div>
                 </div>
 
                 <ps-text-button :disabled="!can.createItem" v-if="rowProps.field == 'duplicate'"
@@ -955,6 +977,12 @@ export default defineComponent({
             handleSearchingSorting(1, value);
         }
 
+        function handleAdminApproveOverride(id) {
+            router.post(route('admin.chabit.items.approve', id), {}, {
+                preserveScroll: true,
+            });
+        }
+
         function handlePublish(id, hasPermission) {
             if (hasPermission) {
                 router.put(route('item.statusChange', id));
@@ -1258,6 +1286,7 @@ export default defineComponent({
             selected_updated_date,
             selected_available,
             handlePublish,
+            handleAdminApproveOverride,
             reRenderToogle,
             // handleCustomfieldFilter,
             selected_customfield,

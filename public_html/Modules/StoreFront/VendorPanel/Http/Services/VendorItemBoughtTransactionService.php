@@ -414,6 +414,15 @@ class VendorItemBoughtTransactionService extends PsService
                 \Illuminate\Support\Facades\Log::warning('Order notification email error: ' . $e->getMessage());
             }
 
+            // Trigger Chabit AI Order Confirmation quick-reply threads (Buyer & Seller) for COD orders
+            if ($cod_result == 1 && ! empty($order)) {
+                try {
+                    app(\App\Services\Chabit\ChabitAssistantService::class)->triggerNewCodOrderThreads($order);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Chabit COD order thread trigger error: ' . $e->getMessage());
+                }
+            }
+
             return responseMsgApi(__('vendor_item__api_success_bought', [], $request->language_symbol), Constants::createdStatusCode, Constants::successStatus);
         }
     }
