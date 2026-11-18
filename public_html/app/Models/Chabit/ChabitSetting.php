@@ -46,7 +46,8 @@ class ChabitSetting extends Model
 
     public function getEffectiveApiKey(): ?string
     {
-        $key = trim((string) ($this->gemini_api_key ?: env('GEMINI_API_KEY', '')));
+        $raw = (string) ($this->gemini_api_key ?: env('GEMINI_API_KEY', ''));
+        $key = preg_replace('/\s+/', '', trim($raw));
 
         return $key !== '' ? $key : null;
     }

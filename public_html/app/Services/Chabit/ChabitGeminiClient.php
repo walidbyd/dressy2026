@@ -8,10 +8,36 @@ use Illuminate\Support\Facades\Log;
 
 class ChabitGeminiClient
 {
+    public const DEFAULT_MODEL = 'gemini-3.6-flash';
+
+    public const ALLOWED_MODELS = [
+        'gemini-3.6-flash',
+        'gemini-3.8-flash',
+    ];
+
     protected string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 
+    public static function sanitizeModel(?string $model): string
+    {
+        $clean = trim((string) $model);
+
+        return in_array($clean, self::ALLOWED_MODELS, true) ? $clean : self::DEFAULT_MODEL;
+    }
+
+    public static function sanitizeApiKey(?string $key): ?string
+    {
+        if ($key === null) {
+            return null;
+        }
+        // Strip leading/trailing whitespace and accidental internal line breaks/spaces from copy-paste
+        $clean = preg_replace('/\s+/', '', trim($key));
+
+        return $clean !== '' ? $clean : null;
+    }
+
     /**
-     * Execute a generateContent request against Google Gemini API.
+     * Execute a generateContent request against the official Google Gemini v1beta API.
+     * Supports strictly gemini-3.6-flash (default) and gemini-3.8-flash.
      */
     public function generateContent(
         array $contents,
@@ -21,93 +47,110 @@ class ChabitGeminiClient
         ?string $modelOverride = null,
         ?string $apiKeyOverride = null
     ): array {
-        $settings = ChabitSetting::current();
-        $apiKey = $apiKeyOverride ?: $settings->getEffectiveApiKey();
-        $model = $modelOverride ?: ($settings->gemini_model ?: 'gemini-3.6-flash');
+        try {
+            $settings = ChabitSetting::current();
+            $apiKey = self::sanitizeApiKey($apiKeyOverride) ?: self::sanitizeApiKey($settings->getEffectiveApiKey());
+            $model = self::sanitizeModel($modelOverride ?: $settings->gemini_model);
 
-        if (empty($apiKey)) {
-            return [
-                'ok' => false,
-                'error' => 'Gemini API key is not configured.',
-            ];
-        }
-
-        $payload = [
-            'contents' => $contents,
-            'generationConfig' => [
-                'temperature' => $expectJson ? 0.1 : 0.4,
-            ],
-        ];
-
-        if ($expectJson) {
-            $payload['generationConfig']['responseMimeType'] = 'application/json';
-        }
-
-        if (! empty($systemInstruction)) {
-            $payload['systemInstruction'] = [
-                'parts' => [
-                    ['text' => $systemInstruction],
-                ],
-            ];
-        }
-
-        if (! empty($tools)) {
-            $payload['tools'] = $tools;
-        }
-
-        $modelsToTry = array_values(array_unique([$model, 'gemini-2.5-flash']));
-        $lastError = 'Unknown Gemini API error';
-
-        foreach ($modelsToTry as $idx => $candidateModel) {
-            try {
-                $url = sprintf('%s/%s:generateContent?key=%s', $this->baseUrl, urlencode($candidateModel), urlencode($apiKey));
-                $response = Http::timeout(25)
-                    ->acceptJson()
-                    ->asJson()
-                    ->post($url, $payload);
-
-                if ($response->successful()) {
-                    $json = $response->json();
-
-                    return [
-                        'ok' => true,
-                        'model_used' => $candidateModel,
-                        'data' => $json,
-                        'text' => $this->extractText($json),
-                        'function_calls' => $this->extractFunctionCalls($json),
-                    ];
-                }
-
-                $status = $response->status();
-                $body = $response->json();
-                $lastError = $body['error']['message'] ?? ('HTTP '.$status.': '.$response->body());
-
-                // Only fallback to secondary model if model-not-found (404) and this wasn't an explicit test
-                if ($status === 404 && $idx === 0 && empty($modelOverride)) {
-                    Log::warning("Chabit Gemini model '{$candidateModel}' returned 404; trying fallback.");
-                    continue;
-                }
-
+            if (empty($apiKey)) {
                 return [
                     'ok' => false,
-                    'status' => $status,
-                    'error' => $lastError,
-                ];
-            } catch (\Throwable $e) {
-                $lastError = $e->getMessage();
-                Log::error('ChabitGeminiClient exception: '.$lastError);
-
-                return [
-                    'ok' => false,
-                    'error' => $lastError,
+                    'model' => $model,
+                    'http_status' => 0,
+                    'error' => 'Gemini API key is not configured. Please paste your Google AI Studio key and save.',
                 ];
             }
-        }
 
-        return [
-            'ok' => false,
-            'error' => $lastError,
-        ];
+            $payload = [
+                'contents' => $contents,
+                'generationConfig' => [
+                    'temperature' => $expectJson ? 0.1 : 0.4,
+                ],
+            ];
+
+            if ($expectJson) {
+                $payload['generationConfig']['responseMimeType'] = 'application/json';
+            }
+
+            if (! empty($systemInstruction)) {
+                $payload['systemInstruction'] = [
+                    'parts' => [
+                        ['text' => $systemInstruction],
+                    ],
+                ];
+            }
+
+            if (! empty($tools)) {
+                $payload['tools'] = $tools;
+            }
+
+            $url = sprintf(
+                '%s/%s:generateContent?key=%s',
+                $this->baseUrl,
+                rawurlencode($model),
+                rawurlencode($apiKey)
+            );
+
+            $response = Http::timeout(25)
+                ->connectTimeout(10)
+                ->acceptJson()
+                ->asJson()
+                ->post($url, $payload);
+
+            $status = $response->status();
+
+            if ($response->successful()) {
+                $json = $response->json();
+
+                return [
+                    'ok' => true,
+                    'model' => $model,
+                    'model_used' => $model,
+                    'http_status' => $status,
+                    'data' => $json,
+                    'text' => $this->extractText($json),
+                    'function_calls' => $this->extractFunctionCalls($json),
+                ];
+            }
+
+            $bodyJson = $response->json();
+            $googleStatus = $bodyJson['error']['status'] ?? null;
+            $googleMsg = $bodyJson['error']['message'] ?? null;
+
+            if ($googleMsg) {
+                $errorDetail = $googleStatus ? "[{$googleStatus}] {$googleMsg}" : $googleMsg;
+            } else {
+                $rawBody = trim(mb_substr((string) $response->body(), 0, 400));
+                $errorDetail = $rawBody !== '' ? $rawBody : 'Empty error response from Google Gemini API.';
+            }
+
+            Log::warning("ChabitGeminiClient HTTP {$status} for model {$model}: {$errorDetail}");
+
+            return [
+                'ok' => false,
+                'model' => $model,
+                'http_status' => $status,
+                'error' => $errorDetail,
+            ];
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error('ChabitGeminiClient cURL/Connection error: '.$e->getMessage());
+
+            return [
+                'ok' => false,
+                'model' => self::sanitizeModel($modelOverride),
+                'http_status' => 0,
+                'error' => 'Network / cURL connection error: '.$e->getMessage(),
+            ];
+        } catch (\Throwable $e) {
+            Log::error('ChabitGeminiClient exception: '.$e->getMessage());
+
+            return [
+                'ok' => false,
+                'model' => self::sanitizeModel($modelOverride),
+                'http_status' => 0,
+                'error' => 'Unexpected client error: '.$e->getMessage(),
+            ];
+        }
     }
 
     /**
@@ -115,35 +158,47 @@ class ChabitGeminiClient
      */
     public function testConnection(?string $apiKey = null, ?string $model = null): array
     {
-        $settings = ChabitSetting::current();
-        $targetModel = $model ?: ($settings->gemini_model ?: 'gemini-3.6-flash');
+        try {
+            $settings = ChabitSetting::current();
+            $targetModel = self::sanitizeModel($model ?: $settings->gemini_model);
+            $cleanKey = self::sanitizeApiKey($apiKey);
 
-        $res = $this->generateContent(
-            contents: [
-                [
-                    'role' => 'user',
-                    'parts' => [
-                        ['text' => 'Reply strictly with: OK'],
+            $res = $this->generateContent(
+                contents: [
+                    [
+                        'role' => 'user',
+                        'parts' => [
+                            ['text' => 'Reply strictly with: OK'],
+                        ],
                     ],
                 ],
-            ],
-            modelOverride: $targetModel,
-            apiKeyOverride: $apiKey
-        );
+                modelOverride: $targetModel,
+                apiKeyOverride: $cleanKey
+            );
 
-        if ($res['ok']) {
+            if ($res['ok']) {
+                return [
+                    'ok' => true,
+                    'model' => $res['model_used'] ?? $targetModel,
+                    'http_status' => $res['http_status'] ?? 200,
+                    'reply' => trim($res['text'] ?? 'OK'),
+                ];
+            }
+
             return [
-                'ok' => true,
-                'model' => $res['model_used'] ?? $targetModel,
-                'reply' => trim($res['text'] ?? 'OK'),
+                'ok' => false,
+                'model' => $res['model'] ?? $targetModel,
+                'http_status' => $res['http_status'] ?? 0,
+                'error' => $res['error'] ?? 'Connection failed.',
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'ok' => false,
+                'model' => self::sanitizeModel($model),
+                'http_status' => 0,
+                'error' => $e->getMessage(),
             ];
         }
-
-        return [
-            'ok' => false,
-            'model' => $targetModel,
-            'error' => $res['error'] ?? 'Connection failed',
-        ];
     }
 
     public function extractText(?array $json): string

@@ -10,6 +10,7 @@ use App\Services\Chabit\ChabitAssistantService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Modules\Core\Entities\UserAccessApiToken;
 
 class ChabitApiController extends Controller
@@ -17,6 +18,22 @@ class ChabitApiController extends Controller
     public function __construct(
         protected ChabitAssistantService $assistant
     ) {}
+
+    /**
+     * Build a safe eager-load select list for psx_orders verified against actual DB columns.
+     */
+    protected function safeOrderRelation(): string
+    {
+        $desired = ['id', 'order_code', 'total_price', 'delivery_fee', 'order_status_id', 'yalidine_tracking'];
+        $existing = ['id'];
+        foreach ($desired as $col) {
+            if ($col !== 'id' && Schema::hasColumn('psx_orders', $col)) {
+                $existing[] = $col;
+            }
+        }
+
+        return 'order:'.implode(',', $existing);
+    }
 
     /**
      * Strictly authenticate the mobile API user. Returns null (401) for guests.
@@ -80,7 +97,7 @@ class ChabitApiController extends Controller
 
         $assistantThread = $this->assistant->getOrCreateAssistantThread($userId);
 
-        $threads = ChabitThread::with(['latestMessage', 'order:id,order_code,total_amount,order_status_id'])
+        $threads = ChabitThread::with(['latestMessage', $this->safeOrderRelation()])
             ->where('user_id', $userId)
             ->orderByDesc('last_message_at')
             ->orderByDesc('id')
@@ -103,7 +120,7 @@ class ChabitApiController extends Controller
             return $this->unauthorizedResponse();
         }
 
-        $thread = ChabitThread::with(['messages', 'order:id,order_code,total_amount,order_status_id'])
+        $thread = ChabitThread::with(['messages', $this->safeOrderRelation()])
             ->where('id', $id)
             ->where('user_id', $userId)
             ->first();
@@ -171,7 +188,7 @@ class ChabitApiController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'thread' => $thread->fresh(['order:id,order_code,total_amount,order_status_id']),
+            'thread' => $thread->fresh([$this->safeOrderRelation()]),
             'user_message' => $result['user_message'],
             'reply_message' => $result['reply_message'],
         ]);

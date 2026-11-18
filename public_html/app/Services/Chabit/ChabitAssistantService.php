@@ -68,7 +68,8 @@ class ChabitAssistantService
 
             $order->loadMissing(['orderItems.item', 'shippingAndBilling', 'vendor']);
             $orderCode = $order->order_code ?: ('#'.$order->id);
-            $totalAmount = number_format((float) ($order->total_amount ?: $order->total_price ?: 0), 0, '.', ' ');
+            $rawTotal = (float) ($order->total_price ?? 0);
+            $totalAmount = number_format($rawTotal, 0, '.', ' ');
             $itemTitles = $order->orderItems
                 ->map(fn ($oi) => ($oi->item?->title ?? 'Article').' (x'.max(1, (int) $oi->quantity).')')
                 ->implode(', ');
@@ -549,8 +550,9 @@ SYS;
                             'role' => 'buyer',
                             'status_id' => $o->order_status_id,
                             'status_label' => $this->orderStatusLabel((int) $o->order_status_id),
-                            'total_dzd' => $o->total_amount ?: $o->total_price,
-                            'yalidine_tracking' => $o->yalidine_tracking,
+                            'total_dzd' => (float) ($o->total_price ?? 0),
+                            'delivery_fee_dzd' => (float) ($o->delivery_fee ?? 0),
+                            'yalidine_tracking' => $o->yalidine_tracking ?? null,
                             'items' => $o->orderItems->map(fn ($i) => $i->item?->title)->filter()->values()->all(),
                             'date' => (string) $o->added_date,
                         ]);
@@ -569,8 +571,9 @@ SYS;
                             'role' => 'seller',
                             'status_id' => $o->order_status_id,
                             'status_label' => $this->orderStatusLabel((int) $o->order_status_id),
-                            'total_dzd' => $o->total_amount ?: $o->total_price,
-                            'yalidine_tracking' => $o->yalidine_tracking,
+                            'total_dzd' => (float) ($o->total_price ?? 0),
+                            'delivery_fee_dzd' => (float) ($o->delivery_fee ?? 0),
+                            'yalidine_tracking' => $o->yalidine_tracking ?? null,
                             'items' => $o->orderItems->map(fn ($i) => $i->item?->title)->filter()->values()->all(),
                             'date' => (string) $o->added_date,
                         ]);
@@ -647,7 +650,8 @@ SYS;
         }
 
         $cancellableStatuses = [(int) Constants::orderPendingStatus, (int) Constants::orderApprovedStatus];
-        if (! in_array((int) $order->order_status_id, $cancellableStatuses, true) || ! empty($order->yalidine_tracking)) {
+        $hasTracking = Schema::hasColumn('psx_orders', 'yalidine_tracking') && ! empty($order->yalidine_tracking);
+        if (! in_array((int) $order->order_status_id, $cancellableStatuses, true) || $hasTracking) {
             $msg = match ($lang) {
                 'ar' => 'عذراً، لا يمكن إلغاء هذا الطلب لأنه تم شحنه بالفعل أو تمت معالجته.',
                 'en' => 'Sorry, this order can no longer be cancelled because it has already been shipped or processed.',
@@ -659,7 +663,9 @@ SYS;
 
         DB::transaction(function () use ($order, $userId) {
             $order->order_status_id = Constants::orderCancelledStatus;
-            $order->status_reason = 'Cancelled by buyer via Chabit';
+            if (Schema::hasColumn('psx_orders', 'status_reason')) {
+                $order->status_reason = 'Cancelled by buyer via Chabit';
+            }
             $order->updated_user_id = $userId;
             $order->save();
 

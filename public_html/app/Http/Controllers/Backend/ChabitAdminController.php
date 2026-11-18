@@ -25,6 +25,38 @@ class ChabitAdminController extends Controller
         protected ChabitPushService $push
     ) {}
 
+    /**
+     * Build a safe eager-load select list for psx_orders verified against actual DB columns.
+     */
+    protected function safeOrderRelation(): string
+    {
+        $desired = ['id', 'order_code', 'total_price', 'delivery_fee', 'order_status_id', 'yalidine_tracking'];
+        $existing = ['id'];
+        foreach ($desired as $col) {
+            if ($col !== 'id' && Schema::hasColumn('psx_orders', $col)) {
+                $existing[] = $col;
+            }
+        }
+
+        return 'order:'.implode(',', $existing);
+    }
+
+    /**
+     * Build a safe eager-load select list for users verified against actual DB columns.
+     */
+    protected function safeUserRelation(): string
+    {
+        $desired = ['id', 'name', 'email', 'user_phone'];
+        $existing = ['id'];
+        foreach ($desired as $col) {
+            if ($col !== 'id' && Schema::hasColumn('users', $col)) {
+                $existing[] = $col;
+            }
+        }
+
+        return 'user:'.implode(',', $existing);
+    }
+
     public function settings()
     {
         $setting = ChabitSetting::current();
@@ -34,7 +66,7 @@ class ChabitAdminController extends Controller
                 'id' => $setting->id,
                 'has_api_key' => ! empty($setting->getEffectiveApiKey()),
                 'masked_api_key' => $setting->getMaskedApiKey(),
-                'gemini_model' => $setting->gemini_model ?: 'gemini-3.6-flash',
+                'gemini_model' => ChabitGeminiClient::sanitizeModel($setting->gemini_model),
                 'is_enabled' => (bool) $setting->is_enabled,
                 'auto_approve_items' => (bool) $setting->auto_approve_items,
                 'auto_approve_confidence' => (int) ($setting->auto_approve_confidence ?: 85),
@@ -51,7 +83,7 @@ class ChabitAdminController extends Controller
     {
         $validated = $request->validate([
             'gemini_api_key' => 'nullable|string|max:500',
-            'gemini_model' => 'required|string|max:100',
+            'gemini_model' => 'required|in:gemini-3.6-flash,gemini-3.8-flash',
             'is_enabled' => 'required|boolean',
             'auto_approve_items' => 'required|boolean',
             'auto_approve_confidence' => 'required|integer|min:50|max:100',
@@ -60,7 +92,7 @@ class ChabitAdminController extends Controller
 
         $setting = ChabitSetting::current();
         $update = [
-            'gemini_model' => $validated['gemini_model'],
+            'gemini_model' => ChabitGeminiClient::sanitizeModel($validated['gemini_model']),
             'is_enabled' => $validated['is_enabled'],
             'auto_approve_items' => $validated['auto_approve_items'],
             'auto_approve_confidence' => $validated['auto_approve_confidence'],
@@ -68,7 +100,7 @@ class ChabitAdminController extends Controller
         ];
 
         if (! empty($validated['gemini_api_key']) && ! str_contains($validated['gemini_api_key'], '****')) {
-            $update['gemini_api_key'] = trim($validated['gemini_api_key']);
+            $update['gemini_api_key'] = ChabitGeminiClient::sanitizeApiKey($validated['gemini_api_key']);
         }
 
         $setting->update($update);
@@ -81,20 +113,33 @@ class ChabitAdminController extends Controller
 
     public function testConnection(Request $request)
     {
-        $apiKey = $request->input('gemini_api_key');
-        if (! empty($apiKey) && str_contains($apiKey, '****')) {
-            $apiKey = null;
+        try {
+            $apiKey = $request->input('gemini_api_key');
+            if (! empty($apiKey) && str_contains((string) $apiKey, '****')) {
+                $apiKey = null;
+            }
+            $apiKey = ChabitGeminiClient::sanitizeApiKey($apiKey);
+            $model = ChabitGeminiClient::sanitizeModel($request->input('gemini_model'));
+
+            $result = $this->gemini->testConnection($apiKey, $model);
+
+            return response()->json($result, ! empty($result['ok']) ? 200 : 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'model' => ChabitGeminiClient::sanitizeModel($request->input('gemini_model')),
+                'http_status' => 0,
+                'error' => $e->getMessage(),
+            ], 422);
         }
-        $model = $request->input('gemini_model') ?: 'gemini-3.6-flash';
-
-        $result = $this->gemini->testConnection($apiKey, $model);
-
-        return response()->json($result, $result['ok'] ? 200 : 422);
     }
 
     public function messages(Request $request)
     {
-        $assistantThreads = ChabitThread::with(['user:id,name,email,user_phone', 'latestMessage'])
+        $userRel = $this->safeUserRelation();
+        $orderRel = $this->safeOrderRelation();
+
+        $assistantThreads = ChabitThread::with([$userRel, 'latestMessage'])
             ->where('thread_type', 'assistant')
             ->orderByDesc('last_message_at')
             ->orderByDesc('id')
@@ -102,8 +147,8 @@ class ChabitAdminController extends Controller
             ->get();
 
         $orderThreads = ChabitThread::with([
-            'user:id,name,email,user_phone',
-            'order:id,order_code,total_amount,order_status_id',
+            $userRel,
+            $orderRel,
             'latestMessage',
         ])
             ->whereIn('thread_type', ['order_buyer', 'order_seller'])
@@ -145,8 +190,8 @@ class ChabitAdminController extends Controller
     public function showThread(int $id)
     {
         $thread = ChabitThread::with([
-            'user:id,name,email,user_phone',
-            'order:id,order_code,total_amount,order_status_id,yalidine_tracking',
+            $this->safeUserRelation(),
+            $this->safeOrderRelation(),
             'messages',
         ])->findOrFail($id);
 

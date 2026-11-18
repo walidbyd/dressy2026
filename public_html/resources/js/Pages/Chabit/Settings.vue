@@ -58,16 +58,19 @@
                             {{ testing ? 'Testing...' : 'Test Connection' }}
                         </button>
                     </div>
-                    <p v-if="testResult"
-                        class="mt-2 text-xs font-medium px-3 py-2 rounded-lg"
-                        :class="testResult.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'">
+                    <div v-if="testResult"
+                        class="mt-2 text-xs font-medium px-3.5 py-2.5 rounded-lg break-words"
+                        :class="testResult.ok ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'">
                         <template v-if="testResult.ok">
-                            ✅ Connected to <strong>{{ testResult.model }}</strong> — Reply: {{ testResult.reply }}
+                            ✅ Connected to <strong>{{ testResult.model }}</strong> (HTTP {{ testResult.http_status || 200 }}) — Reply: {{ testResult.reply }}
                         </template>
                         <template v-else>
-                            ❌ Connection failed ({{ testResult.model }}): {{ testResult.error }}
+                            ❌ Connection failed for <strong>{{ testResult.model }}</strong>
+                            <span v-if="testResult.http_status"> (HTTP {{ testResult.http_status }})</span>
+                            <span v-else> (Network / cURL Error)</span>:
+                            <div class="mt-1 font-mono text-[11px] whitespace-pre-wrap">{{ testResult.error }}</div>
                         </template>
-                    </p>
+                    </div>
                 </div>
 
                 <!-- Gemini Model Selector -->
@@ -204,11 +207,22 @@ async function testConnection() {
         });
         testResult.value = res.data;
     } catch (err) {
-        testResult.value = err.response?.data || {
-            ok: false,
-            model: form.gemini_model,
-            error: err.message || 'Request failed',
-        };
+        const data = err.response?.data;
+        if (data && typeof data === 'object' && ('error' in data || 'message' in data)) {
+            testResult.value = {
+                ok: false,
+                model: data.model || form.gemini_model,
+                http_status: data.http_status ?? err.response?.status ?? 0,
+                error: data.error || data.message || 'Request failed',
+            };
+        } else {
+            testResult.value = {
+                ok: false,
+                model: form.gemini_model,
+                http_status: err.response?.status ?? 0,
+                error: err.message || 'Request failed',
+            };
+        }
     } finally {
         testing.value = false;
     }
