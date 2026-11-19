@@ -74,35 +74,9 @@ class ChabitAssistantService
                 ->map(fn ($oi) => ($oi->item?->title ?? 'Article').' (x'.max(1, (int) $oi->quantity).')')
                 ->implode(', ');
 
-            // 1. Buyer Thread (order_buyer)
-            if (! empty($order->user_id)) {
-                $buyerLang = $this->resolveUserPreferredLanguage((int) $order->user_id);
-                $buyerThread = ChabitThread::firstOrCreate(
-                    [
-                        'user_id' => (int) $order->user_id,
-                        'order_id' => $order->id,
-                        'thread_type' => 'order_buyer',
-                    ],
-                    [
-                        'language' => $buyerLang,
-                        'ai_paused' => false,
-                        'last_message_at' => now(),
-                    ]
-                );
-
-                if ($buyerThread->messages()->count() === 0) {
-                    [$buyerBody, $buyerReplies, $buyerTitle] = $this->buildBuyerOrderConfirmationPayload($buyerLang, $orderCode, $itemTitles, $totalAmount);
-                    $this->addMessage(
-                        thread: $buyerThread,
-                        senderType: 'system',
-                        body: $buyerBody,
-                        quickReplies: $buyerReplies,
-                        metadata: ['order_id' => $order->id, 'order_code' => $orderCode],
-                        sendPush: true,
-                        pushTitle: $buyerTitle
-                    );
-                }
-            }
+            // 1. Buyer Thread: Do NOT send initial confirmation message on order creation.
+            // Only the seller is notified first to confirm or cancel the order.
+            // The buyer receives automated notifications ONLY after seller confirms/updates status.
 
             // 2. Seller Thread (order_seller)
             $sellerUserId = $this->resolveSellerUserId($order);

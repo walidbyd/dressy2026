@@ -120,7 +120,7 @@ class OrderChatNotificationService
      */
     public function getBuyerUserId(Order $order): ?int
     {
-        return $order->user_id ?: $order->added_user_id;
+        return $order->user_id ? (int)$order->user_id : ($order->added_user_id ? (int)$order->added_user_id : null);
     }
 
     /**
@@ -129,6 +129,9 @@ class OrderChatNotificationService
     public function getSellerUserId(Order $order): ?int
     {
         $sellerId = $order->vendor?->owner_user_id;
+        if (!$sellerId && $order->vendor_id) {
+            $sellerId = \Modules\Core\Entities\Vendor\Vendor::where('id', $order->vendor_id)->value('owner_user_id');
+        }
         if (!$sellerId) {
             $firstItem = $order->orderItems()->with('item')->first();
             $sellerId = $firstItem?->item?->added_user_id;
@@ -172,8 +175,10 @@ class OrderChatNotificationService
                 return;
             }
 
+            $rawTotal = (float) ($order->total_price ?? 0);
+            $totalAmount = number_format($rawTotal, 0, '.', ' ');
             $itemTitle = $order->orderItems?->first()?->item?->title ?? 'Article';
-            $messageText = "Nouvelle commande #{$order->order_code} reçue pour \"{$itemTitle}\". Veuillez confirmer ou annuler.";
+            $messageText = "Nouvelle commande #{$order->order_code}\nArticle : {$itemTitle}\nMontant total : {$totalAmount} DZD\n\nVeuillez confirmer la disponibilité de l'article pour expédition.";
             $sessionId = $this->getSessionId($buyerId, $sellerId);
             $nowMs = (int) round(microtime(true) * 1000);
             $messageKey = "order_{$order->id}_{$nowMs}";

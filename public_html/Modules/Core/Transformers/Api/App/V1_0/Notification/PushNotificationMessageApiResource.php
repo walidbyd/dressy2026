@@ -29,6 +29,10 @@ class PushNotificationMessageApiResource extends JsonResource
             'sender_name' => (string) $this->handleNotification()['sender_name'],
             'sender_cover_photo' => (string) $this->handleNotification()['sender_cover_photo'],
             'item_id' => checkAndGetValue($this, 'item_id'),
+            'order_id' => (string) (checkAndGetValue($this, 'order_id') ?? ''),
+            'order_code' => (string) (checkAndGetValue($this, 'order_code') ?? ''),
+            'message_type' => (string) (checkAndGetValue($this, 'message_type') ?? ''),
+            'action_status' => (string) (checkAndGetValue($this, 'action_status') ?? 'none'),
             'is_empty_object' => checkAndGetValue($this, 'id', 1),
         ];
     }
