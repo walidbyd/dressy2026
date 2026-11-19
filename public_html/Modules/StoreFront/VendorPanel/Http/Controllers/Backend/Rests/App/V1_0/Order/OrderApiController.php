@@ -267,19 +267,34 @@ class OrderApiController extends Controller
             $rating->from_user_id = $request->from_user_id;
             $rating->to_user_id = $toUserId;
             $rating->rating = (float) $request->rating;
-            $rating->title = $request->title ?: ('Avis commande #' . $order->order_code);
+            $rating->title = $request->title ?: ('Avis commande #' . ($order->order_code ?? $order->id));
             $rating->description = $request->description ?: '';
             $rating->type = Constants::ratingUserType;
             $rating->transaction_header_id = $order->id;
+            if ($order->order_items && $order->order_items->isNotEmpty()) {
+                $rating->item_id = $order->order_items->first()->item_id;
+            }
             $rating->added_date = \Carbon\Carbon::now();
             $rating->added_user_id = $request->from_user_id;
             $rating->save();
 
-            // Update order record
-            $order->is_reviewed = 1;
-            $order->review_rating = (float) $request->rating;
-            $order->review_id = $rating->id;
-            $order->save();
+            // Update order record if review columns exist
+            $orderFieldsToSave = false;
+            if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'is_reviewed')) {
+                $order->is_reviewed = 1;
+                $orderFieldsToSave = true;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'review_rating')) {
+                $order->review_rating = (float) $request->rating;
+                $orderFieldsToSave = true;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'review_id')) {
+                $order->review_id = $rating->id;
+                $orderFieldsToSave = true;
+            }
+            if ($orderFieldsToSave) {
+                $order->save();
+            }
 
             // Automatically recalculate the seller's rating note & count
             $allSellerRatings = \Modules\Core\Entities\User\Rating::where('to_user_id', $toUserId)->get();
@@ -288,12 +303,12 @@ class OrderApiController extends Controller
             $avgRating = $totalCount > 0 ? number_format((float) ($sumRating / $totalCount), 1, '.', '') : '0.0';
 
             $sellerUser = \App\Models\User::find($toUserId);
-            if ($sellerUser) {
+            if ($sellerUser && \Illuminate\Support\Facades\Schema::hasColumn('users', 'overall_rating')) {
                 $sellerUser->overall_rating = $avgRating;
                 $sellerUser->save();
             }
 
-            if ($order->vendor_id) {
+            if ($order->vendor_id && \Illuminate\Support\Facades\Schema::hasColumn('psx_vendors', 'overall_rating')) {
                 $vendor = \Modules\Core\Entities\Vendor\Vendor::find($order->vendor_id);
                 if ($vendor) {
                     $vendor->overall_rating = $avgRating;

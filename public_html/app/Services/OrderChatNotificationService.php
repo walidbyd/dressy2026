@@ -256,9 +256,11 @@ class OrderChatNotificationService
                 'item_id' => (string) $itemId,
                 'buyer_user_id' => (string) $buyerId,
                 'seller_user_id' => (string) $sellerId,
+                'sender_id' => (string) $buyerId,
+                'receiver_id' => (string) $sellerId,
                 'flag' => Constants::chatNotiFlag,
                 'message_type' => 'order_confirmation_request',
-            ]);
+            ], senderId: $buyerId);
         } catch (\Throwable $e) {
             Log::error('sendSellerConfirmationRequest error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
         }
@@ -362,14 +364,25 @@ class OrderChatNotificationService
                 'buyer_user_id' => (string) $buyerId,
                 'seller_user_id' => (string) $sellerId,
                 'flag' => Constants::chatNotiFlag,
+                'sender_id' => (string) ($triggerUserId ?? (auth()->id() ?? auth('sanctum')->id() ?? '0')),
                 'message_type' => 'order_status_update',
             ];
 
+            $senderIdVal = $triggerUserId ?? (auth()->id() ?? auth('sanctum')->id());
+
             if ($recipient === 'buyer' || $recipient === 'both') {
-                $this->sendFcmPush($buyerId, $pushData);
+                if ($senderIdVal === null || (int)$buyerId !== (int)$senderIdVal) {
+                    $buyerPush = $pushData;
+                    $buyerPush['receiver_id'] = (string) $buyerId;
+                    $this->sendFcmPush($buyerId, $buyerPush, $senderIdVal ? (int)$senderIdVal : null);
+                }
             }
             if ($recipient === 'seller' || $recipient === 'both') {
-                $this->sendFcmPush($sellerId, $pushData);
+                if ($senderIdVal === null || (int)$sellerId !== (int)$senderIdVal) {
+                    $sellerPush = $pushData;
+                    $sellerPush['receiver_id'] = (string) $sellerId;
+                    $this->sendFcmPush($sellerId, $sellerPush, $senderIdVal ? (int)$senderIdVal : null);
+                }
             }
         } catch (\Throwable $e) {
             Log::error('sendOrderStatusUpdate error: ' . $e->getMessage());
@@ -439,9 +452,18 @@ class OrderChatNotificationService
     /**
      * Send FCM Push Notification to all active device tokens of a user.
      */
-    protected function sendFcmPush(int $userId, array $data): void
+    protected function sendFcmPush(int $userId, array $data, ?int $senderId = null): void
     {
         try {
+            $sender = $senderId ?? ($data['sender_id'] ?? null);
+            if ($sender !== null && (int)$userId === (int)$sender) {
+                // NEVER send push notification to sender!
+                return;
+            }
+            if (empty($userId)) {
+                return;
+            }
+
             $tokens = PushNotificationToken::where('user_id', $userId)->get();
             if ($tokens->isEmpty()) {
                 return;

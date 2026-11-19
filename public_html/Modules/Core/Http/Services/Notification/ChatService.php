@@ -307,7 +307,37 @@ class ChatService extends PsService implements ChatServiceInterface
             $chatHistory = $this->chatHistoryService->get(null, [ChatHistory::orderId => $chatData['order_id']], $this->chatApiRelations);
         }
 
-        if ($chatHistory) {
+        if ($chatHistory && $chatHistory instanceof \Modules\Core\Entities\Notification\ChatHistory) {
+            $effectiveUserId = (string) ($loginUserId ?: (auth()->id() ?? auth('sanctum')->id()));
+            $needSave = false;
+            if ($effectiveUserId === (string) $chatHistory->buyer_user_id && (int) $chatHistory->buyer_unread_count > 0) {
+                $chatHistory->buyer_unread_count = 0;
+                $needSave = true;
+            } elseif ($effectiveUserId === (string) $chatHistory->seller_user_id && (int) $chatHistory->seller_unread_count > 0) {
+                $chatHistory->seller_unread_count = 0;
+                $needSave = true;
+            }
+            if ($needSave) {
+                $chatHistory->save();
+            }
+
+            // Mark matching psx_chat_notis as read
+            \Modules\Core\Entities\Notification\ChatNoti::where('is_read', 0)
+                ->where(function ($query) use ($chatHistory) {
+                    if (!empty($chatHistory->order_id)) {
+                        $query->where('order_id', $chatHistory->order_id);
+                    } else {
+                        $query->where('buyer_user_id', $chatHistory->buyer_user_id)
+                              ->where('seller_user_id', $chatHistory->seller_user_id);
+                        if (!empty($chatHistory->item_id)) {
+                            $query->where('item_id', $chatHistory->item_id);
+                        }
+                    }
+                })
+                ->update(['is_read' => 1]);
+
+            $chatHistory = new ChatHistoryApiResource($chatHistory);
+        } elseif ($chatHistory) {
             $chatHistory = new ChatHistoryApiResource($chatHistory);
         } else {
             $chatHistory = new \stdClass;
@@ -338,38 +368,78 @@ class ChatService extends PsService implements ChatServiceInterface
 
     public function resetCountFromApi($chatData, $langSymbol, $loginUserId)
     {
-        $chatNotiConds = $this->prepareChatNotiCondsDataResetCount($chatData);
-        $chatNotis = $this->chatNotiService->getAll(conds: $chatNotiConds, noPagination: Constants::yes);
-        foreach ($chatNotis as $chatNoti) {
-            try {
-                $chatNotiData = $this->prepareChatNotiUpdateDataResetCount();
-                $this->chatNotiService->update($chatNoti->id, $chatNotiData, $loginUserId);
-            } catch (Throwable $e) {
-                // dd($e->getMessage());
-                throw new PsApiException($e->getMessage(), Constants::internalServerErrorStatusCode);
+        $effectiveUserId = (string) ($loginUserId ?: (auth()->id() ?? auth('sanctum')->id()));
+
+        // Mark matching notifications as read
+        try {
+            $chatNotiQuery = \Modules\Core\Entities\Notification\ChatNoti::where('is_read', 0);
+            if (!empty($chatData['order_id'])) {
+                $chatNotiQuery->where('order_id', $chatData['order_id']);
+            } elseif (!empty($chatData['buyer_user_id']) && !empty($chatData['seller_user_id'])) {
+                $chatNotiQuery->where('buyer_user_id', $chatData['buyer_user_id'])
+                    ->where('seller_user_id', $chatData['seller_user_id']);
+                if (!empty($chatData['item_id'])) {
+                    $chatNotiQuery->where('item_id', $chatData['item_id']);
+                }
+            }
+            $chatNotiQuery->update(['is_read' => 1]);
+        } catch (\Throwable $e) {
+            // Ignore error if any
+        }
+
+        // Find ChatHistory by id, order_id, or buyer/seller
+        $chatHistory = null;
+        if (!empty($chatData['id'])) {
+            $chatHistory = $this->chatHistoryService->get($chatData['id']);
+        }
+        if (!$chatHistory && !empty($chatData['order_id'])) {
+            $chatHistory = $this->chatHistoryService->get(null, [ChatHistory::orderId => $chatData['order_id']]);
+        }
+        if (!$chatHistory && !empty($chatData['buyer_user_id']) && !empty($chatData['seller_user_id'])) {
+            $conds = [
+                ChatHistory::buyerUserId => $chatData['buyer_user_id'],
+                ChatHistory::sellerUserId => $chatData['seller_user_id'],
+            ];
+            if (!empty($chatData['item_id'])) {
+                $conds[ChatHistory::itemId] = $chatData['item_id'];
+            }
+            $chatHistory = $this->chatHistoryService->get(null, $conds);
+            if (!$chatHistory && !empty($chatData['item_id'])) {
+                unset($conds[ChatHistory::itemId]);
+                $chatHistory = $this->chatHistoryService->get(null, $conds);
             }
         }
 
-        $chatHistoryConds = $this->prepareChatHistoryGetCondsData($chatData);
-        $chatHistory = $this->chatHistoryService->get(null, $chatHistoryConds);
+        if ($chatHistory) {
+            // Determine which unread count to reset
+            if ($effectiveUserId === (string) $chatHistory->buyer_user_id) {
+                $chatHistory->buyer_unread_count = 0;
+            } elseif ($effectiveUserId === (string) $chatHistory->seller_user_id) {
+                $chatHistory->seller_unread_count = 0;
+            } else {
+                if (isset($chatData['type'])) {
+                    if ($chatData['type'] == Constants::chatToSeller) {
+                        $chatHistory->buyer_unread_count = 0;
+                    } else {
+                        $chatHistory->seller_unread_count = 0;
+                    }
+                } else {
+                    $chatHistory->buyer_unread_count = 0;
+                    $chatHistory->seller_unread_count = 0;
+                }
+            }
+            $chatHistory->save();
 
-        if (empty($chatHistory)) {
-            $message = __('chatting__api_err_chat_history_not_exist', [], $langSymbol);
-            throw new PsApiException($message, Constants::notFoundStatusCode);
+            $resource = new ChatHistoryApiResource($this->chatHistoryService->get($chatHistory->id, null, $this->chatApiRelations));
+            return responseDataApi($resource, Constants::okStatusCode, Constants::successStatus);
         }
 
-        try {
-            $chatHistoryData = $this->prepareChatHistoryUpdateDataResetCount($chatData);
-            $this->chatHistoryService->update($chatHistory->id, $chatHistoryData, $loginUserId);
-        } catch (Throwable $e) {
-            // dd($e->getMessage());
-            $message = __('chatting__api_db_error', [], $langSymbol);
-            throw new PsApiException($message, Constants::internalServerErrorStatusCode);
-        }
-
-        $chatHistory = new ChatHistoryApiResource($this->chatHistoryService->get($chatHistory->id, null, $this->chatApiRelations));
-
-        return responseDataApi($chatHistory, Constants::okStatusCode, Constants::successStatus);
+        // Return empty 200 OK so Flutter doesn't fail with 404
+        $emptyObj = new \stdClass;
+        $emptyObj->id = '0';
+        $emptyObj->buyer_unread_count = '0';
+        $emptyObj->seller_unread_count = '0';
+        return responseDataApi(new ChatHistoryApiResource($emptyObj), Constants::okStatusCode, Constants::successStatus);
     }
 
     public function unreadCountFromApi($chatData, $langSymbol, $loginUserId)
@@ -1061,34 +1131,62 @@ class ChatService extends PsService implements ChatServiceInterface
 
     public function sendChatNoti($chat_data)
     {
-        // start noti send to sender user
-        $token_conds['user_id'] = $chat_data['receiver_user_id'];
+        $senderUserId = $chat_data['sender_user_id'] ?? null;
+        $receiverUserId = $chat_data['receiver_user_id'] ?? null;
+
+        // Guard: NEVER send push notification if receiver is empty or receiver is sender!
+        if (empty($receiverUserId) || (!empty($senderUserId) && (string)$receiverUserId === (string)$senderUserId)) {
+            return;
+        }
+
+        // Send noti to receiver user only
+        $token_conds['user_id'] = $receiverUserId;
         $notiTokens = $this->pushNotificationTokenService->getAll(conds: $token_conds, noPagination: Constants::yes);
         $device_ids = [];
         $platform_names = [];
         foreach ($notiTokens as $token) {
-            $device_ids[] = $token->device_token;
-            $platform_names[] = $token->platform_name;
+            if (!empty($token->device_token) && $token->device_token !== 'errorToken') {
+                $device_ids[] = $token->device_token;
+                $platform_names[] = $token->platform_name ?? 'android';
+            }
         }
 
-        // get reveiver data
-        $receiver = $this->userService->getUser($chat_data['receiver_user_id']);
+        if (empty($device_ids)) {
+            return;
+        }
 
-        $user = $this->userService->getUser($chat_data['sender_user_id']);
-        $data['message'] = $chat_data[ChatNoti::chatNotiMessage];
-        $data[ChatNoti::buyerUserId] = $chat_data[ChatNoti::buyerUserId];
-        $data[ChatNoti::sellerUserId] = $chat_data[ChatNoti::sellerUserId];
-        $data['sender_name'] = $user->name;
+        $receiver = $this->userService->getUser($receiverUserId);
+        $user = $this->userService->getUser($senderUserId);
+        if (!$receiver) {
+            return;
+        }
+
+        $data['message'] = $chat_data[ChatNoti::chatNotiMessage] ?? '';
+        $data[ChatNoti::buyerUserId] = (string) ($chat_data[ChatNoti::buyerUserId] ?? '');
+        $data[ChatNoti::sellerUserId] = (string) ($chat_data[ChatNoti::sellerUserId] ?? '');
+        $data['sender_id'] = (string) ($senderUserId ?? '');
+        $data['receiver_id'] = (string) ($receiverUserId ?? '');
+        $data['sender_user_id'] = (string) ($senderUserId ?? '');
+        $data['receiver_user_id'] = (string) ($receiverUserId ?? '');
+        $data['sender_name'] = $user ? $user->name : '';
         $data['user_name'] = $receiver->name;
-        $data[ChatNoti::itemId] = $chat_data[ChatNoti::itemId];
-        $data['sender_profile_photo'] = $user->user_cover_photo;
+        $data[ChatNoti::itemId] = (string) ($chat_data[ChatNoti::itemId] ?? '');
+        $data['sender_profile_photo'] = $user ? $user->user_cover_photo : '';
         $data['user_profile_photo'] = $receiver->user_cover_photo;
         $data['flag'] = Constants::chatNotiFlag;
-        $data['chat_flag'] = $chat_data['flag'];
+        $data['chat_flag'] = $chat_data['flag'] ?? '';
+        if (!empty($chat_data['chat_history_id'])) {
+            $data['chat_history_id'] = (string) $chat_data['chat_history_id'];
+        }
+        if (!empty($chat_data['order_id'])) {
+            $data['order_id'] = (string) $chat_data['order_id'];
+        }
+        if (!empty($chat_data['order_code'])) {
+            $data['order_code'] = (string) $chat_data['order_code'];
+        }
+
         foreach ($device_ids as $device_id) {
             $this->firebaseCloudMessagingService->sendAndroidFcm($device_id, $data, $platform_names);
         }
-        // end noti send to sender user
-
     }
 }

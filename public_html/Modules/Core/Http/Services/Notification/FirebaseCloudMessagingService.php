@@ -168,7 +168,7 @@ class FirebaseCloudMessagingService extends PsService implements FirebaseCloudMe
         return $noti_arr;
     }
 
-    private function prepareTokenNotiData($type = null, $message = null, $flag = null, $clickAction = null, $rating = null, $buyerId = null, $sellerId = null, $itemId = null, $senderName = null, $senderProfilePhoto = null)
+    private function prepareTokenNotiData($type = null, $message = null, $flag = null, $clickAction = null, $rating = null, $buyerId = null, $sellerId = null, $itemId = null, $senderName = null, $senderProfilePhoto = null, $senderId = null, $receiverId = null, $chatHistoryId = null, $orderId = null, $orderCode = null)
     {
         $notiData = [
             'message' => $message,
@@ -188,6 +188,23 @@ class FirebaseCloudMessagingService extends PsService implements FirebaseCloudMe
             $notiData['sender_name'] = (string) $senderName;
             $notiData['sender_profile_photo'] = (string) $senderProfilePhoto;
             $notiData['action'] = 'abc';
+            if (!empty($senderId)) {
+                $notiData['sender_id'] = (string) $senderId;
+                $notiData['sender_user_id'] = (string) $senderId;
+            }
+            if (!empty($receiverId)) {
+                $notiData['receiver_id'] = (string) $receiverId;
+                $notiData['receiver_user_id'] = (string) $receiverId;
+            }
+            if (!empty($chatHistoryId)) {
+                $notiData['chat_history_id'] = (string) $chatHistoryId;
+            }
+            if (!empty($orderId)) {
+                $notiData['order_id'] = (string) $orderId;
+            }
+            if (!empty($orderCode)) {
+                $notiData['order_code'] = (string) $orderCode;
+            }
         }
 
         return $notiData;
@@ -326,7 +343,12 @@ class FirebaseCloudMessagingService extends PsService implements FirebaseCloudMe
                 itemId: $item_id,
                 senderName: $sender_name,
                 senderProfilePhoto: $sender_profile_photo,
-                clickAction: $click_action
+                clickAction: $click_action,
+                senderId: $data['sender_id'] ?? $data['sender_user_id'] ?? null,
+                receiverId: $data['receiver_id'] ?? $data['receiver_user_id'] ?? null,
+                chatHistoryId: $data['chat_history_id'] ?? null,
+                orderId: $data['order_id'] ?? null,
+                orderCode: $data['order_code'] ?? null
             );
 
         }
