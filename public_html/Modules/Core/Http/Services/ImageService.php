@@ -282,36 +282,44 @@ class ImageService extends PsService
     {
 
         // dd($uploadType);
+        @ini_set('memory_limit', '256M');
         $font_color = $this->colorService->get(key: 'backend_color');
 
         $org_image = Image::make($file);
         $backend_setting = BackendSetting::first();
+        $maxWidth = !empty($backend_setting->landscape_width) ? min((int)$backend_setting->landscape_width, 1280) : 1280;
+        $maxHeight = !empty($backend_setting->potrait_height) ? min((int)$backend_setting->potrait_height, 1280) : 1280;
+        $maxSquare = !empty($backend_setting->square_height) ? min((int)$backend_setting->square_height, 1280) : 1280;
+
         // dd($uploadType);
         // do not apply resize for banner FE
         if ($uploadType != 'frontend_banner') {
             if ($org_image->width() > $org_image->height()) {
                 $image_type = 'Landscape';
-                if ($org_image->width() > $backend_setting->landscape_width) {
-                    $org_image = $org_image->resize($backend_setting->landscape_width, $org_image->height(), function ($constraint) {
+                if ($org_image->width() > $maxWidth) {
+                    $org_image = $org_image->resize($maxWidth, null, function ($constraint) {
                         $constraint->aspectRatio();
+                        $constraint->upsize();
                     });
                 }
             }
 
             if ($org_image->height() > $org_image->width()) {
                 $image_type = 'Portrait';
-                if ($org_image->height() > $backend_setting->potrait_height) {
-                    $org_image = $org_image->resize($backend_setting->potrait_height, $org_image->height(), function ($constraint) {
+                if ($org_image->height() > $maxHeight) {
+                    $org_image = $org_image->resize(null, $maxHeight, function ($constraint) {
                         $constraint->aspectRatio();
+                        $constraint->upsize();
                     });
                 }
             }
 
             if ($org_image->width() == $org_image->height()) {
                 $image_type = 'Square';
-                if ($org_image->height() > $backend_setting->square_height) {
-                    $org_image = $org_image->resize($backend_setting->square_height, $org_image->height(), function ($constraint) {
+                if ($org_image->height() > $maxSquare) {
+                    $org_image = $org_image->resize($maxSquare, null, function ($constraint) {
                         $constraint->aspectRatio();
+                        $constraint->upsize();
                     });
                 }
             }
@@ -342,7 +350,7 @@ class ImageService extends PsService
 
         // $canvas_image->save(public_path() . $this->storage_upload_path . $fileName, 50);
 
-        $org_image->save(public_path().$this->storage_upload_path.$fileName, 50);
+        $org_image->save(public_path().$this->storage_upload_path.$fileName, 82);
 
         return $org_image;
     }
@@ -379,6 +387,7 @@ class ImageService extends PsService
     // save thumb 1x
     public function createThumbnail1x($file, $fileName, $uploadType = null)
     {
+        @ini_set('memory_limit', '256M');
         $backend_setting = BackendSetting::first();
 
         if ($uploadType == 'preview') {
@@ -447,13 +456,13 @@ class ImageService extends PsService
             }
         }
 
-        $thumbnail1x->save(public_path().$this->storage_thumb1x_path.$fileName);
+        $thumbnail1x->save(public_path().$this->storage_thumb1x_path.$fileName, 82);
     }
 
     // save thumb 2x
     public function createThumbnail2x($file, $fileName, $uploadType = null)
     {
-
+        @ini_set('memory_limit', '256M');
         $backend_setting = BackendSetting::first();
         if ($uploadType == 'preview') {
             $conds_background = [
@@ -518,12 +527,13 @@ class ImageService extends PsService
                 }
             }
         }
-        $thumbnail2x->save(public_path().$this->storage_thumb2x_path.$fileName);
+        $thumbnail2x->save(public_path().$this->storage_thumb2x_path.$fileName, 82);
     }
 
     // save thumb 3x
     public function createThumbnail3x($file, $fileName, $uploadType = null)
     {
+        @ini_set('memory_limit', '256M');
         // dd($file);
         $backend_setting = BackendSetting::first();
         if ($uploadType == 'preview') {
@@ -586,7 +596,7 @@ class ImageService extends PsService
                 }
             }
         }
-        $thumbnail3x->save(public_path().$this->storage_thumb3x_path.$fileName);
+        $thumbnail3x->save(public_path().$this->storage_thumb3x_path.$fileName, 82);
     }
 
     public function applyWatermask($backend_setting, $image, $watermarkImage)

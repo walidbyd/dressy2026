@@ -32,6 +32,8 @@ class ImageProcessingService extends PsService implements ImageProcessingService
 
     public function createImageFiles($file, $fileName, $imageType, array $resolutions = ['original'])
     {
+        @ini_set('memory_limit', '256M');
+
         $images = [];
         foreach ($resolutions as $resolution) {
             $images[] = $this->createImageFile($file, $fileName, $imageType, $resolution);
@@ -42,6 +44,8 @@ class ImageProcessingService extends PsService implements ImageProcessingService
 
     public function createImageFile($file, $fileName, $imageType, $resolution = 'original')
     {
+        @ini_set('memory_limit', '256M');
+
         /**
          * @todo
          * Need to replace Backend Setting to get from Service Class
@@ -71,8 +75,8 @@ class ImageProcessingService extends PsService implements ImageProcessingService
             $resizedImage = $this->waterMarkService->applyWatermark($resizedImage);
         }
 
-        // Save final image
-        $resizedImage->save(public_path().$this->getStoragePath($resolution).$fileName);
+        // Save final image at 82% quality (JPEG/WebP) to maintain crisp detail while reducing file size to 120-250KB
+        $resizedImage->save(public_path().$this->getStoragePath($resolution).$fileName, 82);
 
         return $resizedImage;
     }
@@ -149,29 +153,27 @@ class ImageProcessingService extends PsService implements ImageProcessingService
     {
         $configs = [
             '1x' => [
-                'landscape' => $backendSetting->landscape_thumb_width,
-                'square' => $backendSetting->square_thumb_height,
-                'portrait' => $backendSetting->potrait_thumb_height,
+                'landscape' => (int)($backendSetting->landscape_thumb_width ?: 300),
+                'square' => (int)($backendSetting->square_thumb_height ?: 300),
+                'portrait' => (int)($backendSetting->potrait_thumb_height ?: 300),
             ],
             '2x' => [
-                'landscape' => $backendSetting->landscape_thumb2x_width,
-                'square' => $backendSetting->square_thumb2x_height,
-                'portrait' => $backendSetting->potrait_thumb2x_height,
+                'landscape' => (int)($backendSetting->landscape_thumb2x_width ?: 600),
+                'square' => (int)($backendSetting->square_thumb2x_height ?: 600),
+                'portrait' => (int)($backendSetting->potrait_thumb2x_height ?: 600),
             ],
             '3x' => [
-                'landscape' => $backendSetting->landscape_thumb3x_width,
-                'square' => $backendSetting->square_thumb3x_height,
-                'portrait' => $backendSetting->potrait_thumb3x_height,
+                'landscape' => (int)($backendSetting->landscape_thumb3x_width ?: 900),
+                'square' => (int)($backendSetting->square_thumb3x_height ?: 900),
+                'portrait' => (int)($backendSetting->potrait_thumb3x_height ?: 900),
             ],
             'original' => [
-                'landscape' => $backendSetting->landscape_width,
-                'square' => $backendSetting->square_height,
-                'portrait' => $backendSetting->potrait_height,
+                'landscape' => !empty($backendSetting->landscape_width) ? min((int)$backendSetting->landscape_width, 1280) : 1280,
+                'square' => !empty($backendSetting->square_height) ? min((int)$backendSetting->square_height, 1280) : 1280,
+                'portrait' => !empty($backendSetting->potrait_height) ? min((int)$backendSetting->potrait_height, 1280) : 1280,
             ],
-
         ];
 
         return $configs[$resolution];
-
     }
 }
