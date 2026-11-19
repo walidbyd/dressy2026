@@ -51,7 +51,7 @@ class ChatService extends PsService implements ChatServiceInterface
         protected ChatNotiServiceInterface $chatNotiService,
         protected UserAccessApiTokenService $userAccessApiTokenService
     ) {
-        $this->chatApiRelations = ['item', 'buyer', 'seller', 'defaultPhoto'];
+        $this->chatApiRelations = ['item.defaultPhoto', 'buyer', 'seller', 'defaultPhoto', 'order.orderStatus', 'order.orderItems.item'];
     }
 
     /**

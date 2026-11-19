@@ -291,19 +291,30 @@ class OrderChatNotificationService
                 ->where('item_id', $itemId)
                 ->first();
 
-            if ($chatHistory) {
-                $chatHistory->order_id = $order->id;
-                $chatHistory->order_code = (string) $order->order_code;
-                $chatHistory->latest_chat_message = $messageText;
-                $chatHistory->updated_date = Carbon::now();
-                if ($recipient === 'buyer' || $recipient === 'both') {
-                    $chatHistory->buyer_unread_count = (int)($chatHistory->buyer_unread_count ?? 0) + 1;
-                }
-                if ($recipient === 'seller' || $recipient === 'both') {
-                    $chatHistory->seller_unread_count = (int)($chatHistory->seller_unread_count ?? 0) + 1;
-                }
-                $chatHistory->save();
+            if (!$chatHistory) {
+                $chatHistory = new ChatHistory();
+                $chatHistory->buyer_user_id = $buyerId;
+                $chatHistory->seller_user_id = $sellerId;
+                $chatHistory->item_id = $itemId;
+                $chatHistory->nego_price = $order->total_price ?? 0;
+                $chatHistory->buyer_unread_count = 0;
+                $chatHistory->seller_unread_count = 0;
+                $chatHistory->is_accept = 0;
+                $chatHistory->offer_status = 0;
+                $chatHistory->added_user_id = $buyerId;
             }
+
+            $chatHistory->order_id = $order->id;
+            $chatHistory->order_code = (string) $order->order_code;
+            $chatHistory->latest_chat_message = $messageText;
+            $chatHistory->updated_date = Carbon::now();
+            if ($recipient === 'buyer' || $recipient === 'both') {
+                $chatHistory->buyer_unread_count = (int)($chatHistory->buyer_unread_count ?? 0) + 1;
+            }
+            if ($recipient === 'seller' || $recipient === 'both') {
+                $chatHistory->seller_unread_count = (int)($chatHistory->seller_unread_count ?? 0) + 1;
+            }
+            $chatHistory->save();
 
             // 2. Insert into psx_chat_notis
             $chatNoti = new ChatNoti();

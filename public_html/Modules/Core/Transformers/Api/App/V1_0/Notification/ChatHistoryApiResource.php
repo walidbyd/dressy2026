@@ -11,6 +11,46 @@ class ChatHistoryApiResource extends JsonResource
 {
     public function toArray($request)
     {
+        $loginUserId = $request->query('login_user_id') 
+            ?: ($request->user_id ?? $request->input('user_id') ?? (auth('sanctum')->check() ? auth('sanctum')->id() : null));
+
+        $isSeller = ($loginUserId && (string) $this->seller_user_id === (string) $loginUserId);
+        $role = $isSeller ? 'selling' : 'buying';
+
+        // Dynamic unread count according to viewer's role
+        $unreadCount = $isSeller 
+            ? (int) (checkAndGetValue($this, 'seller_unread_count') ?? 0) 
+            : (int) (checkAndGetValue($this, 'buyer_unread_count') ?? 0);
+
+        // Counterparty user (buyer sees seller, seller sees buyer)
+        $counterparty = $isSeller ? ($this->buyer ?? null) : ($this->seller ?? null);
+
+        // Resolve item: direct item or order's item fallback
+        $item = $this->item;
+        if (!$item && $this->order && $this->order->orderItems && $this->order->orderItems->isNotEmpty()) {
+            $item = $this->order->orderItems->first()->item;
+        }
+
+        // Resolve human-readable order status label
+        $orderStatusLabel = '';
+        if ($this->order && $this->order->orderStatus) {
+            $orderStatusLabel = (string) $this->order->orderStatus->name;
+        }
+        if (empty($orderStatusLabel) && !empty($this->action_status)) {
+            $statusMap = [
+                'pending' => 'En attente',
+                'confirmed' => 'Confirmée',
+                'accepted' => 'Acceptée',
+                'dispatched' => 'Expédiée',
+                'shipped' => 'Expédiée',
+                'delivered' => 'Livrée',
+                'cancelled' => 'Annulée',
+            ];
+            $orderStatusLabel = $statusMap[strtolower($this->action_status)] ?? ucfirst($this->action_status);
+        }
+
+        $latestChatMessage = (string) checkAndGetValue($this, 'latest_chat_message');
+        $chatDateStr = $this->getChatDateStr();
 
         return [
             'id' => (string) checkAndGetValue($this, 'id'),
@@ -20,19 +60,25 @@ class ChatHistoryApiResource extends JsonResource
             'order_id' => (string) (checkAndGetValue($this, 'order_id') ?? ''),
             'order_code' => (string) (checkAndGetValue($this, 'order_code') ?? ''),
             'action_status' => (string) (checkAndGetValue($this, 'action_status') ?? 'none'),
+            'order_status_label' => (string) $orderStatusLabel,
+            'role' => (string) $role,
+            'last_message' => $latestChatMessage,
+            'last_message_time' => $chatDateStr,
+            'unread_count' => (string) $unreadCount,
             'nego_price' => (string) checkAndGetValue($this, 'nego_price'),
             'buyer_unread_count' => (string) checkAndGetValue($this, 'buyer_unread_count'),
             'seller_unread_count' => (string) checkAndGetValue($this, 'seller_unread_count'),
-            'latest_chat_message' => (string) checkAndGetValue($this, 'latest_chat_message'),
+            'latest_chat_message' => $latestChatMessage,
             'is_accept' => (string) checkAndGetValue($this, 'is_accept'),
             'offer_status' => (string) checkAndGetValue($this, 'offer_status'),
             'is_offer' => (string) $this->getOfferStatus(),
             'added_date' => (string) $this->getChatDate(),
             'offer_amount' => (string) checkAndGetValue($this, 'nego_price'),
-            'item' => new ProductApiResource($this->item ?? []),
+            'item' => new ProductApiResource($item ?? []),
             'buyer' => new UserApiResource($this->buyer ?? []),
             'seller' => new UserApiResource($this->seller ?? []),
-            'added_date_str' => $this->getChatDateStr(),
+            'user' => new UserApiResource($counterparty ?? []),
+            'added_date_str' => $chatDateStr,
             'is_empty_object' => $this->when(! isset($this->id), '1'),
         ];
     }
