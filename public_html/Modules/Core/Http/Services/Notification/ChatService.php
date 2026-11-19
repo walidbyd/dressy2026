@@ -51,7 +51,7 @@ class ChatService extends PsService implements ChatServiceInterface
         protected ChatNotiServiceInterface $chatNotiService,
         protected UserAccessApiTokenService $userAccessApiTokenService
     ) {
-        $this->chatApiRelations = ['item.defaultPhoto', 'buyer', 'seller', 'defaultPhoto', 'order.orderStatus', 'order.orderItems.item'];
+        $this->chatApiRelations = ['item.cover', 'buyer', 'seller', 'defaultPhoto', 'order.orderStatus', 'order.orderItems.item.cover'];
     }
 
     /**
@@ -414,8 +414,7 @@ class ChatService extends PsService implements ChatServiceInterface
         );
 
         if ($chatHistories->isEmpty()) {
-            $message = __('chatting__api_record_not_found', [], $langSymbol);
-            throw new PsApiException($message, Constants::noContentStatusCode, Constants::successStatus);
+            return responseDataApi([], Constants::okStatusCode, Constants::successStatus);
         }
 
         $chatHistories = ChatHistoryApiResource::collection($chatHistories);
@@ -1017,26 +1016,12 @@ class ChatService extends PsService implements ChatServiceInterface
         $block_ids = $this->blockUserService->getAll(conds: $blockUserConds)
             ->pluck(BlockUser::toBlockUserId);
 
-        if ($returnType == Constants::chatBuyerReturnType) {
-            $conds[ChatHistory::sellerUserId] = $userId;
+        // Unified list: unconditionally return all conversation threads where user is buyer OR seller
+        $conds['unified_user_id'] = $userId;
 
-            if ($isBlockUser == 1 && ! empty($block_ids)) {
-                $not_in_conds[ChatHistory::buyerUserId] = $block_ids;
-            }
-        } elseif ($returnType == Constants::chatSellerReturnType) {
-            $conds[ChatHistory::buyerUserId] = $userId;
-
-            if ($isBlockUser == 1 && ! empty($block_ids)) {
-                $not_in_conds[ChatHistory::sellerUserId] = $block_ids;
-            }
-        } else {
-            // Unified list: return all threads where user is buyer OR seller
-            $conds['unified_user_id'] = $userId;
-
-            if ($isBlockUser == 1 && ! empty($block_ids)) {
-                $not_in_conds[ChatHistory::buyerUserId] = $block_ids;
-                $not_in_conds[ChatHistory::sellerUserId] = $block_ids;
-            }
+        if ($isBlockUser == 1 && ! empty($block_ids)) {
+            $not_in_conds[ChatHistory::buyerUserId] = $block_ids;
+            $not_in_conds[ChatHistory::sellerUserId] = $block_ids;
         }
 
         /* Start For Item Report */

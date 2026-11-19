@@ -18,10 +18,41 @@ class VendorApiResource extends JsonResource
      */
     public function toArray($request)
     {
-        $product_count = 0;
-        if (isset($this->id)) {
-            $product_count = productCountByVendorId($this->id);
+        if (empty(checkAndGetValue($this, 'id'))) {
+            return [
+                'id' => '',
+                'owner_user_id' => '',
+                'status' => '',
+                'name' => '',
+                'phone' => '',
+                'email' => '',
+                'address' => '',
+                'description' => '',
+                'website' => '',
+                'facebook' => '',
+                'instagram' => '',
+                'product_count' => '0',
+                'currency_id' => '',
+                'added_date' => '',
+                'expired_date' => '',
+                'expire_status' => 0,
+                'follower_count' => '0',
+                'following_count' => '0',
+                'is_followed' => '0',
+                'overall_rating' => '0',
+                'rating_count' => '0',
+                'logo' => new CoreImageApiResource([]),
+                'banner_1' => new CoreImageApiResource([]),
+                'banner_2' => new CoreImageApiResource([]),
+                'vendor_application' => new VendorApplicationApiResource([]),
+                'added_date_str' => '',
+                'is_empty_object' => '1',
+                'updated_flag' => '',
+                'vendorRelation' => [],
+            ];
         }
+
+        $product_count = productCountByVendorId($this->id);
 
         $vendor_subcription_setting = Setting::select('setting')->where('setting_env', Constants::VENDOR_SUBSCRIPTION_CONFIG)->first();
         $jsonSetting = json_decode($vendor_subcription_setting->setting, true);
@@ -51,7 +82,7 @@ class VendorApiResource extends JsonResource
             }
         }
 
-        $ownerId = $this->owner_user_id;
+        $ownerId = checkAndGetValue($this, 'owner_user_id');
         $owner = $ownerId ? \App\Models\User::find($ownerId) : null;
         $loginUserId = $request->query('login_user_id') ?? $request->login_user_id;
 

@@ -12,7 +12,7 @@ class ChatHistoryApiResource extends JsonResource
     public function toArray($request)
     {
         $loginUserId = $request->query('login_user_id') 
-            ?: ($request->user_id ?? $request->input('user_id') ?? (auth('sanctum')->check() ? auth('sanctum')->id() : null));
+            ?: ($request->user_id ?? $request->input('user_id') ?? $request->get('user_id') ?? (is_array($request->all()) ? ($request->all()['user_id'] ?? null) : null) ?? (auth('sanctum')->check() ? auth('sanctum')->id() : null));
 
         $isSeller = ($loginUserId && (string) $this->seller_user_id === (string) $loginUserId);
         $role = $isSeller ? 'selling' : 'buying';

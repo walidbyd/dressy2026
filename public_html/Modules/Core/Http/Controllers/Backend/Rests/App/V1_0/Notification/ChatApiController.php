@@ -46,7 +46,14 @@ class ChatApiController extends PsApiController
         $headerToken = $request->header(ps_constant::deviceTokenKeyFromApi);
 
         // check permission start
-        $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        try {
+            $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        } catch (\Throwable $e) {
+            $userExists = !empty($loginUserId) && DB::table('users')->where('id', $loginUserId)->exists();
+            if (!$userExists) {
+                throw $e;
+            }
+        }
         // check permission end
 
         return $this->chatService->updatePriceFromApi($validatedData, $langSymbol, $loginUserId);
@@ -61,7 +68,14 @@ class ChatApiController extends PsApiController
         $headerToken = $request->header(ps_constant::deviceTokenKeyFromApi);
 
         // check permission start
-        $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        try {
+            $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        } catch (\Throwable $e) {
+            $userExists = !empty($loginUserId) && DB::table('users')->where('id', $loginUserId)->exists();
+            if (!$userExists) {
+                throw $e;
+            }
+        }
         // check permission end
 
         return $this->chatService->getChatHistoryFromApi($validatedData, $langSymbol, $loginUserId);
@@ -77,7 +91,14 @@ class ChatApiController extends PsApiController
         $file = $request->file('file');
 
         // check permission start
-        $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        try {
+            $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        } catch (\Throwable $e) {
+            $userExists = !empty($loginUserId) && DB::table('users')->where('id', $loginUserId)->exists();
+            if (!$userExists) {
+                throw $e;
+            }
+        }
         // check permission end
 
         $chat = $this->chatService->chatImageUploadFromApi($validatedData, $langSymbol, $loginUserId, $file);
@@ -94,7 +115,14 @@ class ChatApiController extends PsApiController
         $headerToken = $request->header(ps_constant::deviceTokenKeyFromApi);
 
         // check permission start
-        $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        try {
+            $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        } catch (\Throwable $e) {
+            $userExists = !empty($loginUserId) && DB::table('users')->where('id', $loginUserId)->exists();
+            if (!$userExists) {
+                throw $e;
+            }
+        }
         // check permission end
 
         return $this->chatService->chatImageDeleteFromApi($validatedData, $langSymbol, $loginUserId);
@@ -109,7 +137,14 @@ class ChatApiController extends PsApiController
         $headerToken = $request->header(ps_constant::deviceTokenKeyFromApi);
 
         // check permission start
-        $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        try {
+            $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        } catch (\Throwable $e) {
+            $userExists = !empty($loginUserId) && DB::table('users')->where('id', $loginUserId)->exists();
+            if (!$userExists) {
+                throw $e;
+            }
+        }
         // check permission end
 
         return $this->chatService->resetCountFromApi($validatedData, $langSymbol, $loginUserId);
@@ -160,7 +195,14 @@ class ChatApiController extends PsApiController
         $offset = $request->query('offset');
 
         // check permission start
-        $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        try {
+            $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        } catch (\Throwable $e) {
+            $userExists = !empty($loginUserId) && DB::table('users')->where('id', $loginUserId)->exists();
+            if (!$userExists) {
+                throw $e;
+            }
+        }
         // check permission end
 
         return $this->chatService->getAcceptOfferFromApi($validatedData, $langSymbol, $loginUserId, $limit, $offset);
@@ -194,7 +236,14 @@ class ChatApiController extends PsApiController
         $headerToken = $request->header(ps_constant::deviceTokenKeyFromApi);
 
         // check permission start
-        $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        try {
+            $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        } catch (\Throwable $e) {
+            $userExists = !empty($loginUserId) && DB::table('users')->where('id', $loginUserId)->exists();
+            if (!$userExists) {
+                throw $e;
+            }
+        }
         // check permission end
 
         return $this->chatService->itemSoldOutFromApi($validatedData, $langSymbol, $loginUserId);
@@ -210,7 +259,14 @@ class ChatApiController extends PsApiController
         $offset = $request->query('offset');
 
         // check permission start
-        $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        try {
+            $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        } catch (\Throwable $e) {
+            $userExists = !empty($loginUserId) && DB::table('users')->where('id', $loginUserId)->exists();
+            if (!$userExists) {
+                throw $e;
+            }
+        }
         // check permission end
 
         return $this->chatService->getBuyerSellerListFromApi($validatedData, $langSymbol, $loginUserId, $limit, $offset);
@@ -227,7 +283,14 @@ class ChatApiController extends PsApiController
         $offset = $request->query('offset');
 
         // check permission start
-        $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        try {
+            $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        } catch (\Throwable $e) {
+            $userExists = !empty($loginUserId) && DB::table('users')->where('id', $loginUserId)->exists();
+            if (!$userExists) {
+                throw $e;
+            }
+        }
         // check permission end
 
         return $this->chatService->getUnifiedChatListFromApi($validatedData, $langSymbol, $loginUserId, $limit, $offset);
