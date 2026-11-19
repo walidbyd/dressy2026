@@ -69,6 +69,7 @@ class MobileSettingWithKeyResource extends JsonResource
             'show_special_collections' => (string) $this->show_special_collections,
             'show_featured_items' => (string) $this->show_featured_items,
             'show_best_choice_slider' => (string) $this->show_best_choice_slider,
+            'show_sold_items_on_home' => (string) ($this->show_sold_items_on_home ?? 1),
             'default_flutter_wave_currency' => (string) $this->default_flutter_wave_currency,
             'default_order_time' => (string) $this->default_order_time,
             'trending_item_loading_limit' => (string) $this->trending_item_loading_limit,

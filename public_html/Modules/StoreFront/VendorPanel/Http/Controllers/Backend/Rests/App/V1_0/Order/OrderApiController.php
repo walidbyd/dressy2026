@@ -303,15 +303,25 @@ class OrderApiController extends Controller
             $avgRating = $totalCount > 0 ? number_format((float) ($sumRating / $totalCount), 1, '.', '') : '0.0';
 
             $sellerUser = \App\Models\User::find($toUserId);
-            if ($sellerUser && \Illuminate\Support\Facades\Schema::hasColumn('users', 'overall_rating')) {
-                $sellerUser->overall_rating = $avgRating;
+            if ($sellerUser) {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'overall_rating')) {
+                    $sellerUser->overall_rating = $avgRating;
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'rating_count')) {
+                    $sellerUser->rating_count = $totalCount;
+                }
                 $sellerUser->save();
             }
 
-            if ($order->vendor_id && \Illuminate\Support\Facades\Schema::hasColumn('psx_vendors', 'overall_rating')) {
+            if ($order->vendor_id) {
                 $vendor = \Modules\Core\Entities\Vendor\Vendor::find($order->vendor_id);
                 if ($vendor) {
-                    $vendor->overall_rating = $avgRating;
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('psx_vendors', 'overall_rating')) {
+                        $vendor->overall_rating = $avgRating;
+                    }
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('psx_vendors', 'rating_count')) {
+                        $vendor->rating_count = $totalCount;
+                    }
                     $vendor->save();
                 }
             }

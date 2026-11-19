@@ -15,7 +15,7 @@ class Vendor extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['id', 'name', 'phone', 'email', 'address', 'description', 'website', 'facebook', 'instagram', 'status', 'owner_user_id', 'is_unlimited', 'added_date', 'expired_date', 'added_user_id', 'updated_date', 'updated_user_id', 'updated_flag'];
+    protected $fillable = ['id', 'name', 'phone', 'email', 'address', 'description', 'website', 'facebook', 'instagram', 'status', 'owner_user_id', 'is_unlimited', 'overall_rating', 'rating_count', 'added_date', 'expired_date', 'added_user_id', 'updated_date', 'updated_user_id', 'updated_flag'];
 
     protected $table = 'psx_vendors';
 

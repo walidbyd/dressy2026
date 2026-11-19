@@ -388,11 +388,20 @@ class ItemApiController extends PsApiController
             }
         }
 
+        $mobileSetting = $this->mobileSettingService->get();
+        $showSoldItemsOnHome = $mobileSetting && isset($mobileSetting->show_sold_items_on_home) ? (int)$mobileSetting->show_sold_items_on_home : 1;
+        $isSoldOut = $request->is_sold_out;
+        if ($isSoldOut === null || $isSoldOut === '') {
+            if ($showSoldItemsOnHome === 0) {
+                $isSoldOut = 0;
+            }
+        }
+
         $filter = [
             'login_user_id' => $loginUserId,
             'category_id' => $request->cat_id,
             'subcategory_id' => $request->sub_cat_id,
-            'is_sold_out' => $request->is_sold_out,
+            'is_sold_out' => $isSoldOut,
             'is_discount' => $request->is_discount,
             'status' => $request->status,
             'keyword' => $request->searchterm,
@@ -581,6 +590,15 @@ class ItemApiController extends PsApiController
             ];
         }
 
+        $mobileSetting = $this->mobileSettingService->get();
+        $showSoldItemsOnHome = $mobileSetting && isset($mobileSetting->show_sold_items_on_home) ? (int)$mobileSetting->show_sold_items_on_home : 1;
+        $customSoldOut = $request->input('is_sold_out');
+        if ($customSoldOut === null || $customSoldOut === '') {
+            if ($showSoldItemsOnHome === 0) {
+                $customSoldOut = 0;
+            }
+        }
+
         // Filters
         $filters = [
             'keyword' => $request->input('searchterm'),
@@ -596,7 +614,7 @@ class ItemApiController extends PsApiController
             'miles' => $request->input('miles'),
             'added_user_id' => $request->input('added_user_id'),
             'status' => $request->input('status'),
-            'is_sold_out' => $request->input('is_sold_out'),
+            'is_sold_out' => $customSoldOut,
             'is_discount' => $request->input('is_discount'),
             'vendor_id' => $request->input('vendor_id'),
             'product_relation' => $request->input('product_relation'),

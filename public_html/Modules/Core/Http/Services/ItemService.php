@@ -988,6 +988,9 @@ class ItemService extends PsService
             $qtyRelation->value = 1;
             $qtyRelation->added_user_id = Auth::id() ?? 0;
             $qtyRelation->save();
+        } elseif (empty($qtyRelation->value) || (int) $qtyRelation->value <= 0) {
+            $qtyRelation->value = 1;
+            $qtyRelation->save();
         }
     }
 

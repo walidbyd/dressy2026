@@ -82,6 +82,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'is_banned',
         'code',
         'overall_rating',
+        'rating_count',
         'is_show_email',
         'is_show_phone',
         'is_shop_admin',

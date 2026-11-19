@@ -26,9 +26,7 @@ class RatingService extends PsService implements RatingServiceInterface
 
             if ($ratingData['type'] == Constants::ratingUserType) {
                 $userId = $ratingData['to_user_id'];
-                $ratingCount = $this->getUserRatingCount($userId);
-                $userData = $this->prepareUserData($ratingCount);
-                $this->userService->update($userId, $userData, null, []);
+                $this->syncUserAndVendorRatings($userId);
             }
             DB::commit();
 
@@ -49,9 +47,7 @@ class RatingService extends PsService implements RatingServiceInterface
 
             if ($ratingData['type'] == Constants::ratingUserType) {
                 $userId = $ratingData['to_user_id'];
-                $ratingCount = $this->getUserRatingCount($userId);
-                $userData = $this->prepareUserData($ratingCount);
-                $this->userService->update($userId, $userData, null, []);
+                $this->syncUserAndVendorRatings($userId);
             }
             DB::commit();
 
@@ -157,6 +153,39 @@ class RatingService extends PsService implements RatingServiceInterface
     // /------------------------------------------------------------
     // / Other
     // /------------------------------------------------------------
+    private function syncUserAndVendorRatings($userId)
+    {
+        if (empty($userId)) {
+            return;
+        }
+
+        $allRatings = Rating::where('to_user_id', $userId)->get();
+        $count = $allRatings->count();
+        $avg = $count > 0 ? number_format((float) ($allRatings->sum('rating') / $count), 1, '.', '') : '0.0';
+
+        $user = \App\Models\User::find($userId);
+        if ($user) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'overall_rating')) {
+                $user->overall_rating = $avg;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'rating_count')) {
+                $user->rating_count = $count;
+            }
+            $user->save();
+        }
+
+        $vendors = \Modules\Core\Entities\Vendor\Vendor::where('owner_user_id', $userId)->get();
+        foreach ($vendors as $vendor) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('psx_vendors', 'overall_rating')) {
+                $vendor->overall_rating = $avg;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('psx_vendors', 'rating_count')) {
+                $vendor->rating_count = $count;
+            }
+            $vendor->save();
+        }
+    }
+
     private function getUserRatingCount($userId)
     {
         $conds = [

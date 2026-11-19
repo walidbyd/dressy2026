@@ -75,6 +75,7 @@ class MobileSettingApiResource extends JsonResource
             'show_special_collections' => checkAndGetValue($this, 'show_special_collections'),
             'show_featured_items' => checkAndGetValue($this, 'show_featured_items'),
             'show_best_choice_slider' => checkAndGetValue($this, 'show_best_choice_slider'),
+            'show_sold_items_on_home' => checkAndGetValue($this, 'show_sold_items_on_home', 1),
             'default_flutter_wave_currency' => checkAndGetValue($this, 'default_flutter_wave_currency'),
             'default_order_time' => checkAndGetValue($this, 'default_order_time'),
             'trending_item_loading_limit' => checkAndGetValue($this, 'trending_item_loading_limit'),

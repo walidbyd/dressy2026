@@ -246,6 +246,10 @@ class UpdateMobileSettingRequest extends FormRequest
                 'rules' => 'nullable',
             ],
             [
+                'fieldName' => 'show_sold_items_on_home',
+                'rules' => 'nullable',
+            ],
+            [
                 'fieldName' => 'default_flutter_wave_currency',
                 'rules' => 'nullable',
             ],

@@ -75,6 +75,7 @@ class MobileSetting extends Model
         'show_special_collections',
         'show_featured_items',
         'show_best_choice_slider',
+        'show_sold_items_on_home',
         'default_flutter_wave_currency',
         'default_order_time',
         'trending_item_loading_limit',

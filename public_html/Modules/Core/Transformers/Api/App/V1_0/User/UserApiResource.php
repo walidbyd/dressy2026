@@ -23,7 +23,7 @@ class UserApiResource extends JsonResource
      */
     public function toArray($request)
     {
-        $loginUserId = $request->login_user_id ?? $request->query('login_user_id') ?? $request->user()?->id;
+        $loginUserId = $request->login_user_id ?? $request->query('login_user_id') ?? $request->user_id ?? $request->user()?->id;
         $isOwner = !empty($loginUserId) && $loginUserId != 'nologinuser' && (string)$loginUserId === (string)checkAndGetValue($this, 'id');
 
         $filteredRelations = collect($this->userRelation ?? [])->filter(function($relation) use ($isOwner) {
@@ -55,7 +55,7 @@ class UserApiResource extends JsonResource
             'has_code' => $this->hasCode(),
             'need_verify' => $this->needVerify(),
             'hasPassword' => $this->hasPassword(),
-            'overall_rating' => checkAndGetValue($this, 'overall_rating'),
+            'overall_rating' => $this->getOverallRating(),
             'is_show_email' => $isOwner ? checkAndGetValue($this, 'is_show_email') : '0',
             'is_show_phone' => $isOwner ? checkAndGetValue($this, 'is_show_phone') : '0',
             'is_shop_admin' => checkAndGetValue($this, 'is_shop_admin'),
@@ -72,8 +72,8 @@ class UserApiResource extends JsonResource
             'rating_details' => $this->getRatingPercent(),
             'follower_count' => $this->getFollowerCount(),
             'following_count' => $this->getFollowingCount(),
-            'is_followed' => $this->isFollowed($request->login_user_id),
-            'is_blocked' => $this->isBlocked($request->login_user_id),
+            'is_followed' => $this->isFollowed($loginUserId),
+            'is_blocked' => $this->isBlocked($loginUserId),
             'is_verify_blue_mark' => $this->isVerifyBlueMark(),
             'userRelation' => UserInfoApiResource::collection($filteredRelations),
             'added_date_str' => $this->getAddedDateStr(),
@@ -133,6 +133,25 @@ class UserApiResource extends JsonResource
         }
 
         return $this->added_date->diffForHumans();
+    }
+
+    private function getOverallRating()
+    {
+        if (empty($this->id)) {
+            return '0.0';
+        }
+
+        $avg = Rating::where(['to_user_id' => $this->id])->avg('rating');
+        if ($avg !== null && $avg > 0) {
+            return number_format((float) $avg, 1, '.', '');
+        }
+
+        $savedOverallRating = checkAndGetValue($this, 'overall_rating');
+        if (! empty($savedOverallRating) && (float) $savedOverallRating > 0) {
+            return number_format((float) $savedOverallRating, 1, '.', '');
+        }
+
+        return '0.0';
     }
 
     private function getRatingCount()

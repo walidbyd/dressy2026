@@ -83,8 +83,9 @@ class VendorApiResource extends JsonResource
         }
 
         $ownerId = checkAndGetValue($this, 'owner_user_id');
+        $vendorId = checkAndGetValue($this, 'id');
         $owner = $ownerId ? \App\Models\User::find($ownerId) : null;
-        $loginUserId = $request->query('login_user_id') ?? $request->login_user_id;
+        $loginUserId = $request->query('login_user_id') ?? $request->login_user_id ?? $request->user_id ?? $request->user()?->id;
 
         $followerCount = 0;
         $followingCount = 0;
@@ -98,13 +99,27 @@ class VendorApiResource extends JsonResource
             if ($loginUserId) {
                 $isFollowed = \Modules\Core\Entities\User\FollowUser::where(['user_id' => $loginUserId, 'followed_user_id' => $ownerId])->exists() ? '1' : '0';
             }
-            $ratings = \Modules\Core\Entities\User\Rating::where('to_user_id', $ownerId)->get();
-            $ratingCount = (string) $ratings->count();
-            if ($ratings->count() > 0) {
-                $overallRating = number_format((float) ($ratings->sum('rating') / $ratings->count()), 1, '.', '');
-            } elseif ($owner && ! empty($owner->overall_rating)) {
-                $overallRating = number_format((float) $owner->overall_rating, 1, '.', '');
+        }
+
+        $ratingsQuery = \Modules\Core\Entities\User\Rating::query()->where(function ($q) use ($ownerId, $vendorId) {
+            if ($ownerId) {
+                $q->where('to_user_id', $ownerId);
             }
+            if ($vendorId) {
+                $q->orWhere('to_user_id', $vendorId)
+                  ->orWhere('shop_id', $vendorId);
+            }
+        });
+
+        $ratingCountInt = $ratingsQuery->count();
+        $ratingCount = (string) $ratingCountInt;
+        if ($ratingCountInt > 0) {
+            $avg = $ratingsQuery->avg('rating');
+            $overallRating = number_format((float) $avg, 1, '.', '');
+        } elseif ($owner && ! empty($owner->overall_rating) && (float) $owner->overall_rating > 0) {
+            $overallRating = number_format((float) $owner->overall_rating, 1, '.', '');
+        } elseif (! empty($this->overall_rating) && (float) $this->overall_rating > 0) {
+            $overallRating = number_format((float) $this->overall_rating, 1, '.', '');
         }
 
         $logoImage = $this->logo;

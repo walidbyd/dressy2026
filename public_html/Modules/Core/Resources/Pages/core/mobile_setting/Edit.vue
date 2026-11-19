@@ -189,6 +189,11 @@
                                     <ps-label-caption textColor="text-secondary-400 mt-1">{{$t('core_mb_setting_featured_items_on_info')}}</ps-label-caption>
                                 </div>
 
+                                <div>
+                                    <ps-checkbox-value title="Afficher les articles vendus sur l'accueil / Show Sold Items on Home Page" v-model:value="form.show_sold_items_on_home" />
+                                    <ps-label-caption textColor="text-secondary-400 mt-1">Conserver les articles vendus visibles sur le fil d'accueil avec un badge « Vendu » / Keep sold items visible on the home feed with a 'Sold' badge.</ps-label-caption>
+                                </div>
+
                                 <!-- <div>
                                     <ps-checkbox-value :title="$t('core_mb_setting_best_choice_slider_on')" v-model:value="form.show_best_choice_slider" />
                                     <ps-label-caption textColor="text-secondary-400 mt-1">{{$t('core_mb_setting_best_choice_slider_on_info')}}</ps-label-caption>
@@ -967,6 +972,7 @@ export default defineComponent({
                 trending_item_loading_limit: props.mobile_setting.trending_item_loading_limit,
                 show_special_collections: props.mobile_setting.show_special_collections==1?true:false,
                 show_best_choice_slider: props.mobile_setting.show_best_choice_slider ==1?true:false,
+                show_sold_items_on_home: props.mobile_setting.show_sold_items_on_home == 1 ? true : false,
                 default_order_time: props.mobile_setting.default_order_time,
                 deli_boy_version_no: props.mobile_setting.deli_boy_version_no,
                 deli_boy_version_title: props.mobile_setting.deli_boy_version_title,
