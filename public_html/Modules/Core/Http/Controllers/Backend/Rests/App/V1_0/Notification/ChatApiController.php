@@ -6,6 +6,7 @@ use App\Config\ps_constant;
 use App\Http\Contracts\Notification\ChatServiceInterface;
 use App\Http\Controllers\PsApiController;
 use Illuminate\Contracts\Translation\Translator;
+use Illuminate\Support\Facades\DB;
 use Modules\Core\Http\Requests\Notification\ChatImageDeleteChatApiRequest;
 use Modules\Core\Http\Requests\Notification\ChatImageUploadChatApiRequest;
 use Modules\Core\Http\Requests\Notification\GetBuyerSellerListChatApiRequest;
@@ -61,11 +62,12 @@ class ChatApiController extends PsApiController
 
     public function show(GetChatHistoryChatApiRequest $request)
     {
-
         $validatedData = $request->validated();
-        $loginUserId = $request->query('login_user_id');
+        $loginUserId = $request->query('login_user_id') ?: ($validatedData['user_id'] ?? null);
         $langSymbol = $request->query('language_symbol');
         $headerToken = $request->header(ps_constant::deviceTokenKeyFromApi);
+        $limit = $request->query('limit');
+        $offset = $request->query('offset');
 
         // check permission start
         try {
@@ -77,6 +79,12 @@ class ChatApiController extends PsApiController
             }
         }
         // check permission end
+
+        // If user_id is provided without specific counterparty buyer_user_id & seller_user_id,
+        // or if return_type is passed, treat this as a list request for the user's unified inbox
+        if (!empty($validatedData['user_id']) && (empty($validatedData['buyer_user_id']) || empty($validatedData['seller_user_id']))) {
+            return $this->chatService->getBuyerSellerListFromApi($validatedData, $langSymbol, $loginUserId, $limit, $offset);
+        }
 
         return $this->chatService->getChatHistoryFromApi($validatedData, $langSymbol, $loginUserId);
     }
@@ -269,6 +277,10 @@ class ChatApiController extends PsApiController
         }
         // check permission end
 
+        if (empty($validatedData['user_id']) || $validatedData['user_id'] === 'nologinuser') {
+            return responseDataApi([], \Modules\Core\Constants\Constants::okStatusCode, \Modules\Core\Constants\Constants::successStatus);
+        }
+
         return $this->chatService->getBuyerSellerListFromApi($validatedData, $langSymbol, $loginUserId, $limit, $offset);
     }
 
@@ -292,6 +304,10 @@ class ChatApiController extends PsApiController
             }
         }
         // check permission end
+
+        if (empty($validatedData['user_id']) || $validatedData['user_id'] === 'nologinuser') {
+            return responseDataApi([], \Modules\Core\Constants\Constants::okStatusCode, \Modules\Core\Constants\Constants::successStatus);
+        }
 
         return $this->chatService->getUnifiedChatListFromApi($validatedData, $langSymbol, $loginUserId, $limit, $offset);
     }

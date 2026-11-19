@@ -9,10 +9,19 @@ use Illuminate\Support\Arr;
 
 class GetBuyerSellerListChatApiRequest extends FormRequest
 {
+    protected function prepareForValidation()
+    {
+        if (empty($this->user_id) && !empty($this->query('login_user_id')) && $this->query('login_user_id') !== 'nologinuser') {
+            $this->merge([
+                'user_id' => $this->query('login_user_id'),
+            ]);
+        }
+    }
+
     public function rules()
     {
         return [
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'nullable',
             'return_type' => 'nullable|string',
         ];
     }

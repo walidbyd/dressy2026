@@ -78,7 +78,7 @@ class ChatHistoryService extends PsService implements ChatHistoryServiceInterfac
             ->when($conds, function ($query, $conds) {
                 if (isset($conds['unified_user_id'])) {
                     $unifiedUserId = $conds['unified_user_id'];
-                    unset($conds['unified_user_id']);
+                    unset($conds['unified_user_id'], $conds[ChatHistory::buyerUserId], $conds[ChatHistory::sellerUserId], $conds['return_type']);
                     $query->where(function ($q) use ($unifiedUserId) {
                         $q->where(ChatHistory::buyerUserId, $unifiedUserId)
                           ->orWhere(ChatHistory::sellerUserId, $unifiedUserId);
@@ -104,15 +104,28 @@ class ChatHistoryService extends PsService implements ChatHistoryServiceInterfac
             })
             ->when($condsNotIn, function ($query, $condsNotIn) {
                 if (isset($condsNotIn[ChatHistory::buyerUserId]) && ! empty($condsNotIn[ChatHistory::buyerUserId])) {
-                    $query->whereNotIn(ChatHistory::buyerUserId, $condsNotIn[ChatHistory::buyerUserId]);
+                    $bIds = array_filter((array)$condsNotIn[ChatHistory::buyerUserId]);
+                    if (!empty($bIds)) {
+                        $query->whereNotIn(ChatHistory::buyerUserId, $bIds);
+                    }
                 }
 
                 if (isset($condsNotIn[ChatHistory::sellerUserId]) && ! empty($condsNotIn[ChatHistory::sellerUserId])) {
-                    $query->whereNotIn(ChatHistory::sellerUserId, $condsNotIn[ChatHistory::sellerUserId]);
+                    $sIds = array_filter((array)$condsNotIn[ChatHistory::sellerUserId]);
+                    if (!empty($sIds)) {
+                        $query->whereNotIn(ChatHistory::sellerUserId, $sIds);
+                    }
                 }
 
                 if (isset($condsNotIn[ChatHistory::itemId]) && ! empty($condsNotIn[ChatHistory::itemId])) {
-                    $query->whereNotIn(ChatHistory::itemId, $condsNotIn[ChatHistory::itemId]);
+                    $itemIds = array_filter((array)$condsNotIn[ChatHistory::itemId]);
+                    if (!empty($itemIds)) {
+                        $query->where(function ($q) use ($itemIds) {
+                            $q->whereNull(ChatHistory::itemId)
+                              ->orWhere(ChatHistory::itemId, 0)
+                              ->orWhereNotIn(ChatHistory::itemId, $itemIds);
+                        });
+                    }
                 }
             })
             ->orderBy(ChatHistory::updatedDate, 'desc');

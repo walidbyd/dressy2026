@@ -284,16 +284,34 @@ class ChatService extends PsService implements ChatServiceInterface
 
     public function getChatHistoryFromApi($chatData, $langSymbol, $loginUserId)
     {
-        $conds[ChatHistory::itemId] = $chatData['item_id'];
-        $conds[ChatHistory::buyerUserId] = $chatData['buyer_user_id'];
-        $conds[ChatHistory::sellerUserId] = $chatData['seller_user_id'];
+        $conds = [];
+        if (!empty($chatData['item_id'])) {
+            $conds[ChatHistory::itemId] = $chatData['item_id'];
+        }
+        if (!empty($chatData['order_id'])) {
+            $conds[ChatHistory::orderId] = $chatData['order_id'];
+        }
+        if (!empty($chatData['order_code'])) {
+            $conds[ChatHistory::orderCode] = $chatData['order_code'];
+        }
+        if (!empty($chatData['buyer_user_id'])) {
+            $conds[ChatHistory::buyerUserId] = $chatData['buyer_user_id'];
+        }
+        if (!empty($chatData['seller_user_id'])) {
+            $conds[ChatHistory::sellerUserId] = $chatData['seller_user_id'];
+        }
+
         $chatHistory = $this->chatHistoryService->get(null, $conds, $this->chatApiRelations);
+
+        if (!$chatHistory && !empty($chatData['order_id'])) {
+            $chatHistory = $this->chatHistoryService->get(null, [ChatHistory::orderId => $chatData['order_id']], $this->chatApiRelations);
+        }
 
         if ($chatHistory) {
             $chatHistory = new ChatHistoryApiResource($chatHistory);
         } else {
             $chatHistory = new \stdClass;
-            $chatHistory->chatItemId = $chatData['item_id'];
+            $chatHistory->chatItemId = $chatData['item_id'] ?? '';
             $chatHistory = new ChatHistoryApiResource($chatHistory);
         }
 

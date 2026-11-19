@@ -39,7 +39,58 @@ class ProductApiResource extends JsonResource
      */
     public function toArray($request)
     {
-        // dd($this);
+        if (empty(checkAndGetValue($this, 'id'))) {
+            return [
+                'id' => '',
+                'title' => '',
+                'category_id' => '',
+                'subcategory_id' => '',
+                'currency_id' => '',
+                'location_city_id' => '',
+                'location_township_id' => '',
+                'shop_id' => '',
+                'phone' => '',
+                'percent' => '',
+                'price' => '0',
+                'original_price' => '0',
+                'description' => '',
+                'search_tag' => '',
+                'dynamic_link' => '',
+                'lat' => '',
+                'lng' => '',
+                'status' => '1',
+                'is_paid' => '0',
+                'is_sold_out' => '0',
+                'ordering' => '',
+                'is_available' => '1',
+                'is_discount' => '0',
+                'item_touch_count' => '0',
+                'favourite_count' => '0',
+                'added_date' => '',
+                'added_user_id' => '',
+                'overall_rating' => '0',
+                'is_favourited' => '0',
+                'is_owner' => '0',
+                'ad_type' => '',
+                'paid_status' => '',
+                'photo_count' => '0',
+                'video_count' => '0',
+                'productRelation' => [],
+                'default_photo' => new CoreImageApiResource([]),
+                'default_video' => new CoreImageApiResource([]),
+                'default_video_icon' => new CoreImageApiResource([]),
+                'category' => new CategoryApiResource([]),
+                'sub_category' => new SubcategoryApiResource([]),
+                'item_currency' => new ItemCurrencyApiResource([]),
+                'item_location' => new LocationCityApiResource([]),
+                'item_location_township' => new LocationTownshipApiResource([]),
+                'user' => new UserApiResource([]),
+                'vendor' => new VendorApiResource([]),
+                'added_date_str' => '',
+                'is_empty_object' => '1',
+            ];
+        }
+
         $normalAd = Constants::normalAd;
         $paidAd = Constants::paidAd;
         $paidItemRejected = Constants::paidItemRejected;

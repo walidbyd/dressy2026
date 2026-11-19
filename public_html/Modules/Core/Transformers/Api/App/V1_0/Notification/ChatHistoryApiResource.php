@@ -50,6 +50,9 @@ class ChatHistoryApiResource extends JsonResource
         }
 
         $latestChatMessage = (string) checkAndGetValue($this, 'latest_chat_message');
+        if (!$isSeller && $this->action_status === 'pending' && str_contains($latestChatMessage, 'Nouvelle commande #')) {
+            $latestChatMessage = "Commande #{$this->order_code} : En attente de confirmation du vendeur";
+        }
         $chatDateStr = $this->getChatDateStr();
 
         return [
