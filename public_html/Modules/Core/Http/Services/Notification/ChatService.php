@@ -400,7 +400,7 @@ class ChatService extends PsService implements ChatServiceInterface
 
         $systemConfig = $this->systemConfigService->get();
         $userId = $chatData['user_id'];
-        $returnType = $chatData['return_type'];
+        $returnType = $chatData['return_type'] ?? null;
 
         $getBuyerSellerListCondsData = $this->handleOfferListCondsData($userId, $returnType, $systemConfig->is_block_user);
 
@@ -421,6 +421,12 @@ class ChatService extends PsService implements ChatServiceInterface
         $chatHistories = ChatHistoryApiResource::collection($chatHistories);
 
         return responseDataApi($chatHistories, Constants::okStatusCode, Constants::successStatus);
+    }
+
+    public function getUnifiedChatListFromApi($chatData, $langSymbol, $loginUserId, $limit, $offset)
+    {
+        $chatData['return_type'] = 'unified';
+        return $this->getBuyerSellerListFromApi($chatData, $langSymbol, $loginUserId, $limit, $offset);
     }
 
     public function itemSoldOutFromApi($chatData, $langSymbol, $loginUserId)
@@ -1021,6 +1027,14 @@ class ChatService extends PsService implements ChatServiceInterface
             $conds[ChatHistory::buyerUserId] = $userId;
 
             if ($isBlockUser == 1 && ! empty($block_ids)) {
+                $not_in_conds[ChatHistory::sellerUserId] = $block_ids;
+            }
+        } else {
+            // Unified list: return all threads where user is buyer OR seller
+            $conds['unified_user_id'] = $userId;
+
+            if ($isBlockUser == 1 && ! empty($block_ids)) {
+                $not_in_conds[ChatHistory::buyerUserId] = $block_ids;
                 $not_in_conds[ChatHistory::sellerUserId] = $block_ids;
             }
         }

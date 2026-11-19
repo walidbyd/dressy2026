@@ -12,7 +12,7 @@ class ChatHistory extends PsModel
 {
     use HasFactory;
 
-    protected $fillable = ['id', 'item_id', 'buyer_user_id', 'seller_user_id', 'nego_price', 'buyer_unread_count', 'seller_unread_count', 'latest_chat_message', 'is_accept', 'offer_status', 'added_date', 'added_user_id', 'updated_date', 'updated_user_id', 'updated_flag'];
+    protected $fillable = ['id', 'item_id', 'buyer_user_id', 'seller_user_id', 'order_id', 'order_code', 'action_status', 'nego_price', 'buyer_unread_count', 'seller_unread_count', 'latest_chat_message', 'is_accept', 'offer_status', 'added_date', 'added_user_id', 'updated_date', 'updated_user_id', 'updated_flag'];
 
     protected $table = 'psx_chat_histories';
 
@@ -29,6 +29,12 @@ class ChatHistory extends PsModel
     const buyerUserId = 'buyer_user_id';
 
     const sellerUserId = 'seller_user_id';
+
+    const orderId = 'order_id';
+
+    const orderCode = 'order_code';
+
+    const actionStatus = 'action_status';
 
     const negoPrice = 'nego_price';
 
@@ -64,6 +70,11 @@ class ChatHistory extends PsModel
     public function item()
     {
         return $this->belongsTo(Item::class);
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(\Modules\StoreFront\VendorPanel\Entities\Order::class, 'order_id');
     }
 
     public function defaultPhoto()

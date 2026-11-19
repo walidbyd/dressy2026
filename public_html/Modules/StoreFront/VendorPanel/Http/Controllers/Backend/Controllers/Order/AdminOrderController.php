@@ -147,6 +147,27 @@ class AdminOrderController extends PsController
         $order->updated_user_id = Auth::id() ?? 1;
         $order->save();
 
+        // Send automated status message to unified chat & FCM push
+        try {
+            $statusLabels = [
+                1 => 'En attente',
+                2 => 'Confirmée par le vendeur',
+                3 => 'En cours d\'acheminement avec Yalidine' . (!empty($order->yalidine_tracking) ? " (Suivi: {$order->yalidine_tracking})" : ''),
+                4 => 'Livrée avec succès !',
+                5 => 'Annulée' . (!empty($order->status_reason) ? " (Motif: {$order->status_reason})" : ''),
+                6 => 'Retournée' . (!empty($order->status_reason) ? " (Motif: {$order->status_reason})" : ''),
+            ];
+            $statusLabel = $statusLabels[$newStatusId] ?? "Statut mis à jour (#{$newStatusId})";
+            app(\App\Services\OrderChatNotificationService::class)->sendOrderStatusUpdate($order, $statusLabel, 'both');
+            if ($newStatusId === 2) {
+                app(\App\Services\OrderChatNotificationService::class)->updateOrderActionStatus($order, 'accepted');
+            } elseif ($newStatusId === 5) {
+                app(\App\Services\OrderChatNotificationService::class)->updateOrderActionStatus($order, 'cancelled');
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Admin status update chat noti error: ' . $e->getMessage());
+        }
+
         return redirect()->back()->with('status', [
             'flag' => Constants::success,
             'msg' => __("Order #{$order->order_code} status updated successfully!"),

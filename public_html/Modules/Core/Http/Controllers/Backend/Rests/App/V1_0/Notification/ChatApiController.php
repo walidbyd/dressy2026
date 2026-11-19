@@ -203,7 +203,7 @@ class ChatApiController extends PsApiController
     public function getBuyerSellerList(GetBuyerSellerListChatApiRequest $request)
     {
         $validatedData = $request->validated();
-        $loginUserId = $request->query('login_user_id');
+        $loginUserId = $request->query('login_user_id') ?: ($validatedData['user_id'] ?? null);
         $langSymbol = $request->query('language_symbol');
         $headerToken = $request->header(ps_constant::deviceTokenKeyFromApi);
         $limit = $request->query('limit');
@@ -214,5 +214,22 @@ class ChatApiController extends PsApiController
         // check permission end
 
         return $this->chatService->getBuyerSellerListFromApi($validatedData, $langSymbol, $loginUserId, $limit, $offset);
+    }
+
+    public function getUnifiedList(GetBuyerSellerListChatApiRequest $request)
+    {
+        $validatedData = $request->validated();
+        $validatedData['return_type'] = 'unified';
+        $loginUserId = $request->query('login_user_id') ?: ($validatedData['user_id'] ?? null);
+        $langSymbol = $request->query('language_symbol');
+        $headerToken = $request->header(ps_constant::deviceTokenKeyFromApi);
+        $limit = $request->query('limit');
+        $offset = $request->query('offset');
+
+        // check permission start
+        $this->checkApiPermission($loginUserId, $headerToken, $langSymbol);
+        // check permission end
+
+        return $this->chatService->getUnifiedChatListFromApi($validatedData, $langSymbol, $loginUserId, $limit, $offset);
     }
 }

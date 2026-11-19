@@ -286,6 +286,8 @@ Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])-
         Route::post('order/dispatch', 'dispatchOrder');
         Route::post('order/send-to-delivery', 'sendToDelivery');
         Route::post('order/cancel', 'cancelOrder');
+        Route::post('order/seller-action', 'sellerAction');
+        Route::post('order/{order_id}/seller-action', 'sellerAction');
         Route::post('order/mark_paid', 'markOrderPaid');
         Route::match(['get', 'post'], 'wallet/balance', 'getWalletBalance');
         Route::match(['get', 'post'], 'wallet/transactions', 'getWalletTransactions');
@@ -294,6 +296,7 @@ Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])-
         Route::post('order/submit-review', 'submitReview');
     });
 
+    Route::post('orders/{order_id}/seller-action', [OrderApiController::class, 'sellerAction']);
     Route::post('order/submit-review', [OrderApiController::class, 'submitReview']);
 
     Route::prefix('vendor')->controller(VendorInfoApiController::class)->group(function () {
@@ -365,6 +368,8 @@ Route::prefix('chat')->controller(ChatApiController::class)->group(function () {
     Route::post('/is_user_bought', 'isUserBought');
     Route::post('/update_accept', 'updateAccept');
     Route::post('/get_buyer_seller_list', 'getBuyerSellerList');
+    Route::match(['get', 'post'], '/unified-list', 'getUnifiedList');
+    Route::match(['get', 'post'], '/unified_list', 'getUnifiedList');
     Route::post('/item_sold_out', 'itemSoldOut');
 
     Route::post('/chat_image_delete', 'chatImageDelete');

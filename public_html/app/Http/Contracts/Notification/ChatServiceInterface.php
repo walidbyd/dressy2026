@@ -22,6 +22,8 @@ interface ChatServiceInterface extends PsInterface
 
     public function getBuyerSellerListFromApi($chatData, $langSymbol, $loginUserId, $limit, $offset);
 
+    public function getUnifiedChatListFromApi($chatData, $langSymbol, $loginUserId, $limit, $offset);
+
     public function itemSoldOutFromApi($chatData, $langSymbol, $loginUserId);
 
     public function isUserBoughtFromApi($chatData, $langSymbol, $loginUserId);

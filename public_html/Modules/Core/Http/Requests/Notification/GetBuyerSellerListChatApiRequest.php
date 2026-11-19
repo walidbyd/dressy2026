@@ -13,7 +13,7 @@ class GetBuyerSellerListChatApiRequest extends FormRequest
     {
         return [
             'user_id' => 'required|exists:users,id',
-            'return_type' => 'required',
+            'return_type' => 'nullable|string',
         ];
     }
 

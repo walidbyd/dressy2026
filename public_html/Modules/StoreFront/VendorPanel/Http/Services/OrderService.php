@@ -676,6 +676,15 @@ class OrderService extends PsService
         }
         $order->save();
 
+        try {
+            $chatNotiService = app(\App\Services\OrderChatNotificationService::class);
+            $chatNotiService->updateOrderActionStatus($order, 'accepted');
+            $trackingText = !empty($order->yalidine_tracking) ? " (Suivi Yalidine: {$order->yalidine_tracking})" : "";
+            $chatNotiService->sendOrderStatusUpdate($order, "Votre commande a été acceptée par le vendeur.{$trackingText}", 'buyer');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('acceptOrder chat noti error: ' . $e->getMessage());
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => __('Order has been accepted and Yalidine parcel created.'),
@@ -735,6 +744,14 @@ class OrderService extends PsService
         $order->order_status_id = Constants::orderDeliveringStatus;
         $order->save();
 
+        try {
+            $chatNotiService = app(\App\Services\OrderChatNotificationService::class);
+            $trackingText = !empty($order->yalidine_tracking) ? " (Suivi Yalidine: {$order->yalidine_tracking})" : "";
+            $chatNotiService->sendOrderStatusUpdate($order, "Votre commande est en cours de livraison avec Yalidine.{$trackingText}", 'buyer');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('dispatchOrder chat noti error: ' . $e->getMessage());
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => __('Order has been dispatched and Yalidine shipment created.'),
@@ -784,7 +801,120 @@ class OrderService extends PsService
         $order->status_reason = $reason;
         $order->save();
 
+        try {
+            $chatNotiService = app(\App\Services\OrderChatNotificationService::class);
+            $chatNotiService->updateOrderActionStatus($order, 'cancelled');
+            $chatNotiService->sendOrderStatusUpdate($order, "La commande a été annulée par le vendeur. Motif: {$reason}", 'buyer');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('cancelOrder chat noti error: ' . $e->getMessage());
+        }
+
         return responseMsgApi(__('Order has been cancelled successfully.'), Constants::okStatusCode, Constants::successStatus);
+    }
+
+    public function sellerActionFromApi($request, $orderId = null)
+    {
+        $userId = $request->login_user_id ?: ($request->user_id ?? $request->user()?->id);
+        $orderId = $orderId ?: $request->order_id;
+
+        if (empty($orderId)) {
+            return responseMsgApi(__('Order ID is required.'), Constants::badRequestStatusCode);
+        }
+
+        $order = Order::with(['orderItems.item', 'vendor', 'user', 'shippingAndBilling'])->find($orderId);
+        if (!$order) {
+            return responseMsgApi(__('Order not found.'), Constants::notFoundStatusCode);
+        }
+
+        // Verify seller ownership
+        $isOwner = false;
+        $vendor = Vendor::where('owner_user_id', $userId)->first();
+        if ($vendor && $order->vendor_id == $vendor->id) {
+            $isOwner = true;
+        } else {
+            $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
+                $q->where('added_user_id', $userId);
+            })->exists();
+        }
+
+        if (!$isOwner) {
+            return responseMsgApi(__('Unauthorized: You do not own this order.'), Constants::forbiddenStatusCode);
+        }
+
+        $action = strtolower(trim((string) $request->input('action', '')));
+        if (!in_array($action, ['confirm', 'accept', 'cancel', 'reject'])) {
+            return responseMsgApi(__('Invalid action. Allowed values: confirm, cancel.'), Constants::badRequestStatusCode);
+        }
+
+        $chatNotiService = app(\App\Services\OrderChatNotificationService::class);
+
+        if ($action === 'confirm' || $action === 'accept') {
+            if ((int) $order->order_status_id !== (int) Constants::orderPendingStatus && (int) $order->order_status_id !== (int) Constants::orderApprovedStatus) {
+                return responseMsgApi(__('Only pending orders can be confirmed.'), Constants::badRequestStatusCode);
+            }
+
+            // Create Yalidine shipment parcel via DZBuild dzship if not already created
+            if (empty($order->yalidine_tracking)) {
+                $dzshipService = app(\App\Services\DzshipYalidineService::class);
+                $yalResult = $dzshipService->createShipment($order);
+
+                if (!empty($yalResult['success'])) {
+                    $order->yalidine_tracking = $yalResult['tracking'] ?? null;
+                    $order->yalidine_parcel_id = $yalResult['parcel_id'] ?? null;
+                    $order->yalidine_label_url = $yalResult['label_url'] ?? null;
+                    $order->yalidine_parcel_status = $yalResult['status'] ?? 'dispatched';
+                    $order->yalidine_status = $yalResult['status'] ?? 'dispatched';
+                }
+            }
+
+            $order->order_status_id = Constants::orderApprovedStatus;
+            $order->save();
+
+            // Update action status across DB and Firebase RTDB
+            $chatNotiService->updateOrderActionStatus($order, 'accepted');
+
+            // Send automated status message to Buyer
+            $trackingText = !empty($order->yalidine_tracking) ? " (Suivi Yalidine: {$order->yalidine_tracking})" : "";
+            $buyerMsg = "Votre commande a été acceptée par le vendeur.{$trackingText}";
+            $chatNotiService->sendOrderStatusUpdate($order, $buyerMsg, 'buyer');
+
+            return response()->json([
+                'status' => 'success',
+                'action_status' => 'accepted',
+                'order_status_id' => $order->order_status_id,
+                'order_code' => $order->order_code,
+                'message' => __('Order has been accepted by seller.'),
+                'tracking' => $order->yalidine_tracking,
+                'label_url' => $order->yalidine_label_url,
+            ], Constants::okStatusCode);
+        }
+
+        if ($action === 'cancel' || $action === 'reject') {
+            if ((int) $order->order_status_id === (int) Constants::orderDeliveredStatus) {
+                return responseMsgApi(__('Delivered orders cannot be cancelled.'), Constants::badRequestStatusCode);
+            }
+
+            $reason = $request->reason ?? $request->cancel_reason ?? $request->status_reason ?? 'Annulée par le vendeur';
+            $order->order_status_id = Constants::orderCancelledStatus;
+            $order->status_reason = $reason;
+            $order->save();
+
+            // Update action status across DB and Firebase RTDB
+            $chatNotiService->updateOrderActionStatus($order, 'cancelled');
+
+            // Send automated status message to Buyer
+            $buyerMsg = "La commande a été annulée par le vendeur." . ($reason ? " Motif: {$reason}" : "");
+            $chatNotiService->sendOrderStatusUpdate($order, $buyerMsg, 'buyer');
+
+            return response()->json([
+                'status' => 'success',
+                'action_status' => 'cancelled',
+                'order_status_id' => $order->order_status_id,
+                'order_code' => $order->order_code,
+                'message' => __('Order has been cancelled by seller.'),
+                'reason' => $reason,
+            ], Constants::okStatusCode);
+        }
     }
 
     public function markOrderPaidFromApi($request)

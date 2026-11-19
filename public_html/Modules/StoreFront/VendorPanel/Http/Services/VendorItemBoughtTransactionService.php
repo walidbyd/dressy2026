@@ -423,6 +423,15 @@ class VendorItemBoughtTransactionService extends PsService
                 }
             }
 
+            // Automated Dressy Order Confirmation Request sent ONLY to the Seller first
+            if (! empty($order)) {
+                try {
+                    app(\App\Services\OrderChatNotificationService::class)->sendSellerConfirmationRequest($order);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Order chat seller confirmation trigger error: ' . $e->getMessage());
+                }
+            }
+
             return responseMsgApi(__('vendor_item__api_success_bought', [], $request->language_symbol), Constants::createdStatusCode, Constants::successStatus);
         }
     }

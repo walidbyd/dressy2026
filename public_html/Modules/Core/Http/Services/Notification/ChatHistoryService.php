@@ -76,7 +76,17 @@ class ChatHistoryService extends PsService implements ChatHistoryServiceInterfac
                 $query->offset($offset);
             })
             ->when($conds, function ($query, $conds) {
-                $query->where($conds);
+                if (isset($conds['unified_user_id'])) {
+                    $unifiedUserId = $conds['unified_user_id'];
+                    unset($conds['unified_user_id']);
+                    $query->where(function ($q) use ($unifiedUserId) {
+                        $q->where(ChatHistory::buyerUserId, $unifiedUserId)
+                          ->orWhere(ChatHistory::sellerUserId, $unifiedUserId);
+                    });
+                }
+                if (!empty($conds)) {
+                    $query->where($conds);
+                }
             })
             ->when($in_conds, function ($query, $in_conds) {
                 if (isset($in_conds[ChatHistory::buyerUserId]) && ! empty($in_conds[ChatHistory::buyerUserId])) {

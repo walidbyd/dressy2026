@@ -9,7 +9,7 @@ class ChatNoti extends PsModel
 {
     use HasFactory;
 
-    protected $fillable = ['id', 'item_id', 'buyer_user_id', 'seller_user_id', 'type', 'chat_noti_message', 'chat_flag', 'is_read', 'added_date', 'added_user_id', 'updated_user_id', 'updated_date', 'updated_flag'];
+    protected $fillable = ['id', 'item_id', 'buyer_user_id', 'seller_user_id', 'order_id', 'order_code', 'message_type', 'action_status', 'type', 'chat_noti_message', 'chat_flag', 'is_read', 'added_date', 'added_user_id', 'updated_user_id', 'updated_date', 'updated_flag'];
 
     protected $table = 'psx_chat_notis';
 
@@ -26,6 +26,14 @@ class ChatNoti extends PsModel
     const buyerUserId = 'buyer_user_id';
 
     const sellerUserId = 'seller_user_id';
+
+    const orderId = 'order_id';
+
+    const orderCode = 'order_code';
+
+    const messageType = 'message_type';
+
+    const actionStatus = 'action_status';
 
     const type = 'type';
 

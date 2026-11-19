@@ -148,6 +148,26 @@ class OrderApiController extends Controller
         return $this->orderService->cancelOrderFromApi($request);
     }
 
+    public function sellerAction(Request $request, $order_id = null)
+    {
+        $orderId = $order_id ?: $request->order_id;
+        $validator = Validator::make(array_merge($request->all(), ['order_id' => $orderId]), [
+            'order_id' => 'required|exists:psx_orders,id',
+            'action' => 'required|in:confirm,accept,cancel,reject',
+        ]);
+
+        if ($request->language_symbol) {
+            $this->translator->setLocale($request->language_symbol);
+            $validator->setTranslator($this->translator);
+        }
+
+        if ($validator->fails()) {
+            return responseMsgApi(implode("\n", Arr::flatten($validator->getMessageBag()->getMessages())), Constants::badRequestStatusCode);
+        }
+
+        return $this->orderService->sellerActionFromApi($request, $orderId);
+    }
+
     public function markOrderPaid(Request $request)
     {
         $validator = Validator::make($request->all(), [
