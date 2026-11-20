@@ -51,21 +51,22 @@ class UserAccessApiTokenService extends PsService
     {
         $userAccessApiToken = $this->getUserAccessApiToken($userId, null, $deviceId);
         $headerToken = ps_constant::deviceTokenKeyFromApi;
-        if (empty($request->header($headerToken))) {
+        $token = $request->header($headerToken) ?: ($request->device_token ?: ($request->device_id ?: ('token_' . $userId)));
+        if (empty($token)) {
             return false;
         }
         if (! empty($userAccessApiToken)) {
-            $userAccessApiToken->device_info = $request->device_info;
+            $userAccessApiToken->device_info = $request->device_info ?? '';
             $userAccessApiToken->device_id = $deviceId;
-            $userAccessApiToken->device_token = $request->header($headerToken);
+            $userAccessApiToken->device_token = $token;
             $userAccessApiToken->user_id = $userId;
             $userAccessApiToken->update();
         } else {
             // save in user_access_api_tokens table
             $userAccessApiToken = new UserAccessApiToken;
-            $userAccessApiToken->device_info = $request->device_info;
+            $userAccessApiToken->device_info = $request->device_info ?? '';
             $userAccessApiToken->device_id = $deviceId;
-            $userAccessApiToken->device_token = $request->header($headerToken);
+            $userAccessApiToken->device_token = $token;
             $userAccessApiToken->user_id = $userId;
             $userAccessApiToken->save();
         }

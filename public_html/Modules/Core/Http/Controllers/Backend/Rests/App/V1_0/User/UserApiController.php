@@ -11,6 +11,7 @@ use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -1037,193 +1038,154 @@ class UserApiController extends Controller
         }
         // / validation end
 
+        $googleId = trim((string) $request->google_id);
+        $email = strtolower(trim((string) ($request->email ?? '')));
+        $name = trim((string) ($request->name ?? ''));
+
+        // Find candidate accounts matching google_id or email
+        $candidates = User::query()
+            ->where(function ($q) use ($googleId, $email) {
+                if (!empty($googleId)) {
+                    $q->where('google_id', $googleId);
+                }
+                if (!empty($email)) {
+                    $q->orWhereRaw('LOWER(TRIM(email)) = ?', [$email]);
+                }
+            })
+            ->get();
+
+        if ($candidates->isNotEmpty()) {
+            // Prioritize the best account:
+            // 1. Owns an approved vendor in psx_vendors (+1000)
+            // 2. Owns any vendor in psx_vendors (+500)
+            // 3. Item count in psx_items (+10 per item)
+            // 4. SysAdmin (+200)
+            // 5. Email exact match (+100)
+            // 6. Lowest ID (+ (100000 - ID))
+            $scored = $candidates->map(function ($u) use ($email) {
+                $score = 0;
+                $vendor = DB::table('psx_vendors')->where('owner_user_id', $u->id)->first();
+                if ($vendor) {
+                    $score += ((string)$vendor->status === (string)Constants::vendorAcceptStatus) ? 1000 : 500;
+                }
+                $itemCount = DB::table('psx_items')->where('added_user_id', $u->id)->count();
+                $score += ($itemCount * 10);
+                if ($u->user_is_sys_admin == 1) {
+                    $score += 200;
+                }
+                if (!empty($email) && strtolower(trim($u->email)) === $email) {
+                    $score += 100;
+                }
+                $score += max(0, 100000 - (int)$u->id);
+                return ['user' => $u, 'score' => $score];
+            })->sortByDesc('score');
+
+            $targetUser = $scored->first()['user'];
+
+            if ($targetUser->is_banned == 1) {
+                return responseMsgApi('core__api_banned_user', $this->badRequestStatusCode);
+            }
+
+            // If another candidate held this google_id, clear it to avoid collision
+            foreach ($candidates as $other) {
+                if ($other->id !== $targetUser->id && $other->google_id === $googleId) {
+                    $other->google_id = null;
+                    $other->save();
+                }
+            }
+
+            // Update target user fields
+            $targetUser->google_id = $googleId;
+            if (!empty($email) && (empty($targetUser->email) || strtolower($targetUser->email) !== $email)) {
+                $targetUser->email = $email;
+            }
+            if (!empty($name) && empty($targetUser->name)) {
+                $targetUser->name = $name;
+            }
+            $targetUser->status = $this->publish;
+
+            // Handle profile photo if provided and user has no cover photo
+            $url = $request->profile_photo_url;
+            if (!empty($url) && empty($targetUser->user_cover_photo)) {
+                $img = md5(time()) . '.jpg';
+                $this->imageService->saveImageFromUrl($img, $url);
+                $targetUser->user_cover_photo = $img;
+            }
+
+            $targetUser->verify_types = $this->updateVerifyType($this->googleVerify, ['id' => $targetUser->id]);
+            $targetUser->save();
+
+            // Ensure vendor is approved for this user
+            UserService::createApprovedVendorForUser($targetUser);
+
+            // Store notification token
+            $this->pushNotificationTokenService->storeOrUpdateNotiToken((array) $request->all(), $targetUser->id);
+
+            // Store or update access token
+            $userId = $targetUser->id;
+            $deviceId = $request->device_id;
+            $userAccessApiTokenStoreOrUpdate = $this->userAccessApiTokenService->storeOrUpdate($request, $userId, $deviceId);
+            if (! $userAccessApiTokenStoreOrUpdate) {
+                return responseMsgApi(__('core__api_db_error', [], $request->language_symbol), $this->internalServerErrorStatusCode);
+            }
+
+            // Load fresh model with relations and return single UserApiResource
+            $freshUser = $this->userService->getUser($targetUser->id, null, ['userRelation']);
+            return new UserApiResource($freshUser ?? $targetUser);
+        }
+
+        // New User Registration
+        $validator = Validator::make($request->all(), [
+            'name' => 'required',
+        ]);
+
+        if ($request->language_symbol) {
+            $this->translator->setLocale($request->language_symbol);
+            $validator->setTranslator($this->translator);
+        }
+
+        if ($validator->fails()) {
+            return responseMsgApi($validator->errors(), $this->badRequestStatusCode);
+        }
+
         $user_data = new \stdClass;
         $user_data->name = $request->name;
-        $user_data->email = $request->email;
-        $user_data->google_id = $request->google_id;
+        $user_data->email = $email;
+        $user_data->google_id = $googleId;
         $user_data->permissions = $this->normalUserRoleId;
         $user_data->status = $this->publish;
         $user_data->verify_types = $this->googleVerify;
         $user_data->code = '';
         $added_date = Carbon::now();
+        $user_data->added_date = $added_date;
+        $user_data->added_date_timestamp = strtotime($added_date);
 
-        // Need to check google_id is aleady exist or not?
-        $conds['google_id'] = $request->google_id;
-        if (! $this->userService->exists($conds)) {
-            // User not yet exist
-
-            // prepare validation
-            $validator = Validator::make($request->all(), [
-                'name' => 'required',
-            ]);
-
-            if ($request->language_symbol) {
-                $this->translator->setLocale($request->language_symbol);
-                $validator->setTranslator($this->translator);
-            }
-
-            if ($validator->fails()) {
-                return responseMsgApi($validator->errors(), $this->badRequestStatusCode);
-            }
-            // / validation end
-            $google_id = $request->google_id;
-            $url = $request->profile_photo_url;
-
-            if ($url != '') {
-
-                $img = md5(time()).'.jpg';
-                $this->imageService->saveImageFromUrl($img, $url);
-                $user_data->user_cover_photo = $img;
-            }
-
-            $user_data->name = $request->name;
-            $user_data->added_date = $added_date;
-            $user_data->added_date_timestamp = strtotime($added_date);
-
-            if ($user_data->email != '') {
-                $cond_user_existed['email'] = $user_data->email;
-                $user_infos = $this->userService->getUser(null, $cond_user_existed);
-                $id = empty($user_infos) ? '' : $user_infos->id;
-            }
-
-            if ($id != '') {
-                // user email alerady exist
-                $user_data->verify_types = $this->updateVerifyType($user_data->verify_types, $cond_user_existed);
-
-                // for user name and user email
-                $name = $request->name;
-                $email = $request->email;
-
-                if ($name == '' && $email == '') {
-                    $user_data->name = $user_infos->name;
-                    $user_data->email = $user_infos->email;
-                } elseif ($name == '') {
-                    $user_data->name = $user_infos->name;
-                    $user_data->email = $email;
-                } elseif ($email == '') {
-                    $user_data->name = $name;
-                    $user_data->email = $user_infos->email;
-                } else {
-                    $user_data->name = $name;
-                    $user_data->email = $email;
-                }
-
-                if ($id != '') {
-                    $user_data->id = $id;
-                    $user = $this->userService->updateFromApi($user_data, $id);
-                } else {
-                    $user = $this->userService->storeFromApi($user_data);
-                }
-
-                $this->pushNotificationTokenService->storeOrUpdateNotiToken((array) $request->all(), $user->id);
-            } else {
-                // user email not exist
-                $user = $this->userService->storeFromApi($user_data);
-                $this->pushNotificationTokenService->storeOrUpdateNotiToken((array) $request->all(), $user->id);
-            }
-        } else {
-            // User already exist in DB
-            $user_data->verify_types = $this->updateVerifyType($user_data->verify_types, $conds);
-
-            $conds['google_id'] = $request->google_id;
-            $user_social_info_override = $this->backendSettingService->get()->user_social_info_override;
-
-            if ($user_social_info_override == '1') {
-                $user_cover_photo = $this->userService->getUser(null, $conds)->user_cover_photo;
-
-                // Delete existing image
-                $this->imageService->deleteImage($user_cover_photo);
-
-                // Download again
-                $google_id = $request->google_id;
-                $url = $request->profile_photo_url;
-
-                if ($url != '') {
-
-                    $img = md5(time()).'.jpg';
-                    $this->imageService->saveImageFromUrl($img, $url);
-                    $user_data->user_cover_photo = $img;
-                }
-
-                $user_data->name = $request->name;
-                $user_data->added_date = $added_date;
-                $user_data->added_date_timestamp = strtotime($added_date);
-
-                // for user name and user email
-                $name = $request->name;
-                $email = $request->email;
-
-                if ($name == '' && $email == '') {
-                    $user_data->device_token = $request->device_token;
-                    $user_data->user_cover_photo = $request->user_cover_photo;
-                } elseif ($name == '') {
-                    $user_data->email = $request->email;
-                    $user_data->device_token = $request->device_token;
-                    $user_data->user_cover_photo = $request->user_cover_photo;
-                } elseif ($email == '') {
-                    $user_data->name = $request->name;
-                    $user_data->device_token = $request->device_token;
-                    $user_data->user_cover_photo = $request->user_cover_photo;
-                } else {
-                    $user_data->name = $request->name;
-                    $user_data->email = $request->email;
-                    $user_data->device_token = $request->device_token;
-                    $user_data->user_cover_photo = $request->user_cover_photo;
-                }
-
-                $conds['google_id'] = $request->google_id;
-                $user_datas = $this->userService->getUser(null, $conds);
-                $id = $user_datas->id;
-
-                if ($user_datas->is_banned == 1) {
-
-                    return responseMsgApi('core__api_banned_user', $this->badRequestStatusCode);
-                } elseif ($user_datas->status == 0) {
-                    return responseMsgApi('Your account is unpublished.', $this->badRequestStatusCode);
-                } else {
-                    if ($id != '') {
-                        $user_data->id = $id;
-                        $user = $this->userService->updateFromApi($user_data, $id);
-                    } else {
-                        $user = $this->userService->storeFromApi($user_data);
-                    }
-
-                    $this->pushNotificationTokenService->storeOrUpdateNotiToken((array) $request->all(), $user->id);
-                }
-            } else {
-                $user_datas = $this->userService->getUser(null, $conds);
-                $id = $user_datas->id;
-
-                if ($user_datas->is_banned == 1) {
-
-                    return responseMsgApi('core__api_banned_user', $this->badRequestStatusCode);
-                } elseif ($user_datas->status == 0) {
-                    return responseMsgApi(__('core__api_unpublished_user', [], $request->language_symbol), $this->badRequestStatusCode);
-                } else {
-                    if ($id != '') {
-                        $user_data->id = $id;
-                        $user = $this->userService->updateFromApi($user_data, $id);
-                    } else {
-                        $user = $this->userService->storeFromApi($user_data);
-                    }
-
-                    $this->pushNotificationTokenService->storeOrUpdateNotiToken((array) $request->all(), $user->id);
-                }
-            }
+        $url = $request->profile_photo_url;
+        if (!empty($url)) {
+            $img = md5(time()) . '.jpg';
+            $this->imageService->saveImageFromUrl($img, $url);
+            $user_data->user_cover_photo = $img;
         }
 
-        // save or update in user_access_api_tokens table start
-        $userId = $user->id;
+        $user = $this->userService->storeFromApi($user_data);
+        $userModel = ($user instanceof UserApiResource) ? $user->resource : $user;
+        $userId = $userModel->id ?? $user->id;
+
+        UserService::createApprovedVendorForUser($userModel ?? $userId);
+        $this->pushNotificationTokenService->storeOrUpdateNotiToken((array) $request->all(), $userId);
+
         $deviceId = $request->device_id;
         $userAccessApiTokenStoreOrUpdate = $this->userAccessApiTokenService->storeOrUpdate($request, $userId, $deviceId);
         if (! $userAccessApiTokenStoreOrUpdate) {
             return responseMsgApi(__('core__api_db_error', [], $request->language_symbol), $this->internalServerErrorStatusCode);
         }
-        // save or update in user_access_api_tokens table end
 
-        $user = new UserApiResource($user);
+        if ($user instanceof UserApiResource) {
+            return $user;
+        }
 
-        return $user;
+        $freshUser = $this->userService->getUser($userId, null, ['userRelation']);
+        return new UserApiResource($freshUser ?? $user);
     }
 
     public function search(Request $request)
