@@ -51,6 +51,7 @@ class UserProvider extends PsProvider<User> {
   }) : super(repo, limit,
             subscriptionType: PsConst.SINGLE_OBJECT_SUBSCRIPTION) {
     _repo = repo;
+    super.psValueHolder = psValueHolder;
   }
 
   UserRepository? _repo;
