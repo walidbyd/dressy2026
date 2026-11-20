@@ -64,12 +64,12 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>fb000000000000000</string>
-				<string>com.googleusercontent.apps.828256414245-8lk9i6kh8ietlngrjlahmramskk42otm</string>
+				<string>com.googleusercontent.apps.828256414245-vjfs90e6tthhv913vt9nl91r2geph8hk</string>
 			</array>
 		</dict>
 	</array>
 	<key>GIDClientID</key>
-	<string>828256414245-8lk9i6kh8ietlngrjlahmramskk42otm.apps.googleusercontent.com</string>
+	<string>828256414245-vjfs90e6tthhv913vt9nl91r2geph8hk.apps.googleusercontent.com</string>
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
 	<key>CFBundleVersion</key>

@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>828256414245-8lk9i6kh8ietlngrjlahmramskk42otm.apps.googleusercontent.com</string>
+	<string>828256414245-vjfs90e6tthhv913vt9nl91r2geph8hk.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.828256414245-8lk9i6kh8ietlngrjlahmramskk42otm</string>
+	<string>com.googleusercontent.apps.828256414245-vjfs90e6tthhv913vt9nl91r2geph8hk</string>
 	<key>ANDROID_CLIENT_ID</key>
 	<string>828256414245-4k34vuqltg416i0ortbu4h8ouo0sakmn.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
-	<string>AIzaSyDDfvask1njFIwwlI9pS-Xasrh8rhqitwM</string>
+	<string>AIzaSyAjFedxnOUrxlIQwl7SrRrLmfbcU0orU-c</string>
 	<key>GCM_SENDER_ID</key>
 	<string>828256414245</string>
 	<key>PLIST_VERSION</key>
@@ -31,7 +31,7 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:828256414245:ios:com.dressy.app</string>
+	<string>1:828256414245:ios:37defc7b401588a9452dcc</string>
 	<key>DATABASE_URL</key>
 	<string>https://dressydz-default-rtdb.firebaseio.com</string>
 </dict>

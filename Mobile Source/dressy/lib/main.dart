@@ -43,7 +43,9 @@ Future<void> configure() async {
     // AppCheck
     await FirebaseAppCheck.instance.activate(
         androidProvider:
-            kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity);
+            kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+        appleProvider:
+            kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck);
   } catch (e) {
     Utils.psPrint('Firebase init error: $e');
   }

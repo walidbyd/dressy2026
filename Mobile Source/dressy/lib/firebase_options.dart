@@ -44,12 +44,14 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: PsConfig.iosApiKey,
-    appId: PsConfig.iosGoogleAppId,
-    messagingSenderId: PsConfig.iosGcmSenderId,
-    projectId: PsConfig.iosProjectId,
-    databaseURL: PsConfig.iosDatabaseUrl,
+    apiKey: 'AIzaSyAjFedxnOUrxlIQwl7SrRrLmfbcU0orU-c',
+    appId: '1:828256414245:ios:37defc7b401588a9452dcc',
+    messagingSenderId: '828256414245',
+    projectId: 'dressydz',
     storageBucket: 'dressydz.firebasestorage.app',
+    databaseURL: 'https://dressydz-default-rtdb.firebaseio.com',
+    iosClientId:
+        '828256414245-vjfs90e6tthhv913vt9nl91r2geph8hk.apps.googleusercontent.com',
     iosBundleId: 'com.dressy.app',
   );
 }
