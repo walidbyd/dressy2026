@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../../../../config/route/route_paths.dart';
 import '../../../../../../../core/vendor/api/common/ps_resource.dart';
 import '../../../../../../../core/vendor/constant/ps_constants.dart';
 import '../../../../../../../core/vendor/constant/ps_dimens.dart';
@@ -194,12 +193,8 @@ class __TextFieldAndButtonWidgetState
 
         if (onProfileSelected != null) {
           await onProfileSelected(user.userId);
-        } else {
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            RoutePaths.home,
-            (Route<dynamic> route) => false,
-          );
         }
+        await Utils.completeAuthAndGoHome(context, user);
         print('you can go to profille');
       } else {
         showDialog<dynamic>(

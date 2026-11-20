@@ -678,9 +678,11 @@ class UserProvider extends PsProvider<User> {
             ///
             if (onAppleIdSignInSelected != null) {
               await onAppleIdSignInSelected(user.userId);
-            } else if (callBackAfterLoginSuccess != null) {
+            }
+            if (callBackAfterLoginSuccess != null) {
               await callBackAfterLoginSuccess(user);
             }
+            await Utils.completeAuthAndGoHome(context, user);
           } else {
             ///
             /// Error from server
@@ -913,9 +915,11 @@ class UserProvider extends PsProvider<User> {
             ///
             if (onGoogleIdSignInSelected != null) {
               await onGoogleIdSignInSelected(user.userId);
-            } else if (callBackAfterLoginSuccess != null) {
+            }
+            if (callBackAfterLoginSuccess != null) {
               await callBackAfterLoginSuccess(user);
             }
+            await Utils.completeAuthAndGoHome(context, user);
           } else {
             ///
             /// Error from server
@@ -1151,9 +1155,11 @@ class UserProvider extends PsProvider<User> {
             ///
             if (onFacebookIdSignInSelected != null) {
               await onFacebookIdSignInSelected(user.userId);
-            } else if (callBackAfterLoginSuccess != null) {
+            }
+            if (callBackAfterLoginSuccess != null) {
               await callBackAfterLoginSuccess(user);
             }
+            await Utils.completeAuthAndGoHome(context, user);
           } else {
             ///
             /// Error from server
@@ -1438,9 +1444,11 @@ class UserProvider extends PsProvider<User> {
           } catch (_) {}
           if (onProfileSelected != null) {
             await onProfileSelected(resourceUser.data!.userId);
-          } else if (callBackAfterLoginSuccess != null) {
+          }
+          if (callBackAfterLoginSuccess != null) {
             await callBackAfterLoginSuccess(resourceUser.data);
           }
+          await Utils.completeAuthAndGoHome(context, resourceUser.data!);
         }
       } else {
         ///
@@ -1732,9 +1740,11 @@ class UserProvider extends PsProvider<User> {
 
             if (onRegisterSelected != null) {
               await onRegisterSelected(user);
-            } else if (callBackAfterLoginSuccess != null) {
+            }
+            if (callBackAfterLoginSuccess != null) {
               await callBackAfterLoginSuccess(user);
             }
+            await Utils.completeAuthAndGoHome(context, user);
           } else {
             // Approval On
             showDialog<dynamic>(

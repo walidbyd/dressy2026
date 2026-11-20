@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../../config/ps_colors.dart';
-import '../../../../../config/route/route_paths.dart';
 import '../../../../../core/vendor/constant/ps_dimens.dart';
 import '../../../../../core/vendor/provider/user/user_provider.dart';
 import '../../../../../core/vendor/repository/user_repository.dart';
@@ -176,38 +175,6 @@ class _LoginViewState extends State<LoginView> {
   }
 
   Future<void> callBackAfterLoginSuccess(User user) async {
-    final UserProvider provider =
-        Provider.of<UserProvider>(context, listen: false);
-    final PsValueHolder liveHolder =
-        Provider.of<PsValueHolder>(context, listen: false);
-
-    // 1. Immediately update in-memory fields so any listener sees the user
-    liveHolder.loginUserId = user.userId;
-    if (user.userName != null && user.userName!.isNotEmpty) {
-      liveHolder.loginUserName = user.userName;
-    }
-    liveHolder.isToShowIntroSlider = false;
-    liveHolder.showOnboardLanguage = false;
-
-    // 2. Await full disk persistence before navigation
-    await provider.replaceLoginUserId(user.userId ?? '');
-    if (user.userName != null && user.userName!.isNotEmpty) {
-      await provider.replaceLoginUserName(user.userName!);
-    }
-    await provider.replaceIsToShowIntroSlider(false);
-    await provider.replaceShowOnboardLanguage(false);
-    await provider.replaceItemLocationData('', 'Toute l’Algérie', '0', '0');
-    await provider.replaceItemLocationTownshipData(
-        '', '', 'Toute l’Algérie', '0', '0');
-
-    if (!mounted) {
-      return;
-    }
-
-    // 3. Clear entire stack and navigate straight to Home
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      RoutePaths.home,
-      (Route<dynamic> route) => false,
-    );
+    await Utils.completeAuthAndGoHome(context, user);
   }
 }
