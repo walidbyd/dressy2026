@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Dressy</string>
+	<key>CFBundleDisplayName</key>
+	<string>Dressy</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.dressy.app.braintree</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.dressy.app.braintree</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Bundle ID</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>buysell1.page.link</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.dressy.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.dressy.app.app</string>
+			</array>
+		</dict>
+		<dict>
+			<key>FlutterDeepLinkingEnabled</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb000000000000000</string>
+				<string>com.googleusercontent.apps.828256414245-8lk9i6kh8ietlngrjlahmramskk42otm</string>
+			</array>
+		</dict>
+	</array>
+	<key>GIDClientID</key>
+	<string>828256414245-8lk9i6kh8ietlngrjlahmramskk42otm.apps.googleusercontent.com</string>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<true/>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>FacebookAppID</key>
+	<string>000000000000000</string>
+	<key>FacebookDisplayName</key>
+	<string>Dressy</string>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-0000000000000000~0000000000</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+	</array>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>$(PRODUCT_NAME) requires to access apple music media library for item upload.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>$(PRODUCT_NAME) requires bluetooth access for Google Ads</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>$(PRODUCT_NAME) requires bluetooth access for Google Ads</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>$(PRODUCT_NAME) requires to acess calendar to get date.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Dressy a besoin d'accéder à votre appareil photo pour vous permettre de prendre des photos de vos articles et de votre profil.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Dressy utilise les contacts pour faciliter le partage d'annonces.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Dressy utilise votre localisation pour situer vos articles et vous proposer des annonces à proximité.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Dressy utilise votre localisation pour situer vos articles et vous proposer des annonces à proximité.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Dressy utilise votre localisation pour situer vos articles et vous proposer des annonces à proximité.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Dressy utilise votre localisation pour situer vos articles et vous proposer des annonces à proximité.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Dressy a besoin d'accéder au microphone lors de la capture de vidéos de présentation de vos articles.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Dressy utilise ce service pour la navigation cartographique.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Dressy a besoin de pouvoir enregistrer des photos d'articles dans votre galerie.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Dressy a besoin d'accéder à votre galerie photos pour sélectionner des images pour vos articles et votre profil.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>$(PRODUCT_NAME) requires speech recognition for apple.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This app uses tracking data to show you personalized ads.</string>
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This app uses tracking data to show you personalized ads.</string>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>	
+</dict>
+</plist>
