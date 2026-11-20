@@ -229,6 +229,7 @@ class VendorItemBoughtTransactionService extends PsService
             $offline_result = 0;
             $flutterwave_result = 0;
             $cod_result = 0;
+            $wallet_result = 0;
 
             $isSingleCheckout = $request->is_single_checkout;
 
@@ -359,6 +360,13 @@ class VendorItemBoughtTransactionService extends PsService
                 $data->payment_method = $payment_method;
                 $data->vendor_payment_status_id = ps_constant::paidStatusOfVendorPayment;
                 $flutterwave_result = 1;
+            } elseif ($request->payment_method == 'wallet' || $request->payment_method == 'Wallet') {
+
+                // User paying 100% via Wallet
+                $payment_method = 'wallet';
+                $data->payment_method = 'wallet';
+                $data->vendor_payment_status_id = ps_constant::paidStatusOfVendorPayment;
+                $wallet_result = 1;
             }
             if ($cod_result == 1) {
                 $this->handleWhenPaymentSuccess($getItemOrders, $userId, $isSingleCheckout);
@@ -367,10 +375,48 @@ class VendorItemBoughtTransactionService extends PsService
                 // $data->vendor_payment_status_id = ps_constant::paidStatusOfVendorPayment;
             }
 
+            // Atomically process buyer's wallet deduction if wallet balance was used (full or partial)
+            $order = Order::where(Order::id, $orderId)->first();
+            $walletAmountUsed = 0.0;
+            if ($request->has('wallet_amount_used') && is_numeric($request->wallet_amount_used) && (float) $request->wallet_amount_used > 0) {
+                $walletAmountUsed = (float) $request->wallet_amount_used;
+            } elseif (!empty($order) && !empty($order->wallet_amount_used) && (float) $order->wallet_amount_used > 0) {
+                $walletAmountUsed = (float) $order->wallet_amount_used;
+            }
+
+            if ($walletAmountUsed > 0 && !empty($userId)) {
+                $walletService = app(\Modules\StoreFront\VendorPanel\Http\Services\WalletService::class);
+                $wallet = $walletService->getOrCreateWalletForUser($userId);
+                $lockedWallet = \Modules\StoreFront\VendorPanel\Entities\Wallet::where('id', $wallet->id)->lockForUpdate()->first();
+                if ($lockedWallet->balance < $walletAmountUsed) {
+                    return responseMsgApi(__('Solde de portefeuille insuffisant.'), Constants::badRequestStatusCode);
+                }
+                $newBalance = round($lockedWallet->balance - $walletAmountUsed, 2);
+                $lockedWallet->balance = $newBalance;
+                $lockedWallet->save();
+
+                \Modules\StoreFront\VendorPanel\Entities\WalletTransaction::create([
+                    'wallet_id' => $lockedWallet->id,
+                    'user_id' => $userId,
+                    'type' => 'debit',
+                    'amount' => $walletAmountUsed,
+                    'balance_after' => $newBalance,
+                    'reference_type' => 'order_payment',
+                    'reference_id' => (string) ($order?->order_code ?? $orderId),
+                    'note' => "Paiement commande #" . ($order?->order_code ?? $orderId),
+                    'added_user_id' => $userId,
+                ]);
+
+                if (!empty($order)) {
+                    $order->wallet_amount_used = $walletAmountUsed;
+                    $order->save();
+                }
+            }
+
             // save vendor item bought transaction
             $transaction = $this->store($data);
 
-            if ($paypal_result == 1 || $stripe_result == 1 || $razor_result == 1 || $paystack_result == 1 || $flutterwave_result == 1 || $in_app_purchase_result == 1) {
+            if ($paypal_result == 1 || $stripe_result == 1 || $razor_result == 1 || $paystack_result == 1 || $flutterwave_result == 1 || $in_app_purchase_result == 1 || $wallet_result == 1) {
 
                 $this->handleWhenPaymentSuccess($getItemOrders, $userId, $isSingleCheckout);
 

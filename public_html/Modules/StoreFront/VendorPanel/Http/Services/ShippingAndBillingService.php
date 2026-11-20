@@ -262,6 +262,7 @@ class ShippingAndBillingService extends PsService
             $order->order_status_id = ps_constant::pendingStatusOfVendorOrder;
             $order->order_code = rand(100000, 999999);
             $order->delivery_fee = $deliveryFee;
+            $order->wallet_amount_used = max(0, (float) ($request->wallet_amount_used ?? 0));
             $order->delivery_type = $deliveryType;
             $order->from_wilaya_id = $fromWilayaId;
             $order->to_wilaya_id = $toWilayaId;
