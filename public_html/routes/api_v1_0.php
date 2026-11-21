@@ -291,6 +291,9 @@ Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])-
         Route::post('order/mark_paid', 'markOrderPaid');
         Route::match(['get', 'post'], 'wallet/balance', 'getWalletBalance');
         Route::match(['get', 'post'], 'wallet/transactions', 'getWalletTransactions');
+        Route::match(['get', 'post'], 'sales-transactions', 'getSellerSalesTransactions');
+        Route::match(['get', 'post'], 'sales_transactions', 'getSellerSalesTransactions');
+        Route::match(['get', 'post'], 'seller/transactions', 'getSellerSalesTransactions');
         Route::post('wallet/withdraw_request', 'submitWithdrawRequest');
         Route::match(['get', 'post'], 'calculate_delivery_fee', 'calculateDeliveryFee');
         Route::post('order/submit-review', 'submitReview');
@@ -298,6 +301,7 @@ Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])-
 
     Route::post('orders/{order_id}/seller-action', [OrderApiController::class, 'sellerAction']);
     Route::post('order/submit-review', [OrderApiController::class, 'submitReview']);
+    Route::match(['get', 'post'], 'seller/transactions', [OrderApiController::class, 'getSellerSalesTransactions']);
 
     Route::prefix('vendor')->controller(VendorInfoApiController::class)->group(function () {
         Route::get('info', 'getVendorInfo');

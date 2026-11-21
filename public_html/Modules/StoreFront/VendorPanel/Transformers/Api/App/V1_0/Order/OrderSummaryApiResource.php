@@ -61,11 +61,26 @@ class OrderSummaryApiResource extends JsonResource
         $orderSummaryObj->billing_city = (string) $this->shippingAndBilling->billing_city;
         $orderSummaryObj->billing_postal_code = (string) $this->shippingAndBilling->billing_postal_code;
         $orderSummaryObj->is_save_billing_info_for_next_time = (string) $this->shippingAndBilling->is_save_billing_info_for_next_time;
+        $isDelivered = ((int) $this->order_status_id === 4);
+        $isPaid = ($this->vendorTransaction?->vendorPaymentStatus?->id == 2)
+            || (($this->payment_status ?? '') === 'paid')
+            || ((int) ($this->is_wallet_credited ?? 0) === 1);
+        $isDeliveredAndPaid = ($isDelivered && $isPaid);
+
+        $locale = app()->getLocale() ?: ($request->language_symbol ?? 'fr');
+        $deliveredAndPaidLabel = match(strtolower(substr($locale, 0, 2))) {
+            'ar' => 'تم التوصيل والدفع',
+            'en' => 'Delivered & Paid',
+            default => 'Livré et payé',
+        };
+
         $orderSummaryObj->payment_method = (string) $this->vendorTransaction?->payment_method;
         $orderSummaryObj->payment_status = (string) $this->vendorTransaction?->vendorPaymentStatus->name;
         $orderSummaryObj->payment_status_color = (string) $this->vendorTransaction?->vendorPaymentStatus->colour;
-        $orderSummaryObj->order_status = (string) $this->orderStatus?->name;
-        $orderSummaryObj->order_status_color = (string) $this->orderStatus?->colour;
+        $orderSummaryObj->order_status = $isDeliveredAndPaid ? $deliveredAndPaidLabel : (string) $this->orderStatus?->name;
+        $orderSummaryObj->order_status_color = $isDeliveredAndPaid ? '#10B981' : (string) $this->orderStatus?->colour;
+        $orderSummaryObj->is_delivered_and_paid = $isDeliveredAndPaid ? '1' : '0';
+        $orderSummaryObj->delivered_and_paid_label = $isDeliveredAndPaid ? $deliveredAndPaidLabel : (string) $this->orderStatus?->name;
         $orderSummaryObj->payment_date = isset($this->vendorTransaction->payment_date) ? (string) \Carbon\Carbon::parse($this->vendorTransaction->payment_date)->format('M d, Y') : '';
         $orderSummaryObj->vendor_name = (string) $this->vendorTransaction?->vendor->name;
         $orderSummaryObj->item_info = $itemInfoArr;

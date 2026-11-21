@@ -259,7 +259,7 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: actionStatus == 'accepted'
+              color: (actionStatus == 'accepted' || actionStatus == 'delivered')
                   ? const Color(0xFFC8E6C9)
                   : actionStatus == 'cancelled'
                       ? const Color(0xFFFFCDD2)
@@ -470,6 +470,32 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
                           'Commande acceptée ✅',
                           style: TextStyle(
                             color: Color(0xFF2E7D32),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (actionStatus == 'delivered') ...<Widget>[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 10, horizontal: 12),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Icon(Icons.done_all,
+                            color: Color(0xFF10B981), size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Livré et payé ✨',
+                          style: TextStyle(
+                            color: Color(0xFF10B981),
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),

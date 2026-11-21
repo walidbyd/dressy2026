@@ -74,6 +74,28 @@ class WalletService
                 ];
             }
 
+            // Also check idempotency in transaction ledger by order_code or reference_id
+            $existingTx = WalletTransaction::where(function ($q) use ($lockedOrder) {
+                $q->where('reference_id', (string) $lockedOrder->id)
+                  ->orWhere('order_code', $lockedOrder->order_code);
+            })->where('type', 'credit')->first();
+
+            if ($existingTx) {
+                $lockedOrder->is_wallet_credited = 1;
+                $lockedOrder->wallet_credited_at = $existingTx->created_at ?? now();
+                $lockedOrder->order_status_id = \Modules\Core\Constants\Constants::orderDeliveredStatus;
+                if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'payment_status')) {
+                    $lockedOrder->payment_status = 'paid';
+                }
+                $lockedOrder->save();
+
+                return [
+                    'success' => true,
+                    'already_credited' => true,
+                    'message' => 'Order has already been credited in transaction ledger.',
+                ];
+            }
+
             // Resolve seller user ID via vendor ownership
             $vendor = Vendor::find($lockedOrder->vendor_id);
             $sellerUserId = $vendor?->owner_user_id ?? $lockedOrder->added_user_id;
@@ -105,16 +127,23 @@ class WalletService
 
             $newBalance = round($lockedWallet->balance + $creditedAmount, 2);
 
+            $description = "Vente livrée #{$lockedOrder->order_code} (Net après commission)";
+
             // Record transaction
             $transaction = WalletTransaction::create([
                 'wallet_id' => $lockedWallet->id,
                 'user_id' => $sellerUserId,
                 'type' => 'credit',
+                'source' => 'sale_earning',
+                'order_code' => $lockedOrder->order_code,
                 'amount' => $creditedAmount,
+                'gross_amount' => $itemsSum,
+                'commission_amount' => $commissionAmount,
                 'balance_after' => $newBalance,
                 'reference_type' => 'order',
                 'reference_id' => (string) $lockedOrder->id,
-                'note' => "Order #{$lockedOrder->order_code} settled (Item amount: {$itemsSum} DZD, Commission {$commissionPercent}%: -{$commissionAmount} DZD)",
+                'note' => $description,
+                'description' => $description,
                 'added_user_id' => $adminUserId ?? $sellerUserId,
             ]);
 
@@ -122,9 +151,13 @@ class WalletService
             $lockedWallet->balance = $newBalance;
             $lockedWallet->save();
 
-            // Mark order as credited
+            // Mark order as Delivered and Paid
+            $lockedOrder->order_status_id = \Modules\Core\Constants\Constants::orderDeliveredStatus;
             $lockedOrder->is_wallet_credited = 1;
             $lockedOrder->wallet_credited_at = now();
+            if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'payment_status')) {
+                $lockedOrder->payment_status = 'paid';
+            }
             $lockedOrder->save();
 
             // Mark vendor transaction as Paid (status 2 in psx_vendor_payment_statuses)
@@ -137,8 +170,9 @@ class WalletService
                 'order_id' => $lockedOrder->id,
                 'order_code' => $lockedOrder->order_code,
                 'seller_user_id' => $sellerUserId,
-                'credited_amount' => $creditedAmount,
+                'gross_amount' => $itemsSum,
                 'commission' => $commissionAmount,
+                'credited_amount' => $creditedAmount,
                 'balance_after' => $newBalance,
             ]);
 
@@ -206,11 +240,16 @@ class WalletService
             return [
                 'id' => (string) $item->id,
                 'type' => (string) $item->type,
+                'source' => (string) ($item->source ?? ($item->type === 'credit' ? 'sale_earning' : 'withdrawal')),
+                'order_code' => (string) ($item->order_code ?? ''),
                 'amount' => number_format($item->amount, 2, '.', ''),
+                'gross_amount' => number_format((float) ($item->gross_amount ?? $item->amount), 2, '.', ''),
+                'commission_amount' => number_format((float) ($item->commission_amount ?? 0), 2, '.', ''),
                 'balance_after' => number_format($item->balance_after, 2, '.', ''),
                 'reference_type' => (string) ($item->reference_type ?? ''),
                 'reference_id' => (string) ($item->reference_id ?? ''),
                 'note' => (string) ($item->note ?? ''),
+                'description' => (string) ($item->description ?? $item->note ?? ''),
                 'created_at' => (string) $item->created_at?->format('M d, Y H:i'),
             ];
         });
@@ -220,6 +259,158 @@ class WalletService
             'limit' => $limit,
             'offset' => $offset,
             'transactions' => $data,
+        ];
+    }
+
+    /**
+     * Retrieve seller sales transactions with KPI summary and date filtering.
+     *
+     * @param  int|string  $userId
+     * @param  string|null  $dateFrom
+     * @param  string|null  $dateTo
+     * @param  int  $limit
+     * @param  int  $offset
+     * @return array
+     */
+    public function getSellerSalesTransactions($userId, ?string $dateFrom = null, ?string $dateTo = null, int $limit = 20, int $offset = 0): array
+    {
+        $vendor = Vendor::where('owner_user_id', $userId)->first();
+
+        $query = Order::with(['orderItems.item.cover', 'vendorTransaction.currency'])
+            ->where('order_status_id', \Modules\Core\Constants\Constants::orderDeliveredStatus);
+
+        if ($vendor) {
+            $query->where('vendor_id', $vendor->id);
+        } else {
+            $query->where('added_user_id', $userId);
+        }
+
+        if (!empty($dateFrom)) {
+            $query->where(function ($q) use ($dateFrom) {
+                $q->whereDate('wallet_credited_at', '>=', $dateFrom)
+                  ->orWhere(function ($sq) use ($dateFrom) {
+                      $sq->whereNull('wallet_credited_at')
+                         ->whereDate('updated_date', '>=', $dateFrom);
+                  });
+            });
+        }
+
+        if (!empty($dateTo)) {
+            $query->where(function ($q) use ($dateTo) {
+                $q->whereDate('wallet_credited_at', '<=', $dateTo)
+                  ->orWhere(function ($sq) use ($dateTo) {
+                      $sq->whereNull('wallet_credited_at')
+                         ->whereDate('updated_date', '<=', $dateTo);
+                  });
+            });
+        }
+
+        // Calculate KPI summary across all filtered delivered sales
+        $allOrders = (clone $query)->get();
+        $totalSalesCount = $allOrders->count();
+        $grossSalesTotal = 0.0;
+        $totalCommission = 0.0;
+        $realisedProfit = 0.0;
+
+        foreach ($allOrders as $ord) {
+            $itemsSum = (float) $ord->orderItems->sum('sub_total');
+            if ($itemsSum <= 0) {
+                $itemsSum = max(0, (float) ($ord->total_price - ($ord->delivery_fee ?? 0)));
+                if ($itemsSum <= 0) {
+                    $itemsSum = (float) $ord->total_price;
+                }
+            }
+
+            $tx = WalletTransaction::where('order_code', $ord->order_code)
+                ->where('type', 'credit')
+                ->first();
+
+            if ($tx) {
+                $gross = (float) ($tx->gross_amount > 0 ? $tx->gross_amount : $itemsSum);
+                $comm = (float) $tx->commission_amount;
+                $net = (float) $tx->amount;
+            } else {
+                $commissionPercent = self::getCommissionPercent();
+                $gross = $itemsSum;
+                $comm = round(($gross * $commissionPercent) / 100, 2);
+                $net = round(max(0, $gross - $comm), 2);
+            }
+
+            $grossSalesTotal += $gross;
+            $totalCommission += $comm;
+            $realisedProfit += $net;
+        }
+
+        // Paginate transaction orders
+        $pagedOrders = $query->latest('updated_date')
+            ->skip($offset)
+            ->take($limit)
+            ->get();
+
+        $transactions = $pagedOrders->map(function ($order) {
+            $itemsSum = (float) $order->orderItems->sum('sub_total');
+            if ($itemsSum <= 0) {
+                $itemsSum = max(0, (float) ($order->total_price - ($order->delivery_fee ?? 0)));
+                if ($itemsSum <= 0) {
+                    $itemsSum = (float) $order->total_price;
+                }
+            }
+
+            $tx = WalletTransaction::where('order_code', $order->order_code)
+                ->where('type', 'credit')
+                ->first();
+
+            if ($tx) {
+                $gross = (float) ($tx->gross_amount > 0 ? $tx->gross_amount : $itemsSum);
+                $comm = (float) $tx->commission_amount;
+                $net = (float) $tx->amount;
+            } else {
+                $commissionPercent = self::getCommissionPercent();
+                $gross = $itemsSum;
+                $comm = round(($gross * $commissionPercent) / 100, 2);
+                $net = round(max(0, $gross - $comm), 2);
+            }
+
+            $firstItem = $order->orderItems->first();
+            $coverImage = $firstItem?->item?->cover?->first();
+            $imageUrl = '';
+            if ($coverImage && !empty($coverImage->img_path)) {
+                $imageUrl = asset('storage/' . $coverImage->img_path);
+            }
+
+            return [
+                'id' => (string) $order->id,
+                'order_id' => (string) $order->id,
+                'order_code' => (string) $order->order_code,
+                'order_date' => (string) \Carbon\Carbon::parse($order->order_date ?? $order->added_date)->format('M d, Y'),
+                'delivery_date' => isset($order->wallet_credited_at)
+                    ? (string) \Carbon\Carbon::parse($order->wallet_credited_at)->format('M d, Y H:i')
+                    : (string) \Carbon\Carbon::parse($order->updated_date)->format('M d, Y H:i'),
+                'status' => 'delivered',
+                'status_label' => 'Livré et payé',
+                'is_delivered_and_paid' => '1',
+                'currency_symbol' => 'DA',
+                'gross_amount' => number_format($gross, 2, '.', ''),
+                'commission_amount' => number_format($comm, 2, '.', ''),
+                'net_amount' => number_format($net, 2, '.', ''),
+                'item_name' => (string) ($firstItem?->item_name ?? 'Produit'),
+                'item_count' => (int) $order->orderItems->count(),
+                'image_url' => (string) $imageUrl,
+            ];
+        });
+
+        return [
+            'summary' => [
+                'total_sales_count' => $totalSalesCount,
+                'gross_sales_total' => number_format($grossSalesTotal, 2, '.', ''),
+                'total_commission' => number_format($totalCommission, 2, '.', ''),
+                'realised_profit' => number_format($realisedProfit, 2, '.', ''),
+                'currency_symbol' => 'DA',
+            ],
+            'transactions' => $transactions,
+            'total' => $totalSalesCount,
+            'limit' => $limit,
+            'offset' => $offset,
         ];
     }
 

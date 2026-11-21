@@ -17,16 +17,23 @@ class WalletTransaction extends Model
         'wallet_id',
         'user_id',
         'type',
+        'source',
+        'order_code',
         'amount',
+        'gross_amount',
+        'commission_amount',
         'balance_after',
         'reference_type',
         'reference_id',
         'note',
+        'description',
         'added_user_id',
     ];
 
     protected $casts = [
         'amount' => 'float',
+        'gross_amount' => 'float',
+        'commission_amount' => 'float',
         'balance_after' => 'float',
     ];
 

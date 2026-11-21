@@ -196,6 +196,11 @@ class OrderApiController extends Controller
         return $this->orderService->getWalletTransactionsFromApi($request);
     }
 
+    public function getSellerSalesTransactions(Request $request)
+    {
+        return $this->orderService->getSellerSalesTransactionsFromApi($request);
+    }
+
     public function submitWithdrawRequest(Request $request)
     {
         $validator = Validator::make($request->all(), [

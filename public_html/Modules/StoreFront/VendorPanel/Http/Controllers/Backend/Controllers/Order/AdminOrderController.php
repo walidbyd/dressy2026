@@ -147,6 +147,15 @@ class AdminOrderController extends PsController
         $order->updated_user_id = Auth::id() ?? 1;
         $order->save();
 
+        // If order transitioned to Delivered, automatically credit the seller's wallet and mark paid
+        if ((int) $newStatusId === (int) Constants::orderDeliveredStatus) {
+            try {
+                app(\Modules\StoreFront\VendorPanel\Http\Services\WalletService::class)->creditForOrder($order, Auth::id() ?? 1);
+            } catch (\Throwable $e) {
+                \Log::error('Auto wallet credit on order delivery failed: ' . $e->getMessage());
+            }
+        }
+
         // Send automated status message to unified chat & FCM push
         try {
             $statusLabels = [
@@ -161,6 +170,8 @@ class AdminOrderController extends PsController
             app(\App\Services\OrderChatNotificationService::class)->sendOrderStatusUpdate($order, $statusLabel, 'both');
             if ($newStatusId === 2) {
                 app(\App\Services\OrderChatNotificationService::class)->updateOrderActionStatus($order, 'accepted');
+            } elseif ($newStatusId === 4) {
+                app(\App\Services\OrderChatNotificationService::class)->updateOrderActionStatus($order, 'delivered');
             } elseif ($newStatusId === 5) {
                 app(\App\Services\OrderChatNotificationService::class)->updateOrderActionStatus($order, 'cancelled');
             }

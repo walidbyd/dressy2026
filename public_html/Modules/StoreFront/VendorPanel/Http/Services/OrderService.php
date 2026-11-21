@@ -842,11 +842,33 @@ class OrderService extends PsService
         }
 
         $action = strtolower(trim((string) $request->input('action', '')));
-        if (!in_array($action, ['confirm', 'accept', 'cancel', 'reject'])) {
-            return responseMsgApi(__('Invalid action. Allowed values: confirm, cancel.'), Constants::badRequestStatusCode);
+        if (!in_array($action, ['confirm', 'accept', 'cancel', 'reject', 'delivered', 'deliver'])) {
+            return responseMsgApi(__('Invalid action. Allowed values: confirm, cancel, delivered.'), Constants::badRequestStatusCode);
         }
 
         $chatNotiService = app(\App\Services\OrderChatNotificationService::class);
+
+        if ($action === 'delivered' || $action === 'deliver') {
+            $walletService = app(WalletService::class);
+            $result = $walletService->creditForOrder($order, $userId);
+
+            if (! empty($result['error'])) {
+                return responseMsgApi($result['error'], Constants::badRequestStatusCode);
+            }
+
+            $chatNotiService->updateOrderActionStatus($order, 'delivered');
+            $buyerMsg = "Votre commande a été livrée avec succès !";
+            $chatNotiService->sendOrderStatusUpdate($order, $buyerMsg, 'both');
+
+            return response()->json([
+                'status' => 'success',
+                'action_status' => 'delivered',
+                'order_status_id' => $order->order_status_id,
+                'order_code' => $order->order_code,
+                'message' => __('Order marked as delivered and seller wallet credited.'),
+                'wallet_credited' => true,
+            ], Constants::okStatusCode);
+        }
 
         if ($action === 'confirm' || $action === 'accept') {
             if ((int) $order->order_status_id !== (int) Constants::orderPendingStatus && (int) $order->order_status_id !== (int) Constants::orderApprovedStatus) {
@@ -966,7 +988,7 @@ class OrderService extends PsService
 
     public function getWalletTransactionsFromApi($request)
     {
-        $userId = $request->login_user_id;
+        $userId = $request->login_user_id ?: ($request->user_id ?? $request->user()?->id);
         if (! $userId) {
             return responseMsgApi(__('Login user is required.'), Constants::badRequestStatusCode);
         }
@@ -976,6 +998,24 @@ class OrderService extends PsService
 
         $walletService = app(WalletService::class);
         $transactionsData = $walletService->getWalletTransactions($userId, $limit, $offset);
+
+        return responseDataApi($transactionsData);
+    }
+
+    public function getSellerSalesTransactionsFromApi($request)
+    {
+        $userId = $request->login_user_id ?: ($request->user_id ?? $request->user()?->id);
+        if (! $userId) {
+            return responseMsgApi(__('Login user is required.'), Constants::badRequestStatusCode);
+        }
+
+        $dateFrom = $request->date_from;
+        $dateTo = $request->date_to;
+        $limit = (int) ($request->limit ?? 20);
+        $offset = (int) ($request->offset ?? 0);
+
+        $walletService = app(WalletService::class);
+        $transactionsData = $walletService->getSellerSalesTransactions($userId, $dateFrom, $dateTo, $limit, $offset);
 
         return responseDataApi($transactionsData);
     }

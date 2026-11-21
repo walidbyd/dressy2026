@@ -33,6 +33,19 @@ class OrderHistoryApiResource extends JsonResource
             array_push($subTotalPriceArr, $orderItem->sub_total);
         }
 
+        $isDelivered = ((int) $this->order_status_id === 4);
+        $isPaid = ($this->vendorTransaction?->vendor_payment_status_id == 2)
+            || (($this->payment_status ?? '') === 'paid')
+            || ((int) ($this->is_wallet_credited ?? 0) === 1);
+        $isDeliveredAndPaid = ($isDelivered && $isPaid);
+
+        $locale = app()->getLocale() ?: ($request->language_symbol ?? 'fr');
+        $deliveredAndPaidLabel = match(strtolower(substr($locale, 0, 2))) {
+            'ar' => 'تم التوصيل والدفع',
+            'en' => 'Delivered & Paid',
+            default => 'Livré et payé',
+        };
+
         return [
             'id' => (string) $this->id,
             'order_status_id' => (string) $this->order_status_id,
@@ -40,8 +53,12 @@ class OrderHistoryApiResource extends JsonResource
             'order_date' => (string) \Carbon\Carbon::parse($this->order_date)->format('M d, Y'),
             'payment_status' => (string) $this->vendorTransaction?->vendorPaymentStatus?->name,
             'payment_status_color' => (string) $this->vendorTransaction?->vendorPaymentStatus?->colour,
-            'order_status' => (string) $this->orderStatus?->name,
-            'order_status_color' => (string) $this->orderStatus?->colour,
+            'order_status' => $isDeliveredAndPaid ? $deliveredAndPaidLabel : (string) $this->orderStatus?->name,
+            'order_status_color' => $isDeliveredAndPaid ? '#10B981' : (string) $this->orderStatus?->colour,
+            'is_delivered_and_paid' => $isDeliveredAndPaid ? '1' : '0',
+            'delivered_and_paid_label' => $isDeliveredAndPaid ? $deliveredAndPaidLabel : (string) $this->orderStatus?->name,
+            'is_wallet_credited' => (string) ($this->is_wallet_credited ?? '0'),
+            'wallet_credited_at' => isset($this->wallet_credited_at) ? (string) \Carbon\Carbon::parse($this->wallet_credited_at)->format('M d, Y H:i') : '',
             'status_reason' => (string) ($this->status_reason ?? ''),
             'payment_date' => isset($this->vendorTransaction?->payment_date) ? (string) \Carbon\Carbon::parse($this->vendorTransaction?->payment_date)->format('M d, Y') : '',
             'vendor_name' => (string) $this->vendor?->name,
