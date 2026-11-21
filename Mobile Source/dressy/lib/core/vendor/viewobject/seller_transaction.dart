@@ -117,12 +117,6 @@ class SellerTransaction extends PsObject<SellerTransaction> {
     }
     return null;
   }
-      data['item_count'] = object.itemCount;
-      data['image_url'] = object.imageUrl;
-      return data;
-    }
-    return null;
-  }
 
   @override
   List<SellerTransaction> fromMapList(List<dynamic> dynamicDataList) {
