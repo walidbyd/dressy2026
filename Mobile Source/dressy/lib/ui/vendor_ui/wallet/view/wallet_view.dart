@@ -329,6 +329,40 @@ class _WalletViewState extends State<WalletView> {
   Widget _buildTransactionItem(WalletTransaction item) {
     final bool isCredit = (item.type ?? '').toLowerCase() == 'credit';
     final String currency = _wallet?.currencySymbol ?? 'DA';
+    final String source = (item.source ?? '').toLowerCase();
+    final bool isReversal = source == 'sale_reversal';
+    final bool isRefund = source == 'order_refund';
+
+    Color iconBgColor = isCredit ? PsColors.success50 : PsColors.error50;
+    Color iconColor = isCredit ? PsColors.success500 : PsColors.error500;
+    IconData txIcon = isCredit ? Icons.arrow_downward : Icons.arrow_upward;
+
+    if (isReversal) {
+      iconBgColor = const Color(0xFFFEF2F2);
+      iconColor = const Color(0xFFDC2626);
+      txIcon = Icons.replay;
+    } else if (isRefund) {
+      iconBgColor = const Color(0xFFEFF6FF);
+      iconColor = const Color(0xFF2563EB);
+      txIcon = Icons.undo;
+    }
+
+    String txTitle;
+    if (isReversal) {
+      txTitle = (item.orderCode != null && item.orderCode!.isNotEmpty)
+          ? 'Annulation / Retour #${item.orderCode}'
+          : (item.description ?? item.note ?? 'Débit annulation');
+    } else if (isRefund) {
+      txTitle = (item.orderCode != null && item.orderCode!.isNotEmpty)
+          ? 'Remboursement commande #${item.orderCode}'
+          : (item.description ?? item.note ?? 'Remboursement commande');
+    } else if (isCredit) {
+      txTitle = (item.orderCode != null && item.orderCode!.isNotEmpty)
+          ? 'Vente livrée #${item.orderCode}'
+          : (item.note ?? 'Vente livrée');
+    } else {
+      txTitle = item.note ?? 'Demande de retrait';
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -342,9 +376,11 @@ class _WalletViewState extends State<WalletView> {
             : PsColors.achromatic700,
         borderRadius: const BorderRadius.all(Radius.circular(PsDimens.space10)),
         border: Border.all(
-          color: Utils.isLightMode(context)
-              ? PsColors.achromatic100
-              : PsColors.achromatic600,
+          color: isReversal
+              ? const Color(0xFFFCA5A5)
+              : (Utils.isLightMode(context)
+                  ? PsColors.achromatic100
+                  : PsColors.achromatic600),
         ),
       ),
       child: Row(
@@ -353,14 +389,12 @@ class _WalletViewState extends State<WalletView> {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: isCredit
-                  ? PsColors.success50
-                  : PsColors.error50,
+              color: iconBgColor,
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isCredit ? Icons.arrow_downward : Icons.arrow_upward,
-              color: isCredit ? PsColors.success500 : PsColors.error500,
+              txIcon,
+              color: iconColor,
               size: 20,
             ),
           ),
@@ -370,9 +404,7 @@ class _WalletViewState extends State<WalletView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  (item.orderCode != null && item.orderCode!.isNotEmpty)
-                      ? 'Vente livrée #${item.orderCode}'
-                      : (item.note ?? (isCredit ? 'Vente livrée' : 'Retrait')),
+                  txTitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -380,7 +412,20 @@ class _WalletViewState extends State<WalletView> {
                         fontSize: 13,
                       ),
                 ),
-                if (isCredit &&
+                if (isReversal &&
+                    item.grossAmount != null &&
+                    item.grossAmount!.isNotEmpty &&
+                    item.grossAmount != '0.00') ...<Widget>[
+                  const SizedBox(height: 3),
+                  Text(
+                    'Brut: ${Utils.getPriceFormat(item.grossAmount!, '#,##0')} $currency • Commission: -${Utils.getPriceFormat(item.commissionAmount ?? '0', '#,##0')} $currency • Net débité: -${Utils.getPriceFormat(item.amount ?? '0', '#,##0')} $currency',
+                    style: const TextStyle(
+                      color: Color(0xFFDC2626),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 11,
+                    ),
+                  ),
+                ] else if (isCredit &&
                     item.grossAmount != null &&
                     item.grossAmount!.isNotEmpty &&
                     item.grossAmount != '0.00') ...<Widget>[

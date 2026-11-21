@@ -1111,6 +1111,13 @@ Route::middleware(['isInstall'])->group(function () {
             Route::get('/', 'index')->name('admin.commission.index');
             Route::post('/', 'update')->name('admin.commission.update');
         });
+
+        Route::prefix('delivery-settings')->controller(\Modules\StoreFront\VendorPanel\Http\Controllers\Backend\Controllers\DeliverySetting\AdminDeliverySettingController::class)->group(function () {
+            Route::get('/', 'index')->name('admin.delivery.settings');
+            Route::post('/', 'update')->name('admin.delivery.update');
+            Route::post('/test-connection', 'testConnection')->name('admin.delivery.testConnection');
+            Route::post('/sync-fees', 'syncFees')->name('admin.delivery.syncFees');
+        });
     });
 
     Route::prefix('item')->group(function () {

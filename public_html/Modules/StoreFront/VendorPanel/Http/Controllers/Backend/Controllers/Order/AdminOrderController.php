@@ -156,6 +156,15 @@ class AdminOrderController extends PsController
             }
         }
 
+        // If order transitioned to Cancelled or Returned, automatically reverse seller wallet funds (if delivered) and refund buyer
+        if (in_array((int) $newStatusId, [(int) Constants::orderCancelledStatus, (int) Constants::orderReturnedStatus])) {
+            try {
+                app(\Modules\StoreFront\VendorPanel\Http\Services\WalletService::class)->reverseOrderFunds($order, $request->status_reason ?? null, Auth::id() ?? 1);
+            } catch (\Throwable $e) {
+                \Log::error('Auto wallet reversal on order cancel/return failed: ' . $e->getMessage());
+            }
+        }
+
         // Send automated status message to unified chat & FCM push
         try {
             $statusLabels = [

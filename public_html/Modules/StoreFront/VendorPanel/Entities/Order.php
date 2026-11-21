@@ -13,7 +13,7 @@ class Order extends PsModel
 {
     use HasFactory, VendorAuthorizationTrait;
 
-    protected $fillable = ['id', 'user_id', 'vendor_id', 'order_date', 'total_price', 'total_amount', 'delivery_fee', 'wallet_amount_used', 'delivery_type', 'from_wilaya_id', 'to_wilaya_id', 'to_commune_name', 'yalidine_stop_desk_id', 'order_status_id', 'payment_status', 'is_reviewed', 'review_rating', 'review_id', 'order_code', 'is_payment_fail', 'yalidine_tracking', 'yalidine_parcel_id', 'yalidine_status', 'yalidine_label_url', 'yalidine_parcel_status', 'status_reason', 'is_wallet_credited', 'wallet_credited_at', 'added_date', 'added_user_id', 'updated_date', 'updated_user_id', 'updated_flag'];
+    protected $fillable = ['id', 'user_id', 'vendor_id', 'order_date', 'total_price', 'total_amount', 'delivery_fee', 'wallet_amount_used', 'delivery_type', 'from_wilaya_id', 'to_wilaya_id', 'to_commune_name', 'yalidine_stop_desk_id', 'order_status_id', 'payment_status', 'is_reviewed', 'review_rating', 'review_id', 'order_code', 'is_payment_fail', 'yalidine_tracking', 'yalidine_parcel_id', 'yalidine_status', 'yalidine_label_url', 'yalidine_parcel_status', 'status_reason', 'is_wallet_credited', 'wallet_credited_at', 'wallet_reversed_at', 'added_date', 'added_user_id', 'updated_date', 'updated_user_id', 'updated_flag'];
 
     protected $table = 'psx_orders';
 
@@ -42,6 +42,8 @@ class Order extends PsModel
     const isWalletCredited = 'is_wallet_credited';
 
     const walletCreditedAt = 'wallet_credited_at';
+
+    const walletReversedAt = 'wallet_reversed_at';
 
     const orderStatusId = 'order_status_id';
 

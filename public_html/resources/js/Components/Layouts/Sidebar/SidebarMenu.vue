@@ -118,6 +118,13 @@
                             {{ $t('dressy_commission_module') || 'Commission & Settings' }}
                         </span>
                     </Link>
+                    <Link :href="route('admin.delivery.settings')" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-secondary-700 dark:text-secondary-300 hover:bg-primary-100 dark:hover:bg-secondary-800"
+                        :class="{ 'bg-primary-500 !text-white font-semibold shadow-sm': route().current('admin.delivery.*') }">
+                        <ps-icon name="refresh" w="18" h="18" />
+                        <span :class="{ 'inline': sideMenuStore.isFullSideMenu, 'hidden xl:hidden': !sideMenuStore.isFullSideMenu }">
+                            {{ $t('dressy_delivery_settings_module') || 'Delivery Settings (Yalidine)' }}
+                        </span>
+                    </Link>
                 </div>
             </div>
 

@@ -801,6 +801,13 @@ class OrderService extends PsService
         $order->status_reason = $reason;
         $order->save();
 
+        // Process automatic wallet reversal (if credited) and refund buyer wallet balance (if used)
+        try {
+            app(WalletService::class)->reverseOrderFunds($order, $reason, $userId);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Wallet reversal on cancelOrderFromApi failed: ' . $e->getMessage());
+        }
+
         try {
             $chatNotiService = app(\App\Services\OrderChatNotificationService::class);
             $chatNotiService->updateOrderActionStatus($order, 'cancelled');
@@ -920,6 +927,13 @@ class OrderService extends PsService
             $order->order_status_id = Constants::orderCancelledStatus;
             $order->status_reason = $reason;
             $order->save();
+
+            // Process automatic wallet reversal (if credited) and refund buyer wallet balance (if used)
+            try {
+                app(WalletService::class)->reverseOrderFunds($order, $reason, $userId);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Wallet reversal on sellerAction cancel failed: ' . $e->getMessage());
+            }
 
             // Update action status across DB and Firebase RTDB
             $chatNotiService->updateOrderActionStatus($order, 'cancelled');

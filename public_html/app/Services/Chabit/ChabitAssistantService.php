@@ -643,6 +643,13 @@ SYS;
             $order->updated_user_id = $userId;
             $order->save();
 
+            // Reverse wallet credit (if credited) and refund buyer wallet balance (if used)
+            try {
+                app(\Modules\StoreFront\VendorPanel\Http\Services\WalletService::class)->reverseOrderFunds($order, 'Cancelled by buyer via Chabit', $userId);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Wallet reversal in Chabit cancelOrder failed: ' . $e->getMessage());
+            }
+
             // Restore item stock
             foreach ($order->orderItems as $orderItem) {
                 if (! $orderItem->item_id) {

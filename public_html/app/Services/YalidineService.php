@@ -30,7 +30,28 @@ class YalidineService
      */
     protected function resolveCredentials(): void
     {
-        // 1. Try psx_backend_settings
+        // 1. Try psx_delivery_settings (Admin Delivery Settings)
+        try {
+            $deliverySetting = \App\Models\DeliverySetting::first();
+            if ($deliverySetting) {
+                if (!empty($deliverySetting->api_id)) {
+                    $this->apiId = trim((string) $deliverySetting->api_id);
+                }
+                if (!empty($deliverySetting->api_token)) {
+                    $this->apiToken = trim((string) $deliverySetting->api_token);
+                }
+                if (!empty($deliverySetting->api_base_url)) {
+                    $this->apiUrl = rtrim(trim((string) $deliverySetting->api_base_url), '/');
+                }
+                if (!$deliverySetting->is_enabled || $deliverySetting->environment === 'sandbox') {
+                    $this->stubMode = true;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore DB errors during early bootstrapping
+        }
+
+        // 2. Try psx_backend_settings
         try {
             $backendSetting = DB::table('psx_backend_settings')->first();
             if ($backendSetting) {

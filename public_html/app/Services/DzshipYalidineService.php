@@ -33,6 +33,23 @@ class DzshipYalidineService
         $this->apiToken = config('services.yalidine.api_token');
         $configuredStub = filter_var(config('services.yalidine.stub_mode', config('yalidine_rates.stub_mode', true)), FILTER_VALIDATE_BOOLEAN);
 
+        try {
+            $deliverySetting = \App\Models\DeliverySetting::first();
+            if ($deliverySetting) {
+                if (!empty($deliverySetting->api_id)) {
+                    $this->apiId = trim((string) $deliverySetting->api_id);
+                }
+                if (!empty($deliverySetting->api_token)) {
+                    $this->apiToken = trim((string) $deliverySetting->api_token);
+                }
+                if (!$deliverySetting->is_enabled || $deliverySetting->environment === 'sandbox') {
+                    $configuredStub = true;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore DB errors during bootstrap
+        }
+
         // If Yalidine API credentials are not configured yet, safely operate in stub/fallback mode
         $this->stubMode = $configuredStub || empty($this->apiId) || empty($this->apiToken);
     }

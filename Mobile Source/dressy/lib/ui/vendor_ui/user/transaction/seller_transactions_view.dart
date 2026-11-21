@@ -448,6 +448,19 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
 
   Widget _buildTransactionItem(SellerTransaction item) {
     final String currency = item.currencySymbol ?? 'DA';
+    final String status = (item.status ?? '').toLowerCase();
+    final bool isCancelled = status == 'cancelled';
+    final bool isReturned = status == 'returned';
+    final bool isReversal = isCancelled || isReturned || (item.netAmount != null && item.netAmount!.startsWith('-'));
+
+    final Color badgeBg = isReversal ? const Color(0xFFFEF2F2) : const Color(0xFFE8F5E9);
+    final Color badgeBorder = isReversal ? const Color(0xFFEF4444) : const Color(0xFF10B981);
+    final Color badgeText = isReversal ? const Color(0xFFDC2626) : const Color(0xFF10B981);
+    final IconData badgeIcon = isReversal
+        ? (isReturned ? Icons.replay : Icons.cancel_outlined)
+        : Icons.done_all;
+    final String badgeLabel = item.statusLabel ?? (isReturned ? 'Retournée' : (isCancelled ? 'Annulée' : 'Livré et payé'));
+
     return Container(
       margin: const EdgeInsets.symmetric(
           horizontal: PsDimens.space16, vertical: PsDimens.space6),
@@ -457,9 +470,11 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
             : PsColors.achromatic700,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Utils.isLightMode(context)
-              ? const Color(0xFFE5E7EB)
-              : PsColors.achromatic600,
+          color: isReversal
+              ? const Color(0xFFFCA5A5)
+              : (Utils.isLightMode(context)
+                  ? const Color(0xFFE5E7EB)
+                  : PsColors.achromatic600),
         ),
         boxShadow: const <BoxShadow>[
           BoxShadow(
@@ -486,7 +501,7 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              // Top Row: Order Code & Delivered Badge
+              // Top Row: Order Code & Status Badge
               Row(
                 children: <Widget>[
                   Text(
@@ -503,21 +518,21 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE8F5E9),
+                      color: badgeBg,
                       border: Border.all(
-                          color: const Color(0xFF10B981), width: 1),
+                          color: badgeBorder, width: 1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        const Icon(Icons.done_all,
-                            size: 13, color: Color(0xFF10B981)),
+                        Icon(badgeIcon,
+                            size: 13, color: badgeText),
                         const SizedBox(width: 4),
                         Text(
-                          item.statusLabel ?? 'Livré et payé',
-                          style: const TextStyle(
-                            color: Color(0xFF10B981),
+                          badgeLabel,
+                          style: TextStyle(
+                            color: badgeText,
                             fontWeight: FontWeight.bold,
                             fontSize: 11,
                           ),
@@ -624,10 +639,12 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
                       ),
                     ),
                     Text(
-                      '${'seller_financial_net'.tr}: +${Utils.getPriceFormat(item.netAmount ?? '0', '#,##0')} $currency',
-                      style: const TextStyle(
+                      isReversal
+                          ? '${'seller_financial_net'.tr}: -${Utils.getPriceFormat((item.netAmount ?? '0').replaceAll('-', ''), '#,##0')} $currency'
+                          : '${'seller_financial_net'.tr}: +${Utils.getPriceFormat(item.netAmount ?? '0', '#,##0')} $currency',
+                      style: TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF10B981),
+                        color: isReversal ? const Color(0xFFDC2626) : const Color(0xFF10B981),
                         fontWeight: FontWeight.bold,
                       ),
                     ),

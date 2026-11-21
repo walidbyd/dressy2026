@@ -188,6 +188,163 @@ class WalletService
     }
 
     /**
+     * Reverse / deduct wallet credit when an order is cancelled or returned,
+     * and refund any buyer wallet balance used on the order.
+     *
+     * @param  Order  $order
+     * @param  string|null  $reason
+     * @param  int|string|null  $adminUserId
+     * @return array
+     */
+    public function reverseOrderFunds(Order $order, ?string $reason = null, $adminUserId = null): array
+    {
+        return DB::transaction(function () use ($order, $reason, $adminUserId) {
+            $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+            if (! $lockedOrder) {
+                return [
+                    'success' => false,
+                    'error' => 'Order not found.',
+                ];
+            }
+
+            $orderCode = $lockedOrder->order_code;
+            $sellerReversed = false;
+            $buyerRefunded = false;
+            $reversalAmount = 0.0;
+            $refundAmount = 0.0;
+
+            // --- 1. CASE A: SELLER REVERSAL ---
+            // Check if seller was previously credited for this order
+            $sellerCreditTx = WalletTransaction::where('order_code', $orderCode)
+                ->where('type', 'credit')
+                ->where('source', 'sale_earning')
+                ->first();
+
+            $alreadyReversed = WalletTransaction::where('order_code', $orderCode)
+                ->where('type', 'debit')
+                ->where('source', 'sale_reversal')
+                ->exists();
+
+            if ($sellerCreditTx && ! $alreadyReversed) {
+                $vendor = Vendor::find($lockedOrder->vendor_id);
+                $sellerUserId = $vendor?->owner_user_id ?? $lockedOrder->added_user_id ?? $sellerCreditTx->user_id;
+
+                if ($sellerUserId) {
+                    $sellerWallet = $this->getOrCreateWalletForUser($sellerUserId, $lockedOrder->vendor_id);
+                    $lockedSellerWallet = Wallet::where('id', $sellerWallet->id)->lockForUpdate()->first();
+
+                    $reversalAmount = (float) $sellerCreditTx->amount;
+                    // Deduct from seller balance (allowing negative if seller already withdrew)
+                    $newSellerBalance = round($lockedSellerWallet->balance - $reversalAmount, 2);
+                    $lockedSellerWallet->balance = $newSellerBalance;
+                    $lockedSellerWallet->save();
+
+                    $desc = "Annulation / Retour commande #{$orderCode} (Débit net après commission)";
+                    if (! empty($reason)) {
+                        $desc .= " - Motif: {$reason}";
+                    }
+
+                    WalletTransaction::create([
+                        'wallet_id' => $lockedSellerWallet->id,
+                        'user_id' => $sellerUserId,
+                        'type' => 'debit',
+                        'source' => 'sale_reversal',
+                        'order_code' => $orderCode,
+                        'amount' => $reversalAmount,
+                        'gross_amount' => $sellerCreditTx->gross_amount,
+                        'commission_amount' => $sellerCreditTx->commission_amount,
+                        'balance_after' => $newSellerBalance,
+                        'reference_type' => 'order',
+                        'reference_id' => (string) $lockedOrder->id,
+                        'note' => $desc,
+                        'description' => $desc,
+                        'added_user_id' => $adminUserId ?? $sellerUserId,
+                    ]);
+
+                    $sellerReversed = true;
+
+                    Log::info("Seller wallet reversed for order #{$orderCode}:", [
+                        'seller_user_id' => $sellerUserId,
+                        'reversal_amount' => $reversalAmount,
+                        'balance_after' => $newSellerBalance,
+                    ]);
+                }
+            }
+
+            // --- 2. CASE B: BUYER REFUND ---
+            // If buyer paid with wallet and hasn't been refunded yet
+            $alreadyRefunded = WalletTransaction::where('order_code', $orderCode)
+                ->where('type', 'credit')
+                ->where('source', 'order_refund')
+                ->exists();
+
+            $buyerWalletUsed = (float) ($lockedOrder->wallet_amount_used ?? 0);
+            if ($buyerWalletUsed > 0 && ! $alreadyRefunded && $lockedOrder->user_id) {
+                $buyerUserId = $lockedOrder->user_id;
+                $buyerWallet = $this->getOrCreateWalletForUser($buyerUserId);
+                $lockedBuyerWallet = Wallet::where('id', $buyerWallet->id)->lockForUpdate()->first();
+
+                $refundAmount = $buyerWalletUsed;
+                $newBuyerBalance = round($lockedBuyerWallet->balance + $refundAmount, 2);
+                $lockedBuyerWallet->balance = $newBuyerBalance;
+                $lockedBuyerWallet->save();
+
+                $buyerDesc = "Remboursement commande #{$orderCode}";
+                if (! empty($reason)) {
+                    $buyerDesc .= " - Motif: {$reason}";
+                }
+
+                WalletTransaction::create([
+                    'wallet_id' => $lockedBuyerWallet->id,
+                    'user_id' => $buyerUserId,
+                    'type' => 'credit',
+                    'source' => 'order_refund',
+                    'order_code' => $orderCode,
+                    'amount' => $refundAmount,
+                    'gross_amount' => $refundAmount,
+                    'commission_amount' => 0.00,
+                    'balance_after' => $newBuyerBalance,
+                    'reference_type' => 'order',
+                    'reference_id' => (string) $lockedOrder->id,
+                    'note' => $buyerDesc,
+                    'description' => $buyerDesc,
+                    'added_user_id' => $adminUserId ?? $buyerUserId,
+                ]);
+
+                $buyerRefunded = true;
+
+                Log::info("Buyer wallet refunded for order #{$orderCode}:", [
+                    'buyer_user_id' => $buyerUserId,
+                    'refund_amount' => $refundAmount,
+                    'balance_after' => $newBuyerBalance,
+                ]);
+            }
+
+            // Mark order flags
+            $lockedOrder->is_wallet_credited = 0;
+            if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'wallet_reversed_at')) {
+                $lockedOrder->wallet_reversed_at = now();
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'payment_status')) {
+                $lockedOrder->payment_status = 'refunded';
+            }
+            if ($lockedOrder->vendorTransaction) {
+                $lockedOrder->vendorTransaction->vendor_payment_status_id = 4; // Refunded
+                $lockedOrder->vendorTransaction->save();
+            }
+            $lockedOrder->save();
+
+            return [
+                'success' => true,
+                'seller_reversed' => $sellerReversed,
+                'reversal_amount' => $reversalAmount,
+                'buyer_refunded' => $buyerRefunded,
+                'refund_amount' => $refundAmount,
+            ];
+        });
+    }
+
+    /**
      * Retrieve wallet balance summary for a user.
      *
      * @param  int|string  $userId
@@ -199,10 +356,19 @@ class WalletService
 
         $totalEarned = (float) WalletTransaction::where('wallet_id', $wallet->id)
             ->where('type', 'credit')
+            ->where('source', 'sale_earning')
             ->sum('amount');
+
+        $totalReversed = (float) WalletTransaction::where('wallet_id', $wallet->id)
+            ->where('type', 'debit')
+            ->where('source', 'sale_reversal')
+            ->sum('amount');
+
+        $netEarned = max(0, $totalEarned - $totalReversed);
 
         $totalWithdrawn = (float) WalletTransaction::where('wallet_id', $wallet->id)
             ->where('type', 'debit')
+            ->where('source', 'withdrawal')
             ->sum('amount');
 
         $pendingWithdraw = (float) WithdrawRequest::where('wallet_id', $wallet->id)
@@ -213,7 +379,7 @@ class WalletService
             'balance' => number_format($wallet->balance, 2, '.', ''),
             'currency' => $wallet->currency_code ?? 'DZD',
             'currency_symbol' => 'DA',
-            'total_earned' => number_format($totalEarned, 2, '.', ''),
+            'total_earned' => number_format($netEarned, 2, '.', ''),
             'total_withdrawn' => number_format($totalWithdrawn, 2, '.', ''),
             'pending_withdraw' => number_format($pendingWithdraw, 2, '.', ''),
         ];
@@ -277,7 +443,23 @@ class WalletService
         $vendor = Vendor::where('owner_user_id', $userId)->first();
 
         $query = Order::with(['orderItems.item.cover', 'vendorTransaction.currency'])
-            ->where('order_status_id', \Modules\Core\Constants\Constants::orderDeliveredStatus);
+            ->where(function ($q) {
+                $q->where('order_status_id', \Modules\Core\Constants\Constants::orderDeliveredStatus)
+                  ->orWhere(function ($sq) {
+                      $sq->whereIn('order_status_id', [
+                          \Modules\Core\Constants\Constants::orderCancelledStatus,
+                          \Modules\Core\Constants\Constants::orderReturnedStatus,
+                      ])->where(function ($ssq) {
+                          $ssq->whereNotNull('wallet_reversed_at')
+                              ->orWhereExists(function ($ex) {
+                                  $ex->select(\Illuminate\Support\Facades\DB::raw(1))
+                                     ->from('psx_wallet_transactions')
+                                     ->whereColumn('psx_wallet_transactions.order_code', 'psx_orders.order_code')
+                                     ->where('psx_wallet_transactions.source', 'sale_reversal');
+                              });
+                      });
+                  });
+            });
 
         if ($vendor) {
             $query->where('vendor_id', $vendor->id);
@@ -288,8 +470,10 @@ class WalletService
         if (!empty($dateFrom)) {
             $query->where(function ($q) use ($dateFrom) {
                 $q->whereDate('wallet_credited_at', '>=', $dateFrom)
+                  ->orWhereDate('wallet_reversed_at', '>=', $dateFrom)
                   ->orWhere(function ($sq) use ($dateFrom) {
                       $sq->whereNull('wallet_credited_at')
+                         ->whereNull('wallet_reversed_at')
                          ->whereDate('updated_date', '>=', $dateFrom);
                   });
             });
@@ -298,21 +482,27 @@ class WalletService
         if (!empty($dateTo)) {
             $query->where(function ($q) use ($dateTo) {
                 $q->whereDate('wallet_credited_at', '<=', $dateTo)
+                  ->orWhereDate('wallet_reversed_at', '<=', $dateTo)
                   ->orWhere(function ($sq) use ($dateTo) {
                       $sq->whereNull('wallet_credited_at')
+                         ->whereNull('wallet_reversed_at')
                          ->whereDate('updated_date', '<=', $dateTo);
                   });
             });
         }
 
-        // Calculate KPI summary across all filtered delivered sales
+        // Calculate KPI summary across all filtered delivered sales and reversals
         $allOrders = (clone $query)->get();
-        $totalSalesCount = $allOrders->count();
+        $totalSalesCount = 0;
         $grossSalesTotal = 0.0;
         $totalCommission = 0.0;
         $realisedProfit = 0.0;
 
         foreach ($allOrders as $ord) {
+            $isCancelled = ((int) $ord->order_status_id === (int) \Modules\Core\Constants\Constants::orderCancelledStatus);
+            $isReturned = ((int) $ord->order_status_id === (int) \Modules\Core\Constants\Constants::orderReturnedStatus);
+            $isReversed = ($isCancelled || $isReturned || !empty($ord->wallet_reversed_at));
+
             $itemsSum = (float) $ord->orderItems->sum('sub_total');
             if ($itemsSum <= 0) {
                 $itemsSum = max(0, (float) ($ord->total_price - ($ord->delivery_fee ?? 0)));
@@ -323,6 +513,7 @@ class WalletService
 
             $tx = WalletTransaction::where('order_code', $ord->order_code)
                 ->where('type', 'credit')
+                ->where('source', 'sale_earning')
                 ->first();
 
             if ($tx) {
@@ -336,10 +527,21 @@ class WalletService
                 $net = round(max(0, $gross - $comm), 2);
             }
 
-            $grossSalesTotal += $gross;
-            $totalCommission += $comm;
-            $realisedProfit += $net;
+            if ($isReversed) {
+                $grossSalesTotal -= $gross;
+                $totalCommission -= $comm;
+                $realisedProfit -= $net;
+            } else {
+                $grossSalesTotal += $gross;
+                $totalCommission += $comm;
+                $realisedProfit += $net;
+                $totalSalesCount++;
+            }
         }
+
+        $grossSalesTotal = max(0, $grossSalesTotal);
+        $totalCommission = max(0, $totalCommission);
+        $realisedProfit = max(0, $realisedProfit);
 
         // Paginate transaction orders
         $pagedOrders = $query->latest('updated_date')
@@ -348,6 +550,10 @@ class WalletService
             ->get();
 
         $transactions = $pagedOrders->map(function ($order) {
+            $isCancelled = ((int) $order->order_status_id === (int) \Modules\Core\Constants\Constants::orderCancelledStatus);
+            $isReturned = ((int) $order->order_status_id === (int) \Modules\Core\Constants\Constants::orderReturnedStatus);
+            $isReversed = ($isCancelled || $isReturned || !empty($order->wallet_reversed_at));
+
             $itemsSum = (float) $order->orderItems->sum('sub_total');
             if ($itemsSum <= 0) {
                 $itemsSum = max(0, (float) ($order->total_price - ($order->delivery_fee ?? 0)));
@@ -358,6 +564,7 @@ class WalletService
 
             $tx = WalletTransaction::where('order_code', $order->order_code)
                 ->where('type', 'credit')
+                ->where('source', 'sale_earning')
                 ->first();
 
             if ($tx) {
@@ -378,21 +585,37 @@ class WalletService
                 $imageUrl = asset('storage/' . $coverImage->img_path);
             }
 
+            if ($isReversed) {
+                $statusSlug = $isReturned ? 'returned' : 'cancelled';
+                $statusLabel = $isReturned ? 'Retournée' : 'Annulée';
+                $displayDate = isset($order->wallet_reversed_at)
+                    ? (string) \Carbon\Carbon::parse($order->wallet_reversed_at)->format('M d, Y H:i')
+                    : (string) \Carbon\Carbon::parse($order->updated_date)->format('M d, Y H:i');
+                $netAmountFormatted = '-' . number_format($net, 2, '.', '');
+                $isDeliveredAndPaid = '0';
+            } else {
+                $statusSlug = 'delivered';
+                $statusLabel = 'Livré et payé';
+                $displayDate = isset($order->wallet_credited_at)
+                    ? (string) \Carbon\Carbon::parse($order->wallet_credited_at)->format('M d, Y H:i')
+                    : (string) \Carbon\Carbon::parse($order->updated_date)->format('M d, Y H:i');
+                $netAmountFormatted = number_format($net, 2, '.', '');
+                $isDeliveredAndPaid = '1';
+            }
+
             return [
                 'id' => (string) $order->id,
                 'order_id' => (string) $order->id,
                 'order_code' => (string) $order->order_code,
                 'order_date' => (string) \Carbon\Carbon::parse($order->order_date ?? $order->added_date)->format('M d, Y'),
-                'delivery_date' => isset($order->wallet_credited_at)
-                    ? (string) \Carbon\Carbon::parse($order->wallet_credited_at)->format('M d, Y H:i')
-                    : (string) \Carbon\Carbon::parse($order->updated_date)->format('M d, Y H:i'),
-                'status' => 'delivered',
-                'status_label' => 'Livré et payé',
-                'is_delivered_and_paid' => '1',
+                'delivery_date' => $displayDate,
+                'status' => $statusSlug,
+                'status_label' => $statusLabel,
+                'is_delivered_and_paid' => $isDeliveredAndPaid,
                 'currency_symbol' => 'DA',
                 'gross_amount' => number_format($gross, 2, '.', ''),
                 'commission_amount' => number_format($comm, 2, '.', ''),
-                'net_amount' => number_format($net, 2, '.', ''),
+                'net_amount' => $netAmountFormatted,
                 'item_name' => (string) ($firstItem?->item_name ?? 'Produit'),
                 'item_count' => (int) $order->orderItems->count(),
                 'image_url' => (string) $imageUrl,
@@ -408,7 +631,7 @@ class WalletService
                 'currency_symbol' => 'DA',
             ],
             'transactions' => $transactions,
-            'total' => $totalSalesCount,
+            'total' => (int) $query->count(),
             'limit' => $limit,
             'offset' => $offset,
         ];
@@ -497,6 +720,18 @@ class WalletService
 
     public static function isYalidineStubMode(): bool
     {
+        try {
+            $deliverySetting = \App\Models\DeliverySetting::first();
+            if ($deliverySetting) {
+                if (!$deliverySetting->is_enabled || $deliverySetting->environment === 'sandbox') {
+                    return true;
+                }
+                return empty($deliverySetting->api_id) || empty($deliverySetting->api_token);
+            }
+        } catch (\Throwable $e) {
+            // fallback
+        }
+
         try {
             $setting = \Modules\Core\Entities\Configuration\Setting::where('setting_env', 'c2c_finance_setting')->first();
             if ($setting && !empty($setting->setting)) {
