@@ -58,8 +58,8 @@ class __TextFieldAndButtonWidgetState
       ),
       ResendCodeWidget(
         onSignInSelected: widget.onSignInSelected,
-        userName: widget.userName!,
-        userPhone: widget.phoneNumber!.replaceFirst(RegExp(r'-'), ''),
+        userName: widget.userName ?? '',
+        userPhone: widget.phoneNumber?.replaceFirst(RegExp(r'-'), '') ?? '',
       ),
       const SizedBox(
         height: PsDimens.space4,
@@ -89,7 +89,7 @@ class __TextFieldAndButtonWidgetState
                       await gotoProfile(
                           context,
                           user.uid,
-                          widget.userName,
+                          widget.userName ?? '',
                           widget.phoneNumber,
                           provider,
                           widget.onProfileSelected);
@@ -108,7 +108,7 @@ class __TextFieldAndButtonWidgetState
                      await gotoProfile(
                           context,
                           user.user!.uid,
-                          widget.userName,
+                          widget.userName ?? '',
                           widget.phoneNumber,
                           provider,
                           widget.onProfileSelected);

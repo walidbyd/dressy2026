@@ -82,14 +82,14 @@ class _LoginViewState extends State<LoginView> {
             children: <Widget>[
               const SizedBox(height: PsDimens.space32),
               // Centered Dressy wordmark + tagline
-              Text(
+              const Text(
                 'Dressy',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
-                  color: const Color(0xFF6B1D2F),
+                  color: Color(0xFFED7768),
                 ),
               ),
               const SizedBox(height: 6),

@@ -46,7 +46,7 @@ import '../common/ps_provider.dart';
 class UserProvider extends PsProvider<User> {
   UserProvider({
     required UserRepository? repo,
-    required this.psValueHolder,
+    required PsValueHolder? psValueHolder,
     int limit = 0,
   }) : super(repo, limit,
             subscriptionType: PsConst.SINGLE_OBJECT_SUBSCRIPTION) {
@@ -55,7 +55,6 @@ class UserProvider extends PsProvider<User> {
   }
 
   UserRepository? _repo;
-  PsValueHolder? psValueHolder;
   User? holderUser;
   ShippingCountry? selectedCountry;
   ShippingCity? selectedCity;
@@ -277,6 +276,19 @@ class UserProvider extends PsProvider<User> {
         isConnectedToInternet,
         PsStatus.SUCCESS,
         languageCode);
+
+    if (resource.status == PsStatus.SUCCESS && resource.data != null) {
+      super.data = resource;
+      dataStreamController?.add(resource);
+      if (resource.data!.userName != null && resource.data!.userName!.isNotEmpty) {
+        await replaceLoginUserName(resource.data!.userName!);
+        if (psValueHolder != null) {
+          psValueHolder!.loginUserName = resource.data!.userName;
+        }
+      }
+      notifyListeners();
+    }
+
     return resource;
   }
 

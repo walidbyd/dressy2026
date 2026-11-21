@@ -89,7 +89,7 @@ class _RegisterViewState extends State<RegisterView>
                               fontSize: 34,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.5,
-                              color: Color(0xFF6B1D2F),
+                              color: Color(0xFFED7768),
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -118,10 +118,10 @@ class _RegisterViewState extends State<RegisterView>
                               height: 52,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(14.0),
-                                color: const Color(0xFF6B1D2F),
+                                color: const Color(0xFFED7768),
                                 boxShadow: <BoxShadow>[
                                   BoxShadow(
-                                    color: const Color(0xFF6B1D2F).withValues(alpha: 0.25),
+                                    color: const Color(0xFFED7768).withValues(alpha: 0.25),
                                     blurRadius: 8,
                                     offset: const Offset(0, 3),
                                   ),
@@ -134,13 +134,13 @@ class _RegisterViewState extends State<RegisterView>
                                   onTap: () async {
                                     Navigator.pushNamed(
                                       context,
-                                      RoutePaths.user_phone_signin_container,
+                                      RoutePaths.user_phone_signup_container,
                                     );
                                   },
-                                  child: Row(
+                                  child: const Row(
                                     mainAxisSize: MainAxisSize.max,
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    children: const <Widget>[
+                                    children: <Widget>[
                                       Icon(Icons.phone_iphone_rounded,
                                           color: Colors.white, size: 20),
                                       SizedBox(width: PsDimens.space12),

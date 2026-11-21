@@ -27,6 +27,8 @@ class RoutePaths {
       '/user_forgot_password_container';
   static const String user_phone_signin_container =
       '/user_phone_signin_container';
+  static const String user_phone_signup_container =
+      '/user_phone_signup_container';
   static const String edit_phone_signin_container =
       '/edit_phone_signin_container';
   static const String user_phone_verify_container =

@@ -159,29 +159,27 @@ class CustomLoginController extends AuthenticatedSessionController
             $user = User::where('email', $request->email)->orWhere('apple_id', $request->apple_id)->first();
         }
         if ($request->loginMethod == 'phone') {
-            // dd($request->all());
-            $user = User::where('user_phone', $request->user_phone)->first();
-            if (empty($user)) {
-
-                $requestData['username'] = $request->user_name;
-                $requestData['user_phone'] = $request->user_phone;
-                $requestData['display_name'] = $request->user_phone;
-                Validator::extend('username_rule', function ($attr, $value) {
-                    return preg_match('/^[a-zA-Z0-9]+$/', $value);
-                });
-
-                $validator = Validator::make($requestData, [
-                    // 'username' => 'required|username_rule|string|unique:users',
-                    'user_phone' => 'required|string',
-                    'display_name' => 'required',
-                ]);
-                if ($validator->fails()) {
-
-                    $errors = $validator->getMessageBag()->getMessages();
-
-                    return responseMsgApi($errors, $this->okStatusCode, $this->errorStatus);
-                }
+            $rawPhone = trim($request->user_phone ?? '');
+            $digits = preg_replace('/[^0-9]/', '', $rawPhone);
+            if (str_starts_with($digits, '213')) {
+                $local = substr($digits, 3);
+            } else {
+                $local = ltrim($digits, '0');
             }
+            $localWithZero = '0' . $local;
+            $intlPlus = '+213' . $local;
+            $intlDash = '+213-' . $local;
+            $intlDashZero = '+213-' . $localWithZero;
+
+            $user = User::where(function($q) use ($rawPhone, $digits, $local, $localWithZero, $intlPlus, $intlDash, $intlDashZero) {
+                $q->where('user_phone', $rawPhone)
+                  ->orWhere('user_phone', $digits)
+                  ->orWhere('user_phone', $local)
+                  ->orWhere('user_phone', $localWithZero)
+                  ->orWhere('user_phone', $intlPlus)
+                  ->orWhere('user_phone', $intlDash)
+                  ->orWhere('user_phone', $intlDashZero);
+            })->first();
         }
 
         $data['user_isexisted'] = $this->userNotExisted;

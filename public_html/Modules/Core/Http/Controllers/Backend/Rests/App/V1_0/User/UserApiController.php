@@ -412,137 +412,69 @@ class UserApiController extends Controller
         $user_data->code = '';
         $added_date = Carbon::now();
 
-        // Need to check phone_id is aleady exist or not?
-        $conds['phone_id'] = $request->phone_id;
-        if (! $this->userService->exists($conds)) {
-            // User not yet exist
-
-            // prepare validation
-            $validator = Validator::make($request->all(), [
-                'name' => 'required',
-            ]);
-
-            if ($request->language_symbol) {
-                $this->translator->setLocale($request->language_symbol);
-                $validator->setTranslator($this->translator);
-            }
-
-            if ($validator->fails()) {
-                return responseMsgApi($validator->errors(), $this->badRequestStatusCode);
-            }
-            // / validation end
-            $phone_id = $request->phone_id;
-
-            if ($user_data->user_phone != '') {
-                $cond_user_existed['user_phone'] = $user_data->user_phone;
-                $user_infos = $this->userService->getUser(null, $cond_user_existed);
-                $id = empty($user_infos) ? '' : $user_infos->id;
-            }
-
-            if ($id != '') {
-                // user phone alerady exist
-                $user_data->verify_types = $this->updateVerifyType($user_data->verify_types, $cond_user_existed);
-
-                // for user name and user phone
-                $name = $request->name;
-                $user_phone = $request->user_phone;
-
-                if ($name == '' && $user_phone == '') {
-                    $user_data->name = $user_infos->name;
-                    $user_data->user_phone = $user_infos->user_phone;
-                } elseif ($name == '') {
-                    $user_data->name = $user_infos->name;
-                    $user_data->user_phone = $user_phone;
-                } elseif ($user_phone == '') {
-                    $user_data->name = $name;
-                    $user_data->user_phone = $user_infos->user_phone;
-                } else {
-                    $user_data->name = $name;
-                    $user_data->user_phone = $user_phone;
-                }
-
-                if ($id != '') {
-                    $user_data->id = $id;
-                    $user = $this->userService->updateFromApi($user_data, $id);
-                } else {
-                    $user = $this->userService->storeFromApi($user_data);
-                }
-
-                $this->pushNotificationTokenService->storeOrUpdateNotiToken((array) $request->all(), $user->id);
-            } else {
-                // user phone not exist
-                $user = $this->userService->storeFromApi($user_data);
-                $this->pushNotificationTokenService->storeOrUpdateNotiToken((array) $request->all(), $user->id);
-            }
+        $rawPhone = trim($request->user_phone ?? '');
+        $digits = preg_replace('/[^0-9]/', '', $rawPhone);
+        if (str_starts_with($digits, '213')) {
+            $local = substr($digits, 3);
         } else {
-            // User already exist in DB
-            $user_data->verify_types = $this->updateVerifyType($user_data->verify_types, $conds);
+            $local = ltrim($digits, '0');
+        }
+        $localWithZero = '0' . $local;
+        $intlPlus = '+213' . $local;
+        $intlDash = '+213-' . $local;
+        $intlDashZero = '+213-' . $localWithZero;
 
-            $conds['phone_id'] = $request->phone_id;
-            $user_social_info_override = $this->backendSettingService->get()->user_social_info_override;
+        // Check if user already exists by phone_id OR by user_phone
+        $existingUser = null;
+        if (!empty($request->phone_id)) {
+            $existingUser = \App\Models\User::where('phone_id', $request->phone_id)->first();
+        }
+        if (!$existingUser && !empty($rawPhone)) {
+            $existingUser = \App\Models\User::where(function($q) use ($rawPhone, $digits, $local, $localWithZero, $intlPlus, $intlDash, $intlDashZero) {
+                $q->where('user_phone', $rawPhone)
+                  ->orWhere('user_phone', $digits)
+                  ->orWhere('user_phone', $local)
+                  ->orWhere('user_phone', $localWithZero)
+                  ->orWhere('user_phone', $intlPlus)
+                  ->orWhere('user_phone', $intlDash)
+                  ->orWhere('user_phone', $intlDashZero);
+            })->first();
+        }
 
-            if ($user_social_info_override == '1') {
-
-                // Download again
-                $phone_id = $request->phone_id;
-
-                // for user name and user phone
-                $name = $request->name;
-                $user_phone = $request->user_phone;
-
-                if ($name == '' && $user_phone == '') {
-                    $user_data->device_token = $request->device_token;
-                } elseif ($name == '') {
-                    $user_data->user_phone = $request->user_phone;
-                    $user_data->device_token = $request->device_token;
-                } elseif ($user_phone == '') {
-                    $user_data->name = $request->name;
-                    $user_data->device_token = $request->device_token;
-                } else {
-                    $user_data->name = $request->name;
-                    $user_data->user_phone = $request->user_phone;
-                    $user_data->device_token = $request->device_token;
-                }
-
-                $conds['phone_id'] = $request->phone_id;
-                $user_datas = $this->userService->getUser(null, $conds);
-                $id = $user_datas->id;
-
-                if ($user_datas->is_banned == 1) {
-
-                    return responseMsgApi(__('core__api_banned_user', [], $request->language_symbol), $this->badRequestStatusCode);
-                } elseif ($user_datas->status == 0) {
-                    return responseMsgApi(__('core__api_unpublished_user', [], $request->language_symbol), $this->badRequestStatusCode);
-                } else {
-                    if ($id != '') {
-                        $user_data->id = $id;
-                        $user = $this->userService->updateFromApi($user_data, $id);
-                    } else {
-                        $user = $this->userService->storeFromApi($user_data);
-                    }
-
-                    $this->pushNotificationTokenService->storeOrUpdateNotiToken((array) $request->all(), $user->id);
-                }
-            } else {
-                $user_datas = $this->userService->getUser(null, $conds);
-                $id = $user_datas->id;
-
-                if ($user_datas->is_banned == 1) {
-
-                    return responseMsgApi('core__api_banned_user', $this->badRequestStatusCode);
-                } elseif ($user_datas->status == 0) {
-                    return responseMsgApi(__('core__api_unpublished_user', [], $request->language_symbol), $this->badRequestStatusCode);
-                } else {
-                    if ($id != '') {
-                        $user_data->id = $id;
-                        $user = $this->userService->updateFromApi($user_data, $id);
-                    } else {
-                        $user = $this->userService->storeFromApi($user_data);
-                    }
-
-                    $this->pushNotificationTokenService->storeOrUpdateNotiToken((array) $request->all(), $user->id);
-                }
+        if ($existingUser) {
+            // User already exists in DB - Phone Login
+            $id = $existingUser->id;
+            if ($existingUser->is_banned == 1) {
+                return responseMsgApi(__('core__api_banned_user', [], $request->language_symbol), $this->badRequestStatusCode);
+            } elseif ($existingUser->status == 0) {
+                return responseMsgApi(__('core__api_unpublished_user', [], $request->language_symbol), $this->badRequestStatusCode);
             }
+
+            $user_data->id = $id;
+            $user_data->name = !empty($request->name) ? $request->name : $existingUser->name;
+            $user_data->user_phone = !empty($request->user_phone) ? $request->user_phone : $existingUser->user_phone;
+            $user_data->phone_id = $request->phone_id;
+            $user_data->device_token = $request->device_token;
+            $user_data->verify_types = $this->updateVerifyType($this->phoneVerify, ['id' => $id]);
+
+            $user = $this->userService->updateFromApi($user_data, $id);
+            $this->pushNotificationTokenService->storeOrUpdateNotiToken((array) $request->all(), $user->id);
+        } else {
+            // User does not exist yet
+            if (empty($request->name)) {
+                // Phone Sign-In attempted for a non-existent account
+                $notFoundMsg = __('core__api_user_not_found', [], $request->language_symbol);
+                if (empty($notFoundMsg) || $notFoundMsg === 'core__api_user_not_found') {
+                    $notFoundMsg = ($request->language_symbol === 'ar')
+                        ? 'لا يوجد حساب مرتبط برقم الهاتف هذا. يرجى إنشاء حساب جديد.'
+                        : 'Aucun compte associé à ce numéro de téléphone. Veuillez vous inscrire.';
+                }
+                return responseMsgApi($notFoundMsg, $this->badRequestStatusCode);
+            }
+
+            // Phone Sign-Up with chosen name
+            $user = $this->userService->storeFromApi($user_data);
+            $this->pushNotificationTokenService->storeOrUpdateNotiToken((array) $request->all(), $user->id);
         }
 
         // save or update in user_access_api_tokens table start
@@ -1430,27 +1362,17 @@ class UserApiController extends Controller
             $validationArr['name'] = 'required';
         }
 
-        if (in_array('email', $coreFieldsIds)) {
-            $validationArr['email'] = 'required|email';
+        // Allow partial updates for phone-only or social accounts
+        if (!empty($request->email)) {
+            $validationArr['email'] = 'email';
         } else {
-            $validationArr['email'] = 'nullable|sometimes|email';
+            $validationArr['email'] = 'nullable';
         }
 
-        if (in_array('user_phone', $coreFieldsIds)) {
-            $validationArr['user_phone'] = 'required';
-        }
-
-        if (in_array('user_about_me', $coreFieldsIds)) {
-            $validationArr['user_about_me'] = 'required';
-        }
-
-        if (in_array('is_show_email', $coreFieldsIds)) {
-            $validationArr['is_show_email'] = 'required';
-        }
-
-        if (in_array('is_show_phone', $coreFieldsIds)) {
-            $validationArr['is_show_phone'] = 'required';
-        }
+        $validationArr['user_phone'] = 'nullable';
+        $validationArr['user_about_me'] = 'nullable';
+        $validationArr['is_show_email'] = 'nullable';
+        $validationArr['is_show_phone'] = 'nullable';
 
         // prepare validation for core filed
         $validator = Validator::make(

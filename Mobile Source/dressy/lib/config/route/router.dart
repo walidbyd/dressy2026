@@ -36,7 +36,6 @@ import '../../core/vendor/viewobject/noti.dart';
 import '../../core/vendor/viewobject/product.dart';
 import '../../core/vendor/viewobject/ps_app_info.dart';
 import '../../core/vendor/viewobject/shopping_cart_item.dart';
-import '../../ui/vendor_ui/chabit/view/chabit_chat_screen.dart';
 import '../../ui/custom_ui/add_to_cart/view/add_to_cart_view.dart';
 import '../../ui/custom_ui/all_search/view/search_history_list_containter_view.dart';
 import '../../ui/custom_ui/app_info/view/app_info_view.dart';
@@ -103,10 +102,6 @@ import '../../ui/custom_ui/noti/view/noti_list_view_container.dart';
 import '../../ui/custom_ui/offer/view/offer_container_view.dart';
 import '../../ui/custom_ui/offline_payment/view/offline_payment_view.dart';
 import '../../ui/custom_ui/order_detail/view/order_detail_view.dart';
-import '../../ui/vendor_ui/my_sales/view/my_sales_list_view.dart';
-import '../../ui/vendor_ui/my_sales/view/seller_order_detail_view.dart';
-import '../../ui/vendor_ui/user/transaction/seller_transactions_view.dart';
-import '../../ui/vendor_ui/wallet/view/wallet_view.dart';
 import '../../ui/custom_ui/order_sort_by/view/order_sort_view.dart';
 import '../../ui/custom_ui/order_successful/view/order_successful_view.dart';
 import '../../ui/custom_ui/package/view/package_shop_view.dart';
@@ -154,9 +149,14 @@ import '../../ui/custom_ui/vendor_applicaion/view/vendor_application_form_contai
 import '../../ui/custom_ui/vendor_subscription/view/vendor_registeration_success_view.dart';
 import '../../ui/custom_ui/vendor_subscription/view/vendor_subscription_view.dart';
 import '../../ui/vendor_ui/all_search/view/all_search_result_view_container.dart';
+import '../../ui/vendor_ui/chabit/view/chabit_chat_screen.dart';
 import '../../ui/vendor_ui/checkout/component/billing_address/billing_country_code.dart';
 import '../../ui/vendor_ui/checkout/component/shipping_address/shipping_country_code.dart';
 import '../../ui/vendor_ui/item/entry/view/custom_camera_view.dart';
+import '../../ui/vendor_ui/my_sales/view/my_sales_list_view.dart';
+import '../../ui/vendor_ui/my_sales/view/seller_order_detail_view.dart';
+import '../../ui/vendor_ui/user/transaction/seller_transactions_view.dart';
+import '../../ui/vendor_ui/wallet/view/wallet_view.dart';
 
 Route<dynamic> generateRoute(RouteSettings settings) {
   switch (settings.name) {
@@ -257,7 +257,19 @@ Route<dynamic> generateRoute(RouteSettings settings) {
 
     case '${RoutePaths.user_phone_signin_container}':
       return MaterialPageRoute<dynamic>(
-          builder: (BuildContext context) => CustomPhoneSignInContainerView());
+          builder: (BuildContext context) {
+            final Object? args = settings.arguments;
+            final String? initialPhone = args is String ? args : null;
+            return CustomPhoneSignInContainerView(isSignUp: false, initialPhone: initialPhone);
+          });
+
+    case '${RoutePaths.user_phone_signup_container}':
+      return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) {
+            final Object? args = settings.arguments;
+            final String? initialPhone = args is String ? args : null;
+            return CustomPhoneSignInContainerView(isSignUp: true, initialPhone: initialPhone);
+          });
 
     case '${RoutePaths.edit_phone_signin_container}':
       return MaterialPageRoute<dynamic>(builder: (BuildContext context) {
