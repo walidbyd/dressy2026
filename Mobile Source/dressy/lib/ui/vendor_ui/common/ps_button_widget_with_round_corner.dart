@@ -52,7 +52,7 @@ class _PSButtonWidgetRoundCornerState extends State<PSButtonWidgetRoundCorner> {
         effectiveColor == Colors.white ||
         effectiveColor == Colors.transparent ||
         effectiveColor == const Color(0xFFFAF7F2)) {
-      effectiveTextColor = const Color(0xFF5C1A2B);
+      effectiveTextColor = const Color(0xFFED7768);
     } else {
       effectiveTextColor = Colors.white;
     }
@@ -148,7 +148,7 @@ class _PSButtonWithIconWidgetState extends State<PSButtonWithIconWidget> {
     } else if (effectiveColor == Colors.white ||
         effectiveColor == Colors.transparent ||
         effectiveColor == const Color(0xFFFAF7F2)) {
-      effectiveTextColor = const Color(0xFF5C1A2B);
+      effectiveTextColor = const Color(0xFFED7768);
     } else {
       effectiveTextColor = Colors.white;
     }
@@ -255,7 +255,7 @@ class _PSButtonWidgetWithIconRoundCornerState
     } else if (effectiveColor == Colors.white ||
         effectiveColor == Colors.transparent ||
         effectiveColor == const Color(0xFFFAF7F2)) {
-      effectiveTextColor = const Color(0xFF5C1A2B);
+      effectiveTextColor = const Color(0xFFED7768);
     } else {
       effectiveTextColor = Colors.white;
     }
@@ -368,7 +368,7 @@ class _PSButtonWidgetWithIconRoundCorner2State
     _iconColor = widget.iconColor ??
         (effectiveTextColor == Colors.white
             ? Colors.white
-            : const Color(0xFF5C1A2B));
+            : const Color(0xFFED7768));
 
     return Container(
       width: MediaQuery.of(context).size.width,
@@ -471,7 +471,7 @@ class _PSButtonWidgetWithIconRoundCorner3State
     _iconColor = widget.iconColor ??
         (effectiveTextColor == Colors.white
             ? Colors.white
-            : const Color(0xFF5C1A2B));
+            : const Color(0xFFED7768));
 
     return Container(
       width: widget.width,

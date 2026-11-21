@@ -134,7 +134,7 @@ class BottomNavigationWidgetState<T extends BottomNaviationWidget>
     bool showBadge = false,
   }) {
     final bool isSelected = currentIndex == index;
-    const Color activeColor = Color(0xFF5C1A2B);
+    const Color activeColor = Color(0xFFED7768);
     const Color inactiveColor = Color(0xFF6E6568);
     final Color itemColor = isSelected ? activeColor : inactiveColor;
 
@@ -148,7 +148,7 @@ class BottomNavigationWidgetState<T extends BottomNaviationWidget>
             widget.updateSelectedIndexWithAnimation(
                 returnValue[0], returnValue[1]);
           },
-          splashColor: const Color(0x1A5C1A2B),
+          splashColor: const Color(0x1AED7768),
           highlightColor: Colors.transparent,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -171,7 +171,7 @@ class BottomNavigationWidgetState<T extends BottomNaviationWidget>
                         height: 7,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Color(0xFF5C1A2B),
+                          color: Color(0xFFED7768),
                         ),
                       ),
                     ),
@@ -212,10 +212,10 @@ class BottomNavigationWidgetState<T extends BottomNaviationWidget>
             height: 48,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFF5C1A2B),
+              color: Color(0xFFED7768),
               boxShadow: <BoxShadow>[
                 BoxShadow(
-                  color: Color(0x335C1A2B),
+                  color: Color(0x33ED7768),
                   blurRadius: 10,
                   spreadRadius: 1,
                   offset: Offset(0, 4),
@@ -235,7 +235,7 @@ class BottomNavigationWidgetState<T extends BottomNaviationWidget>
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF5C1A2B),
+              color: Color(0xFFED7768),
               letterSpacing: 0.1,
             ),
           ),
