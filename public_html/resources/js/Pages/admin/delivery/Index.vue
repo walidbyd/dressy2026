@@ -1,11 +1,11 @@
 <template>
-    <Head :title="$t('dressy_delivery_settings_title') || 'Delivery Settings (Yalidine)'" />
+    <Head :title="($t('dressy_delivery_settings_title') && $t('dressy_delivery_settings_title') !== 'dressy_delivery_settings_title') ? $t('dressy_delivery_settings_title') : 'Paramètres de livraison (Yalidine)'" />
     <ps-layout>
         <!-- Page Header -->
         <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-secondary-800 dark:text-white flex items-center gap-2.5">
-                    <span>{{ $t('dressy_delivery_title') || 'Paramètres de Livraison Yalidine' }}</span>
+                    <span>{{ ($t('dressy_delivery_title') && $t('dressy_delivery_title') !== 'dressy_delivery_title') ? $t('dressy_delivery_title') : 'Paramètres de Livraison Yalidine' }}</span>
                     <span v-if="form.environment === 'sandbox'"
                         class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
                         Sandbox / Simulation

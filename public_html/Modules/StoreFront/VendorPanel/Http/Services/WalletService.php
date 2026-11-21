@@ -443,23 +443,11 @@ class WalletService
         $vendor = Vendor::where('owner_user_id', $userId)->first();
 
         $query = Order::with(['orderItems.item.cover', 'vendorTransaction.currency'])
-            ->where(function ($q) {
-                $q->where('order_status_id', \Modules\Core\Constants\Constants::orderDeliveredStatus)
-                  ->orWhere(function ($sq) {
-                      $sq->whereIn('order_status_id', [
-                          \Modules\Core\Constants\Constants::orderCancelledStatus,
-                          \Modules\Core\Constants\Constants::orderReturnedStatus,
-                      ])->where(function ($ssq) {
-                          $ssq->whereNotNull('wallet_reversed_at')
-                              ->orWhereExists(function ($ex) {
-                                  $ex->select(\Illuminate\Support\Facades\DB::raw(1))
-                                     ->from('psx_wallet_transactions')
-                                     ->whereColumn('psx_wallet_transactions.order_code', 'psx_orders.order_code')
-                                     ->where('psx_wallet_transactions.source', 'sale_reversal');
-                              });
-                      });
-                  });
-            });
+            ->whereIn('order_status_id', [
+                \Modules\Core\Constants\Constants::orderDeliveredStatus,
+                \Modules\Core\Constants\Constants::orderCancelledStatus,
+                \Modules\Core\Constants\Constants::orderReturnedStatus,
+            ]);
 
         if ($vendor) {
             $query->where('vendor_id', $vendor->id);
@@ -492,16 +480,18 @@ class WalletService
         }
 
         // Calculate KPI summary across all filtered delivered sales and reversals
+        // total_sales_count, gross_sales_total, total_commission: strictly Delivered & Paid orders
+        // realised_profit: net profit realized (gross - commission on delivered) minus reversals from cancelled/returned orders that were previously delivered
         $allOrders = (clone $query)->get();
         $totalSalesCount = 0;
         $grossSalesTotal = 0.0;
         $totalCommission = 0.0;
-        $realisedProfit = 0.0;
+        $totalReversalsDeducted = 0.0;
 
         foreach ($allOrders as $ord) {
+            $isDelivered = ((int) $ord->order_status_id === (int) \Modules\Core\Constants\Constants::orderDeliveredStatus);
             $isCancelled = ((int) $ord->order_status_id === (int) \Modules\Core\Constants\Constants::orderCancelledStatus);
             $isReturned = ((int) $ord->order_status_id === (int) \Modules\Core\Constants\Constants::orderReturnedStatus);
-            $isReversed = ($isCancelled || $isReturned || !empty($ord->wallet_reversed_at));
 
             $itemsSum = (float) $ord->orderItems->sum('sub_total');
             if ($itemsSum <= 0) {
@@ -511,15 +501,15 @@ class WalletService
                 }
             }
 
-            $tx = WalletTransaction::where('order_code', $ord->order_code)
+            $creditTx = WalletTransaction::where('order_code', $ord->order_code)
                 ->where('type', 'credit')
                 ->where('source', 'sale_earning')
                 ->first();
 
-            if ($tx) {
-                $gross = (float) ($tx->gross_amount > 0 ? $tx->gross_amount : $itemsSum);
-                $comm = (float) $tx->commission_amount;
-                $net = (float) $tx->amount;
+            if ($creditTx) {
+                $gross = (float) ($creditTx->gross_amount > 0 ? $creditTx->gross_amount : $itemsSum);
+                $comm = (float) $creditTx->commission_amount;
+                $net = (float) $creditTx->amount;
             } else {
                 $commissionPercent = self::getCommissionPercent();
                 $gross = $itemsSum;
@@ -527,21 +517,26 @@ class WalletService
                 $net = round(max(0, $gross - $comm), 2);
             }
 
-            if ($isReversed) {
-                $grossSalesTotal -= $gross;
-                $totalCommission -= $comm;
-                $realisedProfit -= $net;
-            } else {
+            if ($isDelivered) {
+                $totalSalesCount++;
                 $grossSalesTotal += $gross;
                 $totalCommission += $comm;
-                $realisedProfit += $net;
-                $totalSalesCount++;
+            } elseif ($isCancelled || $isReturned) {
+                $reversalTx = WalletTransaction::where('order_code', $ord->order_code)
+                    ->where('type', 'debit')
+                    ->where('source', 'sale_reversal')
+                    ->first();
+                if ($reversalTx) {
+                    $totalReversalsDeducted += (float) $reversalTx->amount;
+                } elseif (!empty($ord->wallet_reversed_at) && $creditTx) {
+                    $totalReversalsDeducted += $net;
+                }
             }
         }
 
-        $grossSalesTotal = max(0, $grossSalesTotal);
-        $totalCommission = max(0, $totalCommission);
-        $realisedProfit = max(0, $realisedProfit);
+        $grossSalesTotal = round(max(0, $grossSalesTotal), 2);
+        $totalCommission = round(max(0, $totalCommission), 2);
+        $realisedProfit = round(max(0, ($grossSalesTotal - $totalCommission) - $totalReversalsDeducted), 2);
 
         // Paginate transaction orders
         $pagedOrders = $query->latest('updated_date')
@@ -550,9 +545,9 @@ class WalletService
             ->get();
 
         $transactions = $pagedOrders->map(function ($order) {
+            $isDelivered = ((int) $order->order_status_id === (int) \Modules\Core\Constants\Constants::orderDeliveredStatus);
             $isCancelled = ((int) $order->order_status_id === (int) \Modules\Core\Constants\Constants::orderCancelledStatus);
             $isReturned = ((int) $order->order_status_id === (int) \Modules\Core\Constants\Constants::orderReturnedStatus);
-            $isReversed = ($isCancelled || $isReturned || !empty($order->wallet_reversed_at));
 
             $itemsSum = (float) $order->orderItems->sum('sub_total');
             if ($itemsSum <= 0) {
@@ -562,15 +557,20 @@ class WalletService
                 }
             }
 
-            $tx = WalletTransaction::where('order_code', $order->order_code)
+            $creditTx = WalletTransaction::where('order_code', $order->order_code)
                 ->where('type', 'credit')
                 ->where('source', 'sale_earning')
                 ->first();
 
-            if ($tx) {
-                $gross = (float) ($tx->gross_amount > 0 ? $tx->gross_amount : $itemsSum);
-                $comm = (float) $tx->commission_amount;
-                $net = (float) $tx->amount;
+            $reversalTx = WalletTransaction::where('order_code', $order->order_code)
+                ->where('type', 'debit')
+                ->where('source', 'sale_reversal')
+                ->first();
+
+            if ($creditTx) {
+                $gross = (float) ($creditTx->gross_amount > 0 ? $creditTx->gross_amount : $itemsSum);
+                $comm = (float) $creditTx->commission_amount;
+                $net = (float) $creditTx->amount;
             } else {
                 $commissionPercent = self::getCommissionPercent();
                 $gross = $itemsSum;
@@ -579,19 +579,55 @@ class WalletService
             }
 
             $firstItem = $order->orderItems->first();
-            $coverImage = $firstItem?->item?->cover?->first();
+            $item = $firstItem?->item;
+            $coverImage = $item?->cover?->first();
             $imageUrl = '';
-            if ($coverImage && !empty($coverImage->img_path)) {
-                $imageUrl = asset('storage/' . $coverImage->img_path);
+            $defaultPhoto = null;
+            if ($coverImage) {
+                if (!empty($coverImage->img_path)) {
+                    $imageUrl = asset('storage/' . $coverImage->img_path);
+                }
+                $defaultPhoto = [
+                    'img_id' => (string) $coverImage->id,
+                    'img_parent_id' => (string) ($coverImage->img_parent_id ?? $item?->id ?? ''),
+                    'img_type' => (string) ($coverImage->img_type ?? 'item'),
+                    'img_path' => (string) ($coverImage->img_path ?? ''),
+                    'img_width' => (string) ($coverImage->img_width ?? ''),
+                    'img_height' => (string) ($coverImage->img_height ?? ''),
+                    'img_desc' => (string) ($coverImage->img_desc ?? ''),
+                    'ordering' => (string) ($coverImage->ordering ?? '1'),
+                ];
             }
 
-            if ($isReversed) {
-                $statusSlug = $isReturned ? 'returned' : 'cancelled';
-                $statusLabel = $isReturned ? 'Retournée' : 'Annulée';
+            $itemTitle = (string) ($item?->title ?? $firstItem?->item_name ?? 'Produit');
+
+            if ($isCancelled) {
+                $statusSlug = 'cancelled';
+                $statusLabel = 'Annulée';
                 $displayDate = isset($order->wallet_reversed_at)
                     ? (string) \Carbon\Carbon::parse($order->wallet_reversed_at)->format('M d, Y H:i')
                     : (string) \Carbon\Carbon::parse($order->updated_date)->format('M d, Y H:i');
-                $netAmountFormatted = '-' . number_format($net, 2, '.', '');
+                if ($reversalTx || !empty($order->wallet_reversed_at)) {
+                    $reversedAmount = $reversalTx ? (float) $reversalTx->amount : $net;
+                    $netAmountFormatted = '-' . number_format($reversedAmount, 2, '.', '');
+                } else {
+                    $comm = 0.00;
+                    $netAmountFormatted = '0.00';
+                }
+                $isDeliveredAndPaid = '0';
+            } elseif ($isReturned) {
+                $statusSlug = 'returned';
+                $statusLabel = 'Retournée';
+                $displayDate = isset($order->wallet_reversed_at)
+                    ? (string) \Carbon\Carbon::parse($order->wallet_reversed_at)->format('M d, Y H:i')
+                    : (string) \Carbon\Carbon::parse($order->updated_date)->format('M d, Y H:i');
+                if ($reversalTx || !empty($order->wallet_reversed_at)) {
+                    $reversedAmount = $reversalTx ? (float) $reversalTx->amount : $net;
+                    $netAmountFormatted = '-' . number_format($reversedAmount, 2, '.', '');
+                } else {
+                    $comm = 0.00;
+                    $netAmountFormatted = '0.00';
+                }
                 $isDeliveredAndPaid = '0';
             } else {
                 $statusSlug = 'delivered';
@@ -610,21 +646,26 @@ class WalletService
                 'order_date' => (string) \Carbon\Carbon::parse($order->order_date ?? $order->added_date)->format('M d, Y'),
                 'delivery_date' => $displayDate,
                 'status' => $statusSlug,
+                'status_type' => $statusSlug,
                 'status_label' => $statusLabel,
                 'is_delivered_and_paid' => $isDeliveredAndPaid,
                 'currency_symbol' => 'DA',
                 'gross_amount' => number_format($gross, 2, '.', ''),
                 'commission_amount' => number_format($comm, 2, '.', ''),
                 'net_amount' => $netAmountFormatted,
-                'item_name' => (string) ($firstItem?->item_name ?? 'Produit'),
+                'item_name' => $itemTitle,
+                'item_title' => $itemTitle,
                 'item_count' => (int) $order->orderItems->count(),
                 'image_url' => (string) $imageUrl,
+                'item_image' => (string) $imageUrl,
+                'default_photo' => $defaultPhoto,
             ];
         });
 
         return [
             'summary' => [
                 'total_sales_count' => $totalSalesCount,
+                'total_sales_amount' => number_format($grossSalesTotal, 2, '.', ''),
                 'gross_sales_total' => number_format($grossSalesTotal, 2, '.', ''),
                 'total_commission' => number_format($totalCommission, 2, '.', ''),
                 'realised_profit' => number_format($realisedProfit, 2, '.', ''),

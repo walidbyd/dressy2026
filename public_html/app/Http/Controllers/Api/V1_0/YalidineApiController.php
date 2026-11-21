@@ -57,29 +57,16 @@ class YalidineApiController extends Controller
      */
     public function calculateFee(Request $request): JsonResponse
     {
-        $fromWilaya = $request->input('from_wilaya_id') ?? $request->input('from_wilaya');
+        $explicitFrom = $request->input('from_wilaya_id') ?? $request->input('from_wilaya');
+        $itemId = $request->input('item_id') ?? $request->input('product_id');
+        $vendorId = $request->input('vendor_id');
 
-        // If from_wilaya is not provided, deduce from item_id or vendor_id
-        if (empty($fromWilaya) && !empty($request->input('item_id'))) {
-            $item = DB::table('psx_items')->where('id', $request->input('item_id'))->first();
-            if ($item) {
-                if (!empty($item->location_city_id)) {
-                    $fromWilaya = $item->location_city_id;
-                } elseif (!empty($item->vendor_id)) {
-                    $vendor = DB::table('psx_vendors')->where('id', $item->vendor_id)->first();
-                    $fromWilaya = $vendor?->address ?? 16;
-                }
-            }
-        }
-
-        if (empty($fromWilaya) && !empty($request->input('vendor_id'))) {
-            $vendor = DB::table('psx_vendors')->where('id', $request->input('vendor_id'))->first();
-            $fromWilaya = $vendor?->address ?? 16;
-        }
-
-        if (empty($fromWilaya)) {
-            $fromWilaya = 16; // Default to Alger
-        }
+        $dzshipService = app(\App\Services\DzshipYalidineService::class);
+        $fromWilaya = $dzshipService->resolveItemFromWilaya(
+            $itemId ? (int) $itemId : null,
+            $vendorId ? (int) $vendorId : null,
+            $explicitFrom
+        );
 
         $toWilaya = $request->input('to_wilaya_id')
             ?? $request->input('shipping_city_id')

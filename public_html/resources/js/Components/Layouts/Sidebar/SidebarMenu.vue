@@ -122,7 +122,7 @@
                         :class="{ 'bg-primary-500 !text-white font-semibold shadow-sm': route().current('admin.delivery.*') }">
                         <ps-icon name="refresh" w="18" h="18" />
                         <span :class="{ 'inline': sideMenuStore.isFullSideMenu, 'hidden xl:hidden': !sideMenuStore.isFullSideMenu }">
-                            {{ $t('dressy_delivery_settings_module') || 'Delivery Settings (Yalidine)' }}
+                            {{ ($t('dressy_delivery_settings_module') && $t('dressy_delivery_settings_module') !== 'dressy_delivery_settings_module') ? $t('dressy_delivery_settings_module') : 'Paramètres de livraison (Yalidine)' }}
                         </span>
                     </Link>
                 </div>

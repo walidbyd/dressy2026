@@ -260,13 +260,36 @@ class DzshipYalidineService
 
         if (!empty($itemId)) {
             $item = DB::table('psx_items')
-                ->select('id', 'location_city_id', 'vendor_id')
+                ->select('id', 'location_city_id', 'location_township_id', 'added_user_id', 'vendor_id')
                 ->where('id', $itemId)
                 ->first();
 
             if ($item) {
+                // 1. Try item location_township_id
+                if (!empty($item->location_township_id)) {
+                    $township = DB::table('psx_location_townships')
+                        ->select('id', 'name', 'location_city_id')
+                        ->where('id', $item->location_township_id)
+                        ->first();
+
+                    if ($township) {
+                        if (!empty($township->location_city_id)) {
+                            $byTownshipCity = $this->tryParseWilayaCode($township->location_city_id);
+                            if ($byTownshipCity !== null) {
+                                return $byTownshipCity;
+                            }
+                        }
+                        if (!empty($township->name)) {
+                            $byTownshipName = $this->tryParseWilayaCode($township->name);
+                            if ($byTownshipName !== null) {
+                                return $byTownshipName;
+                            }
+                        }
+                    }
+                }
+
+                // 2. Try item location_city_id (lookup psx_location_cities.name, or numeric code)
                 if (!empty($item->location_city_id)) {
-                    // Prefer matching psx_location_cities.name against Algerian wilaya names
                     $city = DB::table('psx_location_cities')
                         ->select('id', 'name')
                         ->where('id', $item->location_city_id)
@@ -285,12 +308,24 @@ class DzshipYalidineService
                     }
                 }
 
+                // 3. Try seller's user profile (added_user_id)
+                if (!empty($item->added_user_id)) {
+                    $sellerUser = DB::table('users')->where('id', $item->added_user_id)->first();
+                    if ($sellerUser && !empty($sellerUser->user_address)) {
+                        $byUser = $this->tryParseWilayaCode($sellerUser->user_address);
+                        if ($byUser !== null) {
+                            return $byUser;
+                        }
+                    }
+                }
+
                 if (empty($vendorId) && !empty($item->vendor_id)) {
                     $vendorId = (int) $item->vendor_id;
                 }
             }
         }
 
+        // 4. Try vendor address
         if (!empty($vendorId)) {
             $vendor = DB::table('psx_vendors')
                 ->select('id', 'address', 'name')
@@ -305,7 +340,20 @@ class DzshipYalidineService
             }
         }
 
-        return 16; // Default origin: Alger
+        // 5. Fallback to Admin DeliverySetting from_wilaya_id
+        try {
+            $adminSetting = \App\Models\DeliverySetting::first();
+            if ($adminSetting && !empty($adminSetting->from_wilaya_id)) {
+                $adminFrom = $this->tryParseWilayaCode($adminSetting->from_wilaya_id);
+                if ($adminFrom !== null) {
+                    return $adminFrom;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore DB errors during bootstrap
+        }
+
+        return 16; // Final fallback if origin is completely unknown
     }
 
     /**

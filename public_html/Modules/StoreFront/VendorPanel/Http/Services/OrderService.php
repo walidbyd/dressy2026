@@ -1057,17 +1057,17 @@ class OrderService extends PsService
     public function calculateDeliveryFeeFromApi($request)
     {
         $yalidineService = app(YalidineService::class);
+        $dzshipService = app(\App\Services\DzshipYalidineService::class);
 
-        $fromWilaya = $request->from_wilaya_id ?? $request->from_wilaya;
-        if (empty($fromWilaya) && !empty($request->vendor_id)) {
-            $vendor = DB::table('psx_vendors')->where('id', $request->vendor_id)->first();
-            if ($vendor) {
-                $fromWilaya = $vendor->address ?? $vendor->name ?? 16;
-            }
-        }
-        if (empty($fromWilaya)) {
-            $fromWilaya = 16; // Alger
-        }
+        $itemId = $request->item_id ?? $request->product_id;
+        $vendorId = $request->vendor_id;
+        $explicitFrom = $request->from_wilaya_id ?? $request->from_wilaya;
+
+        $fromWilaya = $dzshipService->resolveItemFromWilaya(
+            $itemId ? (int) $itemId : null,
+            $vendorId ? (int) $vendorId : null,
+            $explicitFrom
+        );
 
         $toWilaya = $request->to_wilaya_id ?? $request->shipping_city_id ?? $request->shipping_city ?? $request->shipping_state ?? $request->to_wilaya ?? 16;
         $isStopDesk = filter_var($request->is_stop_desk ?? false, FILTER_VALIDATE_BOOLEAN);

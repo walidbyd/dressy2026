@@ -1,5 +1,6 @@
 import 'package:quiver/core.dart';
 import 'common/ps_object.dart';
+import 'default_photo.dart';
 
 class SellerTransaction extends PsObject<SellerTransaction> {
   SellerTransaction({
@@ -9,6 +10,7 @@ class SellerTransaction extends PsObject<SellerTransaction> {
     this.orderDate,
     this.deliveryDate,
     this.status,
+    this.statusType,
     this.statusLabel,
     this.isDeliveredAndPaid,
     this.currencySymbol,
@@ -16,8 +18,11 @@ class SellerTransaction extends PsObject<SellerTransaction> {
     this.commissionAmount,
     this.netAmount,
     this.itemName,
+    this.itemTitle,
     this.itemCount,
     this.imageUrl,
+    this.itemImage,
+    this.defaultPhoto,
   });
 
   String? id;
@@ -26,6 +31,7 @@ class SellerTransaction extends PsObject<SellerTransaction> {
   String? orderDate;
   String? deliveryDate;
   String? status;
+  String? statusType;
   String? statusLabel;
   String? isDeliveredAndPaid;
   String? currencySymbol;
@@ -33,8 +39,11 @@ class SellerTransaction extends PsObject<SellerTransaction> {
   String? commissionAmount;
   String? netAmount;
   String? itemName;
+  String? itemTitle;
   int? itemCount;
   String? imageUrl;
+  String? itemImage;
+  DefaultPhoto? defaultPhoto;
 
   @override
   bool operator ==(dynamic other) => other is SellerTransaction && id == other.id;
@@ -50,22 +59,32 @@ class SellerTransaction extends PsObject<SellerTransaction> {
   @override
   SellerTransaction fromMap(dynamic dynamicData) {
     if (dynamicData != null && dynamicData is Map) {
+      final String? title = (dynamicData['item_title'] ?? dynamicData['item_name'])?.toString();
+      final String? image = (dynamicData['item_image'] ?? dynamicData['image_url'])?.toString();
+      final String? st = (dynamicData['status_type'] ?? dynamicData['status'])?.toString();
+
       return SellerTransaction(
         id: dynamicData['id']?.toString(),
         orderId: dynamicData['order_id']?.toString(),
         orderCode: dynamicData['order_code']?.toString(),
         orderDate: dynamicData['order_date']?.toString(),
         deliveryDate: dynamicData['delivery_date']?.toString(),
-        status: dynamicData['status']?.toString(),
+        status: st,
+        statusType: st,
         statusLabel: dynamicData['status_label']?.toString(),
         isDeliveredAndPaid: dynamicData['is_delivered_and_paid']?.toString(),
         currencySymbol: dynamicData['currency_symbol']?.toString(),
         grossAmount: dynamicData['gross_amount']?.toString(),
         commissionAmount: dynamicData['commission_amount']?.toString(),
         netAmount: dynamicData['net_amount']?.toString(),
-        itemName: dynamicData['item_name']?.toString(),
+        itemName: title,
+        itemTitle: title,
         itemCount: int.tryParse(dynamicData['item_count']?.toString() ?? '1') ?? 1,
-        imageUrl: dynamicData['image_url']?.toString(),
+        imageUrl: image,
+        itemImage: image,
+        defaultPhoto: dynamicData['default_photo'] != null
+            ? DefaultPhoto().fromMap(dynamicData['default_photo'])
+            : null,
       );
     }
     return SellerTransaction();
@@ -81,6 +100,7 @@ class SellerTransaction extends PsObject<SellerTransaction> {
       data['order_date'] = object.orderDate;
       data['delivery_date'] = object.deliveryDate;
       data['status'] = object.status;
+      data['status_type'] = object.statusType;
       data['status_label'] = object.statusLabel;
       data['is_delivered_and_paid'] = object.isDeliveredAndPaid;
       data['currency_symbol'] = object.currencySymbol;
@@ -88,6 +108,15 @@ class SellerTransaction extends PsObject<SellerTransaction> {
       data['commission_amount'] = object.commissionAmount;
       data['net_amount'] = object.netAmount;
       data['item_name'] = object.itemName;
+      data['item_title'] = object.itemTitle;
+      data['item_count'] = object.itemCount;
+      data['image_url'] = object.imageUrl;
+      data['item_image'] = object.itemImage;
+      data['default_photo'] = DefaultPhoto().toMap(object.defaultPhoto);
+      return data;
+    }
+    return null;
+  }
       data['item_count'] = object.itemCount;
       data['image_url'] = object.imageUrl;
       return data;

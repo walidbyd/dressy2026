@@ -381,8 +381,15 @@ class _SellerOrderDetailViewState extends State<SellerOrderDetailView> {
               ),
             ),
             onPressed: _showCancelDialog,
-            child: Text('seller__cancel_order'.tr,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'seller__cancel_order'.tr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
           ),
         ],
       ),

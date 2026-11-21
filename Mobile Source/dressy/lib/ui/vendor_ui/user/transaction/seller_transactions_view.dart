@@ -7,6 +7,7 @@ import '../../../../config/ps_colors.dart';
 import '../../../../config/route/route_paths.dart';
 import '../../../../core/vendor/api/common/ps_resource.dart';
 import '../../../../core/vendor/api/ps_api_service.dart';
+import '../../../../core/vendor/constant/ps_constants.dart';
 import '../../../../core/vendor/constant/ps_dimens.dart';
 import '../../../../core/vendor/provider/language/app_localization_provider.dart';
 import '../../../../core/vendor/utils/utils.dart';
@@ -14,6 +15,7 @@ import '../../../../core/vendor/viewobject/common/ps_value_holder.dart';
 import '../../../../core/vendor/viewobject/seller_transaction.dart';
 import '../../../../core/vendor/viewobject/seller_transaction_summary.dart';
 import '../../../../core/vendor/viewobject/seller_transactions_response.dart';
+import '../../../vendor_ui/common/ps_ui_widget.dart';
 
 enum SellerDateFilterPreset {
   all,
@@ -189,6 +191,7 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
           ),
           const SizedBox(width: 8),
           _buildCustomFilterChip(),
+          const SizedBox(width: 8),
         ],
       ),
     );
@@ -448,10 +451,11 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
 
   Widget _buildTransactionItem(SellerTransaction item) {
     final String currency = item.currencySymbol ?? 'DA';
-    final String status = (item.status ?? '').toLowerCase();
+    final String status = (item.statusType ?? item.status ?? '').toLowerCase();
     final bool isCancelled = status == 'cancelled';
     final bool isReturned = status == 'returned';
-    final bool isReversal = isCancelled || isReturned || (item.netAmount != null && item.netAmount!.startsWith('-'));
+    final bool hasDeduction = item.netAmount != null && item.netAmount!.startsWith('-');
+    final bool isReversal = isCancelled || isReturned || hasDeduction;
 
     final Color badgeBg = isReversal ? const Color(0xFFFEF2F2) : const Color(0xFFE8F5E9);
     final Color badgeBorder = isReversal ? const Color(0xFFEF4444) : const Color(0xFF10B981);
@@ -460,6 +464,23 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
         ? (isReturned ? Icons.replay : Icons.cancel_outlined)
         : Icons.done_all;
     final String badgeLabel = item.statusLabel ?? (isReturned ? 'Retournée' : (isCancelled ? 'Annulée' : 'Livré et payé'));
+
+    final String cleanNetAmount = Utils.getPriceFormat((item.netAmount ?? '0').replaceAll('-', ''), '#,##0');
+    final String netAmountText;
+    final bool isNetPositive;
+
+    if (isCancelled || isReturned) {
+      if (hasDeduction) {
+        netAmountText = '-$cleanNetAmount $currency';
+        isNetPositive = false;
+      } else {
+        netAmountText = '0 $currency';
+        isNetPositive = false;
+      }
+    } else {
+      netAmountText = '+$cleanNetAmount $currency';
+      isNetPositive = true;
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -501,7 +522,7 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              // Top Row: Order Code & Status Badge
+              // Top Row: Order Code & Item Title & Status Badge
               Row(
                 children: <Widget>[
                   Text(
@@ -513,7 +534,19 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
                       color: Color(0xFF5C1A2B),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.itemTitle ?? item.itemName ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
@@ -544,34 +577,47 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
               ),
               const SizedBox(height: 10),
 
-              // Middle: Product Thumbnail & Name & Date
+              // Middle: Product Thumbnail (54x54, border radius 10) & Date / Count
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      width: 48,
-                      height: 48,
-                      color: Colors.grey.shade100,
-                      child: item.imageUrl != null && item.imageUrl!.isNotEmpty
-                          ? Image.network(
-                              item.imageUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (BuildContext context, Object error,
-                                  StackTrace? stackTrace) {
-                                return const Icon(
+                      width: 54,
+                      height: 54,
+                      color: Utils.isLightMode(context)
+                          ? const Color(0xFFF3F4F6)
+                          : PsColors.achromatic800,
+                      child: (item.defaultPhoto != null && (item.defaultPhoto?.imgPath?.isNotEmpty ?? false))
+                          ? PsNetworkImage(
+                              photoKey: '',
+                              defaultPhoto: item.defaultPhoto,
+                              imageAspectRation: PsConst.Aspect_Ratio_1x,
+                              width: 54,
+                              height: 54,
+                              boxfit: BoxFit.cover,
+                            )
+                          : ((item.itemImage ?? item.imageUrl)?.isNotEmpty ?? false)
+                              ? Image.network(
+                                  item.itemImage ?? item.imageUrl!,
+                                  width: 54,
+                                  height: 54,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (BuildContext context, Object error,
+                                      StackTrace? stackTrace) {
+                                    return const Icon(
+                                      Icons.inventory_2_outlined,
+                                      color: Colors.grey,
+                                      size: 24,
+                                    );
+                                  },
+                                )
+                              : const Icon(
                                   Icons.inventory_2_outlined,
                                   color: Colors.grey,
                                   size: 24,
-                                );
-                              },
-                            )
-                          : const Icon(
-                              Icons.inventory_2_outlined,
-                              color: Colors.grey,
-                              size: 24,
-                            ),
+                                ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -580,24 +626,22 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          item.itemName ?? 'Produit vendu',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                          item.deliveryDate ?? item.orderDate ?? '',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Utils.isLightMode(context)
+                                    ? PsColors.text800.withValues(alpha: 0.6)
+                                    : PsColors.achromatic50.withValues(alpha: 0.6),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                               ),
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          item.deliveryDate ?? item.orderDate ?? '',
+                          '${item.itemCount ?? 1} ${(item.itemCount ?? 1) > 1 ? 'articles' : 'article'}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Utils.isLightMode(context)
-                                    ? PsColors.text800.withValues(alpha: 0.5)
-                                    : PsColors.achromatic50.withValues(alpha: 0.5),
+                                    ? PsColors.text800.withValues(alpha: 0.45)
+                                    : PsColors.achromatic50.withValues(alpha: 0.45),
                                 fontSize: 11,
                               ),
                         ),
@@ -608,10 +652,10 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
               ),
               const SizedBox(height: 10),
 
-              // Bottom Financial Row: Vente | Commission | Net réalisé
+              // Bottom Financial Row: Responsive 3-Column Layout with FittedBox (Zero Overflow)
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 6),
+                    horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
                   color: Utils.isLightMode(context)
                       ? const Color(0xFFFAF7F2)
@@ -619,33 +663,122 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
-                    Text(
-                      '${'seller_financial_sale'.tr}: ${Utils.getPriceFormat(item.grossAmount ?? '0', '#,##0')} $currency',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Utils.isLightMode(context)
-                            ? PsColors.text800
-                            : PsColors.achromatic50,
+                    // Col 1: Vente
+                    Expanded(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Text(
+                              'seller_financial_sale'.tr,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Utils.isLightMode(context)
+                                    ? PsColors.text800.withValues(alpha: 0.6)
+                                    : PsColors.achromatic50.withValues(alpha: 0.6),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${Utils.getPriceFormat(item.grossAmount ?? '0', '#,##0')} $currency',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                decoration: (isCancelled || isReturned) ? TextDecoration.lineThrough : null,
+                                color: (isCancelled || isReturned)
+                                    ? (Utils.isLightMode(context)
+                                        ? PsColors.text800.withValues(alpha: 0.4)
+                                        : PsColors.achromatic50.withValues(alpha: 0.4))
+                                    : (Utils.isLightMode(context)
+                                        ? PsColors.text800
+                                        : PsColors.achromatic50),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    Text(
-                      '${'seller_financial_commission'.tr}: -${Utils.getPriceFormat(item.commissionAmount ?? '0', '#,##0')} $currency',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFF59E0B),
-                        fontWeight: FontWeight.w500,
+                    Container(
+                      height: 24,
+                      width: 1,
+                      color: Utils.isLightMode(context) ? const Color(0xFFE5E7EB) : PsColors.achromatic600,
+                      margin: const EdgeInsets.symmetric(horizontal: 6),
+                    ),
+                    // Col 2: Commission
+                    Expanded(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.center,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Text(
+                              'seller_financial_commission'.tr,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Utils.isLightMode(context)
+                                    ? PsColors.text800.withValues(alpha: 0.6)
+                                    : PsColors.achromatic50.withValues(alpha: 0.6),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              (isCancelled || isReturned)
+                                  ? '0 $currency'
+                                  : '-${Utils.getPriceFormat(item.commissionAmount ?? '0', '#,##0')} $currency',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFF59E0B),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    Text(
-                      isReversal
-                          ? '${'seller_financial_net'.tr}: -${Utils.getPriceFormat((item.netAmount ?? '0').replaceAll('-', ''), '#,##0')} $currency'
-                          : '${'seller_financial_net'.tr}: +${Utils.getPriceFormat(item.netAmount ?? '0', '#,##0')} $currency',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isReversal ? const Color(0xFFDC2626) : const Color(0xFF10B981),
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      height: 24,
+                      width: 1,
+                      color: Utils.isLightMode(context) ? const Color(0xFFE5E7EB) : PsColors.achromatic600,
+                      margin: const EdgeInsets.symmetric(horizontal: 6),
+                    ),
+                    // Col 3: Net réalisé
+                    Expanded(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Text(
+                              'seller_financial_net'.tr,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Utils.isLightMode(context)
+                                    ? PsColors.text800.withValues(alpha: 0.6)
+                                    : PsColors.achromatic50.withValues(alpha: 0.6),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              netAmountText,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isNetPositive ? const Color(0xFF10B981) : const Color(0xFFDC2626),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],

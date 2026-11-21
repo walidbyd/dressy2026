@@ -37,7 +37,7 @@ class SellerTransactionSummary extends PsObject<SellerTransactionSummary> {
         totalSalesCount:
             int.tryParse(dynamicData['total_sales_count']?.toString() ?? '0') ??
                 0,
-        grossSalesTotal: dynamicData['gross_sales_total']?.toString() ?? '0.00',
+        grossSalesTotal: (dynamicData['gross_sales_total'] ?? dynamicData['total_sales_amount'])?.toString() ?? '0.00',
         totalCommission: dynamicData['total_commission']?.toString() ?? '0.00',
         realisedProfit: dynamicData['realised_profit']?.toString() ?? '0.00',
         currencySymbol: dynamicData['currency_symbol']?.toString() ?? 'DA',
