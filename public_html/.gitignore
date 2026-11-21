@@ -47,6 +47,11 @@ Thumbs.db
 *.sublime-project
 *.sublime-workspace
 
+# Database Dumps & SQL files
+*.sql
+**/*.sql
+!database/sql/*.sql
+
 # Composer & NPM
 composer.lock
 yarn.lock

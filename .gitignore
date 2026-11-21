@@ -26,7 +26,8 @@ yarn-error.log*
 **/public/storage
 
 # Database Dumps (keep clean migration SQL in database/sql/)
-**/database/*.sql
+*.sql
+**/*.sql
 !**/database/sql/*.sql
 
 
