@@ -53,7 +53,11 @@ class _StoryViewerVieState extends State<StoryViewerView>
       }
     });
 
-    _loadSlide(_currentIndex);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadSlide(_currentIndex);
+      }
+    });
   }
 
   @override

@@ -76,9 +76,9 @@ class _StoryComposerViewState extends State<StoryComposerView> {
       isScrollControlled: true,
       builder: (BuildContext bContext) {
         return Container(
-          height: MediaQuery.of(context).size.height * 0.65,
+          height: MediaQuery.of(bContext).size.height * 0.65,
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
+            color: Theme.of(bContext).cardColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24.0)),
           ),
           child: Column(

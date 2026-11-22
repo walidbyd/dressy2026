@@ -13,7 +13,7 @@ class StoryProvider extends ChangeNotifier {
   });
 
   final StoryRepository repo;
-  final PsValueHolder? psValueHolder;
+  PsValueHolder? psValueHolder;
 
   bool isLoading = false;
   List<VendorStory> myStories = <VendorStory>[];

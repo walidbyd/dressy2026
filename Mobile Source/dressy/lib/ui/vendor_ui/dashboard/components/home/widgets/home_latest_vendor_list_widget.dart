@@ -43,13 +43,15 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
       _hasLoadedStories = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          Provider.of<StoryProvider>(context, listen: false).loadFeed();
+          try {
+            Provider.of<StoryProvider>(context, listen: false).loadFeed();
+          } catch (_) {}
         }
       });
     }
   }
 
-  Future<void> _pickAndComposeStory(BuildContext context) async {
+  Future<void> _pickAndComposeStory() async {
     final ImagePicker picker = ImagePicker();
     await showModalBottomSheet<void>(
       context: context,
@@ -57,7 +59,7 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
       builder: (BuildContext bContext) {
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
+            color: Theme.of(bContext).cardColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -81,7 +83,9 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
                         'mediaType': 'image',
                       },
                     ).then((_) {
-                      Provider.of<StoryProvider>(context, listen: false).loadFeed();
+                      if (mounted) {
+                        Provider.of<StoryProvider>(context, listen: false).loadFeed();
+                      }
                     });
                   }
                 },
@@ -105,7 +109,9 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
                         'mediaType': 'video',
                       },
                     ).then((_) {
-                      Provider.of<StoryProvider>(context, listen: false).loadFeed();
+                      if (mounted) {
+                        Provider.of<StoryProvider>(context, listen: false).loadFeed();
+                      }
                     });
                   }
                 },
@@ -134,7 +140,9 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
                         'mediaType': type,
                       },
                     ).then((_) {
-                      Provider.of<StoryProvider>(context, listen: false).loadFeed();
+                      if (mounted) {
+                        Provider.of<StoryProvider>(context, listen: false).loadFeed();
+                      }
                     });
                   }
                 },
@@ -162,10 +170,12 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
               'vendorLogo': '',
             },
           ).then((_) {
-            storyProvider.loadFeed();
+            if (mounted) {
+              storyProvider.loadFeed();
+            }
           });
         } else {
-          _pickAndComposeStory(context);
+          _pickAndComposeStory();
         }
       },
       child: Container(
@@ -223,7 +233,7 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
                   right: 0,
                   bottom: 0,
                   child: GestureDetector(
-                    onTap: () => _pickAndComposeStory(context),
+                    onTap: () => _pickAndComposeStory(),
                     child: Container(
                       padding: const EdgeInsets.all(2),
                       decoration: BoxDecoration(
@@ -332,7 +342,9 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
               'vendorLogo': vendor.logo?.imgPath,
             },
           ).then((_) {
-            storyProvider.loadFeed();
+            if (mounted) {
+              storyProvider.loadFeed();
+            }
           });
         } else {
           Navigator.pushNamed(
@@ -450,7 +462,6 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
     vendorSearchRepository = Provider.of<VendorSearchRepository>(context);
     final PsValueHolder valueHolder =
         Provider.of<PsValueHolder>(context, listen: false);
-    final StoryProvider storyProvider = Provider.of<StoryProvider>(context);
 
     final bool isUserLoggedIn = Utils.checkUserLoginId(valueHolder) != 'nologinuser' &&
         Utils.checkUserLoginId(valueHolder).isNotEmpty;
@@ -474,9 +485,10 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
               return vendorSearchProvider;
             }),
       ],
-      child: SliverToBoxAdapter(child: Consumer<VendorSearchProvider>(
-        builder: (BuildContext context, VendorSearchProvider provider,
-            Widget? child) {
+      child: SliverToBoxAdapter(
+        child: Consumer2<VendorSearchProvider, StoryProvider>(
+          builder: (BuildContext context, VendorSearchProvider provider,
+              StoryProvider storyProvider, Widget? child) {
           final bool isLoading =
               provider.currentStatus == PsStatus.BLOCK_LOADING;
           final List<VendorUser> activeVendors = (provider.vendorList.data ?? <VendorUser>[])

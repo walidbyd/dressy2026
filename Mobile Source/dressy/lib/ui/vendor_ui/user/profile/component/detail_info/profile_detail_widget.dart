@@ -69,8 +69,8 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
     );
 
     return SliverToBoxAdapter(
-      child: Consumer<UserProvider>(builder:
-          (BuildContext context, UserProvider provider, Widget? child) {
+      child: Consumer2<UserProvider, StoryProvider>(builder:
+          (BuildContext context, UserProvider provider, StoryProvider storyProvider, Widget? child) {
         if (provider.hasData) {
           /**
                * UI SECTION
@@ -262,13 +262,8 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
                       ],
                     ),
                   ),
-                  Consumer<StoryProvider>(
-                    builder: (BuildContext context,
-                        StoryProvider storyProvider, Widget? child) {
-                      return _buildStoriesSection(
-                          context, storyProvider, user, psValueHolder);
-                    },
-                  ),
+                  _buildStoriesSection(
+                      context, storyProvider, user, psValueHolder),
                   _dividerWidget,
                 ],
               ),
@@ -330,7 +325,7 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
     );
   }
 
-  Future<void> _pickAndComposeStory(BuildContext context) async {
+  Future<void> _pickAndComposeStory() async {
     final ImagePicker picker = ImagePicker();
     await showModalBottomSheet<void>(
       context: context,
@@ -338,7 +333,7 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
       builder: (BuildContext bContext) {
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
+            color: Theme.of(bContext).cardColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -362,7 +357,9 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
                         'mediaType': 'image',
                       },
                     ).then((_) {
-                      Provider.of<StoryProvider>(context, listen: false).loadFeed();
+                      if (mounted) {
+                        Provider.of<StoryProvider>(context, listen: false).loadFeed();
+                      }
                     });
                   }
                 },
@@ -386,7 +383,9 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
                         'mediaType': 'video',
                       },
                     ).then((_) {
-                      Provider.of<StoryProvider>(context, listen: false).loadFeed();
+                      if (mounted) {
+                        Provider.of<StoryProvider>(context, listen: false).loadFeed();
+                      }
                     });
                   }
                 },
@@ -415,7 +414,9 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
                         'mediaType': type,
                       },
                     ).then((_) {
-                      Provider.of<StoryProvider>(context, listen: false).loadFeed();
+                      if (mounted) {
+                        Provider.of<StoryProvider>(context, listen: false).loadFeed();
+                      }
                     });
                   }
                 },
@@ -552,7 +553,7 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
                     ],
                   ),
                   InkWell(
-                    onTap: () => _pickAndComposeStory(context),
+                    onTap: () => _pickAndComposeStory(),
                     child: Row(
                       children: <Widget>[
                         const Icon(Icons.add, size: 16, color: Color(0xFFED7768)),
@@ -581,7 +582,7 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
                 itemBuilder: (BuildContext context, int index) {
                   if (index == 0) {
                     return GestureDetector(
-                      onTap: () => _pickAndComposeStory(context),
+                      onTap: () => _pickAndComposeStory(),
                       child: Container(
                         width: 72,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -640,7 +641,9 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
                           'vendorLogo': user.userCoverPhoto,
                         },
                       ).then((_) {
-                        storyProvider.loadFeed();
+                        if (mounted) {
+                          storyProvider.loadFeed();
+                        }
                       });
                     },
                     child: Container(
@@ -747,7 +750,7 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
-        onTap: () => _pickAndComposeStory(context),
+        onTap: () => _pickAndComposeStory(),
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

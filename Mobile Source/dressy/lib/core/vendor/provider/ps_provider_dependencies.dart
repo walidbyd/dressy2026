@@ -653,9 +653,8 @@ List<SingleChildWidget> _dependentProviders = <SingleChildWidget>[
         VendorInfoRepository(
             psApiService: psApiService, vendorInfoDao: vendorInfoDao),
   ),
-  ProxyProvider<PsValueHolder, StoryRepository>(
-    update: (_, PsValueHolder psValueHolder, StoryRepository? repo) =>
-        StoryRepository(psValueHolder: psValueHolder),
+  Provider<StoryRepository>(
+    create: (_) => StoryRepository(psValueHolder: null),
   ),
 ];
 
@@ -665,12 +664,17 @@ List<SingleChildWidget> _valueProviders = <SingleChildWidget>[
     create: (BuildContext context) =>
         Provider.of<PsSharedPreferences>(context, listen: false).psValueHolder,
   ),
-  ChangeNotifierProxyProvider2<StoryRepository, PsValueHolder, StoryProvider>(
+  ChangeNotifierProxyProvider2<StoryRepository, PsValueHolder?, StoryProvider>(
     create: (BuildContext context) => StoryProvider(
       repo: Provider.of<StoryRepository>(context, listen: false),
-      psValueHolder: Provider.of<PsValueHolder>(context, listen: false),
+      psValueHolder: null,
     ),
-    update: (BuildContext context, StoryRepository repo, PsValueHolder psValueHolder, StoryProvider? provider) =>
-        provider ?? StoryProvider(repo: repo, psValueHolder: psValueHolder),
+    update: (BuildContext context, StoryRepository repo, PsValueHolder? psValueHolder, StoryProvider? provider) {
+      if (provider != null) {
+        provider.psValueHolder = psValueHolder;
+        return provider;
+      }
+      return StoryProvider(repo: repo, psValueHolder: psValueHolder);
+    },
   ),
 ];
