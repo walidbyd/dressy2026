@@ -55,26 +55,42 @@ class StoryApiController extends Controller
                     $user = $story->user;
                     $vendor = $story->vendor;
                     $vendorName = $vendor?->name ?? $user?->name ?? 'Dressy Vendeur';
-                    $vendorLogo = '';
-                    if ($vendor?->logo?->img_path) {
-                        $imgPath = $vendor->logo->img_path;
-                        if (str_starts_with($imgPath, 'http://') || str_starts_with($imgPath, 'https://')) {
-                            $vendorLogo = $imgPath;
-                        } else {
-                            $clean = ltrim($imgPath, '/');
-                            $vendorLogo = (str_starts_with($clean, 'storage/') || str_starts_with($clean, 'uploads/'))
-                                ? asset($clean)
-                                : asset('storage/PSX_MPC/uploads/' . $clean);
+
+                    // Resolve seller avatar (vendor-logo or user cover/profile photo)
+                    $avatarPath = '';
+                    $avatarUrl = '';
+
+                    if ($hasVendor && $vendor?->logo?->img_path) {
+                        $avatarPath = $vendor->logo->img_path;
+                    } elseif ($hasVendor) {
+                        $vLogo = \Modules\Core\Entities\CoreImage::where('img_parent_id', $story->vendor_id)
+                            ->where('img_type', 'vendor-logo')
+                            ->value('img_path');
+                        if (!empty($vLogo)) {
+                            $avatarPath = $vLogo;
                         }
-                    } elseif ($user?->user_cover_photo) {
-                        $imgPath = $user->user_cover_photo;
-                        if (str_starts_with($imgPath, 'http://') || str_starts_with($imgPath, 'https://')) {
-                            $vendorLogo = $imgPath;
+                    }
+
+                    if (empty($avatarPath) && $user) {
+                        if (!empty($user->user_cover_photo)) {
+                            $avatarPath = $user->user_cover_photo;
+                        } elseif (!empty($user->user_profile_photo)) {
+                            $avatarPath = $user->user_profile_photo;
+                        }
+                    }
+
+                    if (!empty($avatarPath)) {
+                        if (str_starts_with($avatarPath, 'http://') || str_starts_with($avatarPath, 'https://')) {
+                            $avatarUrl = $avatarPath;
                         } else {
-                            $clean = ltrim($imgPath, '/');
-                            $vendorLogo = (str_starts_with($clean, 'storage/') || str_starts_with($clean, 'uploads/'))
-                                ? asset($clean)
-                                : asset('storage/PSX_MPC/uploads/' . $clean);
+                            $clean = ltrim($avatarPath, '/');
+                            if (File::exists(public_path('storage/PSX_MPC/uploads/' . $clean))) {
+                                $avatarUrl = asset('storage/PSX_MPC/uploads/' . $clean);
+                            } elseif (File::exists(public_path('uploads/' . $clean))) {
+                                $avatarUrl = asset('uploads/' . $clean);
+                            } else {
+                                $avatarUrl = asset('storage/PSX_MPC/uploads/' . $clean);
+                            }
                         }
                     }
 
@@ -83,7 +99,10 @@ class StoryApiController extends Controller
                         'vendor_id' => $hasVendor ? (string) $story->vendor_id : '',
                         'vendor_user_id' => (string) $story->user_id,
                         'vendor_name' => $vendorName,
-                        'vendor_logo' => $vendorLogo,
+                        'vendor_logo' => $avatarUrl,
+                        'vendor_logo_path' => $avatarPath,
+                        'avatar_path' => $avatarPath,
+                        'avatar_url' => $avatarUrl,
                         'is_mine' => $isMine,
                         'has_unseen' => true,
                         'stories' => [],
@@ -236,9 +255,9 @@ class StoryApiController extends Controller
 
                 $fileName = 'story_' . $loginUserId . '_' . time() . '_' . uniqid() . '.' . $extension;
                 $file->move($storiesDir, $fileName);
-                $mediaPath = $uploadSubdir . '/' . $fileName;
+                $mediaPath = 'stories/' . date('Y/m') . '/' . $fileName;
             } elseif ($request->filled('media_path')) {
-                $mediaPath = $request->input('media_path');
+                $mediaPath = ltrim(preg_replace('#^/?uploads/#', '', $request->input('media_path')), '/');
             }
 
             // Thumbnail processing for videos
@@ -250,7 +269,7 @@ class StoryApiController extends Controller
                 $thumbExt = strtolower($thumb->getClientOriginalExtension() ?: 'jpg');
                 $thumbName = 'thumb_' . $loginUserId . '_' . time() . '_' . uniqid() . '.' . $thumbExt;
                 $thumb->move($storiesDir, $thumbName);
-                $thumbnailPath = $uploadSubdir . '/' . $thumbName;
+                $thumbnailPath = 'stories/' . date('Y/m') . '/' . $thumbName;
             } elseif ($mediaType === 'image') {
                 $thumbnailPath = $mediaPath;
             }

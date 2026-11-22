@@ -145,7 +145,7 @@ class VendorApiResource extends JsonResource
                     }
                 })
                 ->where('expires_at', '>', Carbon::now())
-                ->with(['user', 'vendor.logo', 'item.defaultPhoto', 'item.itemCurrency'])
+                ->with(['user', 'vendor.logo', 'item.cover', 'item.currency'])
                 ->orderBy('created_at', 'asc')
                 ->get();
             }

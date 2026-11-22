@@ -1,23 +1,15 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:provider/single_child_widget.dart';
 import '../../../../../../config/ps_colors.dart';
 import '../../../../../../config/route/route_paths.dart';
-import '../../../../../../core/vendor/api/common/ps_status.dart';
-import '../../../../../../core/vendor/constant/ps_constants.dart';
 import '../../../../../../core/vendor/constant/ps_dimens.dart';
 import '../../../../../../core/vendor/provider/language/app_localization_provider.dart';
 import '../../../../../../core/vendor/provider/story/story_provider.dart';
-import '../../../../../../core/vendor/provider/vendor/search_vendor_provider.dart';
-import '../../../../../../core/vendor/repository/vendor_search_repository.dart';
 import '../../../../../../core/vendor/utils/utils.dart';
 import '../../../../../../core/vendor/viewobject/common/ps_value_holder.dart';
-import '../../../../../../core/vendor/viewobject/holder/intent_holder/vendor_user_intent_holder.dart';
-import '../../../../../../core/vendor/viewobject/holder/request_path_holder.dart';
-import '../../../../../../core/vendor/viewobject/holder/vendor_search_parameter_holder.dart';
 import '../../../../../../core/vendor/viewobject/vendor_story.dart';
-import '../../../../../../core/vendor/viewobject/vendor_user.dart';
 import '../../../../common/ps_ui_widget.dart';
 
 class LatestVendorListWidget extends StatefulWidget {
@@ -31,9 +23,6 @@ class LatestVendorListWidget extends StatefulWidget {
 }
 
 class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
-  VendorSearchProvider? vendorSearchProvider;
-  VendorSearchRepository? vendorSearchRepository;
-  late VendorSearchParameterHolder vendorSearchParameterHolder;
   bool _hasLoadedStories = false;
 
   @override
@@ -157,6 +146,12 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
   Widget _buildMyStoryItem(
       BuildContext context, StoryProvider storyProvider, PsValueHolder valueHolder) {
     final bool hasStories = storyProvider.hasMyActiveStories;
+    final String myAvatarPath = (hasStories && storyProvider.myStories.isNotEmpty)
+        ? (storyProvider.myStories.first.avatarPath ?? '')
+        : '';
+    final String myAvatarUrl = (hasStories && storyProvider.myStories.isNotEmpty)
+        ? (storyProvider.myStories.first.avatarUrl ?? '')
+        : '';
 
     return GestureDetector(
       onTap: () {
@@ -167,7 +162,7 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
             arguments: <String, dynamic>{
               'stories': storyProvider.myStories,
               'vendorName': valueHolder.loginUserName ?? 'story__my_story'.tr,
-              'vendorLogo': '',
+              'vendorLogo': myAvatarUrl,
             },
           ).then((_) {
             if (mounted) {
@@ -219,12 +214,32 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
                           ? PsColors.backgroundColor
                           : PsColors.achromatic800,
                     ),
-                    child: const ClipOval(
-                      child: Icon(
-                        Icons.person_rounded,
-                        size: 32,
-                        color: Color(0xFFED7768),
-                      ),
+                    child: ClipOval(
+                      child: myAvatarPath.isNotEmpty && !myAvatarPath.startsWith('http')
+                          ? PsNetworkCircleImage(
+                              photoKey: '',
+                              imagePath: myAvatarPath,
+                              width: 56,
+                              height: 56,
+                              boxfit: BoxFit.cover,
+                            )
+                          : (myAvatarUrl.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: myAvatarUrl,
+                                  width: 56,
+                                  height: 56,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (_, __, ___) => const Icon(
+                                    Icons.person_rounded,
+                                    size: 32,
+                                    color: Color(0xFFED7768),
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.person_rounded,
+                                  size: 32,
+                                  color: Color(0xFFED7768),
+                                )),
                     ),
                   ),
                 ),
@@ -284,78 +299,29 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
     );
   }
 
-  Widget _buildVendorStoryItem(
-      BuildContext context, VendorUser vendor, bool isLoading, StoryProvider storyProvider) {
-    if (isLoading) {
-      return Container(
-        width: 76,
-        margin: const EdgeInsets.symmetric(horizontal: 6),
-        child: Column(
-          children: <Widget>[
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Utils.isLightMode(context)
-                    ? PsColors.text100
-                    : PsColors.text700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              width: 48,
-              height: 10,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                color: Utils.isLightMode(context)
-                    ? PsColors.text100
-                    : PsColors.text700,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final VendorStoriesGroup? group = storyProvider.storiesByVendor.firstWhere(
-      (VendorStoriesGroup g) =>
-          (vendor.id != null && g.vendorId == vendor.id) ||
-          (vendor.ownerUserId != null && g.vendorUserId == vendor.ownerUserId),
-      orElse: () => VendorStoriesGroup(),
-    );
-
-    final List<VendorStory> vendorStories = (group != null && group.stories.isNotEmpty)
-        ? group.stories
-        : (vendor.stories ?? <VendorStory>[]);
-    final bool hasStories = vendorStories.isNotEmpty || (vendor.hasActiveStories == true);
+  Widget _buildStoryGroupItem(
+      BuildContext context, VendorStoriesGroup group, StoryProvider storyProvider) {
+    final String displayName = group.vendorName ?? 'Vendeur';
+    final String avatarPath = group.avatarPath ?? group.vendorLogoPath ?? '';
+    final String avatarUrl = group.avatarUrl ?? group.vendorLogo ?? '';
+    final bool isVendor = group.vendorId != null && group.vendorId!.isNotEmpty && group.vendorId != '0';
 
     return GestureDetector(
       onTap: () {
-        if (hasStories && vendorStories.isNotEmpty) {
+        if (group.stories.isNotEmpty) {
           Navigator.pushNamed(
             context,
             RoutePaths.storyViewer,
             arguments: <String, dynamic>{
-              'stories': vendorStories,
-              'vendorName': vendor.name,
-              'vendorLogo': vendor.logo?.imgPath,
+              'stories': group.stories,
+              'vendorName': group.vendorName,
+              'vendorLogo': avatarUrl.isNotEmpty ? avatarUrl : group.vendorLogo,
             },
           ).then((_) {
             if (mounted) {
               storyProvider.loadFeed();
             }
           });
-        } else {
-          Navigator.pushNamed(
-            context,
-            RoutePaths.userVendorDetail,
-            arguments: VendorUserIntentHolder(
-              vendorId: vendor.id,
-              vendorUserId: vendor.ownerUserId,
-              vendorUserName: vendor.name,
-            ),
-          );
         }
       },
       child: Container(
@@ -367,31 +333,21 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
           children: <Widget>[
             Stack(
               children: <Widget>[
-                // Coral gradient ring for vendors with active stories
+                // Coral gradient ring for active stories
                 Container(
                   width: 64,
                   height: 64,
                   padding: const EdgeInsets.all(2.5),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: hasStories
-                        ? const LinearGradient(
-                            colors: <Color>[
-                              Color(0xFFED7768),
-                              Color(0xFFF4A261),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          )
-                        : null,
-                    border: hasStories
-                        ? null
-                        : Border.all(
-                            color: Utils.isLightMode(context)
-                                ? Colors.grey.shade300
-                                : Colors.grey.shade700,
-                            width: 1.5,
-                          ),
+                    gradient: LinearGradient(
+                      colors: <Color>[
+                        Color(0xFFED7768),
+                        Color(0xFFF4A261),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                   ),
                   child: Container(
                     padding: const EdgeInsets.all(2),
@@ -402,42 +358,66 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
                           : PsColors.achromatic800,
                     ),
                     child: ClipOval(
-                      child: PsNetworkImage(
-                        photoKey: '',
-                        defaultPhoto: vendor.logo,
-                        boxfit: BoxFit.cover,
-                        imageAspectRation: PsConst.Aspect_Ratio_1x,
+                      child: avatarPath.isNotEmpty && !avatarPath.startsWith('http')
+                          ? PsNetworkCircleImage(
+                              photoKey: '',
+                              imagePath: avatarPath,
+                              width: 56,
+                              height: 56,
+                              boxfit: BoxFit.cover,
+                            )
+                          : (avatarUrl.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: avatarUrl,
+                                  width: 56,
+                                  height: 56,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => Container(
+                                    color: Utils.isLightMode(context)
+                                        ? PsColors.text100
+                                        : PsColors.text700,
+                                  ),
+                                  errorWidget: (_, __, ___) => Icon(
+                                    isVendor ? Icons.storefront : Icons.person,
+                                    size: 28,
+                                    color: const Color(0xFFED7768),
+                                  ),
+                                )
+                              : Icon(
+                                  isVendor ? Icons.storefront : Icons.person,
+                                  size: 28,
+                                  color: const Color(0xFFED7768),
+                                )),
+                    ),
+                  ),
+                ),
+                // Small verified checkmark badge at bottom-right for verified vendors
+                if (isVendor)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(1.5),
+                      decoration: BoxDecoration(
+                        color: Utils.isLightMode(context)
+                            ? PsColors.backgroundColor
+                            : PsColors.achromatic800,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_circle,
+                        size: 16,
+                        color: Color(0xFFED7768),
                       ),
                     ),
                   ),
-                ),
-                // Small verified checkmark badge at bottom-right
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(1.5),
-                    decoration: BoxDecoration(
-                      color: Utils.isLightMode(context)
-                          ? PsColors.backgroundColor
-                          : PsColors.achromatic800,
-                    ),
-                    child: const Icon(
-                      Icons.check_circle,
-                      size: 16,
-                      color: Color(0xFFED7768),
-                    ),
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 5),
             SizedBox(
               width: 72,
               child: Text(
-                vendor.name == null || vendor.name!.isEmpty
-                    ? 'default__user_name'.tr
-                    : vendor.name!,
+                displayName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
@@ -456,58 +436,68 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
     );
   }
 
+  Widget _buildShimmerItem(BuildContext context) {
+    return Container(
+      width: 76,
+      margin: const EdgeInsets.symmetric(horizontal: 6),
+      child: Column(
+        children: <Widget>[
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Utils.isLightMode(context)
+                  ? PsColors.text100
+                  : PsColors.text700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: 48,
+            height: 10,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              color: Utils.isLightMode(context)
+                  ? PsColors.text100
+                  : PsColors.text700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    vendorSearchParameterHolder = VendorSearchParameterHolder().getAllVendor();
-    vendorSearchRepository = Provider.of<VendorSearchRepository>(context);
     final PsValueHolder valueHolder =
         Provider.of<PsValueHolder>(context, listen: false);
 
     final bool isUserLoggedIn = Utils.checkUserLoginId(valueHolder) != 'nologinuser' &&
         Utils.checkUserLoginId(valueHolder).isNotEmpty;
 
-    return MultiProvider(
-      providers: <SingleChildWidget>[
-        ChangeNotifierProvider<VendorSearchProvider?>(
-            lazy: false,
-            create: (BuildContext context) {
-              vendorSearchProvider = VendorSearchProvider(
-                repo: vendorSearchRepository,
-              );
-              final VendorSearchParameterHolder vendorSearchParameterHolder =
-                  VendorSearchParameterHolder().getAllVendor();
-              vendorSearchProvider!.loadDataList(
-                  requestPathHolder: RequestPathHolder(
-                      loginUserId: Utils.checkUserLoginId(valueHolder),
-                      ownerUserId: Utils.checkUserLoginId(valueHolder)),
-                  requestBodyHolder: vendorSearchParameterHolder);
+    return SliverToBoxAdapter(
+        child: Consumer<StoryProvider>(
+          builder: (BuildContext context, StoryProvider storyProvider, Widget? child) {
+            final List<VendorStoriesGroup> activeGroups = storyProvider.storiesByVendor;
+            final bool isLoading = storyProvider.isLoading;
 
-              return vendorSearchProvider;
-            }),
-      ],
-      child: SliverToBoxAdapter(
-        child: Consumer2<VendorSearchProvider, StoryProvider>(
-          builder: (BuildContext context, VendorSearchProvider provider,
-              StoryProvider storyProvider, Widget? child) {
-          final bool isLoading =
-              provider.currentStatus == PsStatus.BLOCK_LOADING;
-          final List<VendorUser> activeVendors = (provider.vendorList.data ?? <VendorUser>[])
-              .where((VendorUser v) => v.status == '2' && (int.tryParse(v.productCount ?? '0') ?? 0) >= 1)
-              .toList();
-          final int vendorCount = isLoading
-              ? valueHolder.loadingShimmerItemCount!
-              : activeVendors.length;
+            // If no stories exist and user is not logged in, hide section entirely
+            if (!isLoading && activeGroups.isEmpty && !isUserLoggedIn && !storyProvider.hasMyActiveStories) {
+              return const SizedBox.shrink();
+            }
 
-          if (!isLoading && activeVendors.isEmpty && !isUserLoggedIn) {
-            return const SizedBox();
-          }
+            // Total items: 1 (My Story) + active vendor story groups
+            final int totalItems = isUserLoggedIn
+                ? (isLoading && activeGroups.isEmpty ? 1 + 3 : 1 + activeGroups.length)
+                : (isLoading && activeGroups.isEmpty ? 3 : activeGroups.length);
 
-          final int totalItems = isUserLoggedIn ? vendorCount + 1 : vendorCount;
+            if (totalItems == 0) {
+              return const SizedBox.shrink();
+            }
 
-          return ((provider.currentStatus == PsStatus.BLOCK_LOADING ||
-                      activeVendors.isNotEmpty || isUserLoggedIn) &&
-                  valueHolder.vendorFeatureSetting == PsConst.ONE)
-              ? Column(children: <Widget>[
+            return Column(
+              children: <Widget>[
                   // Header Row with "Vendors" and "See all" pill
                   Padding(
                     padding: const EdgeInsets.only(
@@ -567,34 +557,39 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
                       ],
                     ),
                   ),
-                  // Instagram-Style Stories List with "Ma Story" at index 0
-                  Container(
-                    height: 98,
-                    child: ListView.builder(
-                        shrinkWrap: false,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: PsDimens.space10),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: totalItems,
-                        itemBuilder: (BuildContext context, int index) {
-                          if (isUserLoggedIn && index == 0) {
-                            return _buildMyStoryItem(
-                                context, storyProvider, valueHolder);
-                          }
-                          final int vendorIndex = isUserLoggedIn ? index - 1 : index;
-                          if (isLoading) {
-                            return _buildVendorStoryItem(
-                                context, VendorUser(), true, storyProvider);
-                          }
-                          final VendorUser vendor = activeVendors[vendorIndex];
-                          return _buildVendorStoryItem(
-                              context, vendor, false, storyProvider);
-                        }),
-                  ),
-                ])
-              : const SizedBox();
+              // Instagram-Style Stories Horizontal List:
+              // Index 0 is always the seller's "+ Ajouter votre story" ring.
+              // Subsequent items are strictly active stories from psx_vendor_stories where expires_at > NOW().
+              Container(
+                height: 98,
+                child: ListView.builder(
+                  shrinkWrap: false,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: PsDimens.space10),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: totalItems,
+                  itemBuilder: (BuildContext context, int index) {
+                    if (isUserLoggedIn && index == 0) {
+                      return _buildMyStoryItem(
+                          context, storyProvider, valueHolder);
+                    }
+                    final int groupIndex = isUserLoggedIn ? index - 1 : index;
+                    if (isLoading && activeGroups.isEmpty) {
+                      return _buildShimmerItem(context);
+                    }
+                    if (groupIndex < activeGroups.length) {
+                      final VendorStoriesGroup group = activeGroups[groupIndex];
+                      return _buildStoryGroupItem(
+                          context, group, storyProvider);
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ],
+          );
         },
-      )),
+      ),
     );
   }
 }

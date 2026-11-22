@@ -7,12 +7,15 @@ import 'package:video_player/video_player.dart';
 
 import '../../../../config/ps_config.dart';
 import '../../../../config/route/route_paths.dart';
+import '../../../../core/vendor/constant/ps_constants.dart';
 import '../../../../core/vendor/provider/language/app_localization_provider.dart';
 import '../../../../core/vendor/provider/story/story_provider.dart';
 import '../../../../core/vendor/utils/story_filter_helper.dart';
 import '../../../../core/vendor/viewobject/common/ps_value_holder.dart';
+import '../../../../core/vendor/viewobject/default_photo.dart';
 import '../../../../core/vendor/viewobject/holder/intent_holder/product_detail_intent_holder.dart';
 import '../../../../core/vendor/viewobject/vendor_story.dart';
+import '../common/ps_ui_widget.dart';
 
 class StoryViewerView extends StatefulWidget {
   const StoryViewerView({
@@ -68,6 +71,146 @@ class _StoryViewerVieState extends State<StoryViewerView>
     super.dispose();
   }
 
+  String _getStoryMediaUrl(VendorStory story) {
+    if (story.mediaUrl != null && story.mediaUrl!.isNotEmpty) {
+      return story.mediaUrl!;
+    }
+    final String raw = story.mediaPath ?? '';
+    if (raw.isEmpty) {
+      return '';
+    }
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      return raw;
+    }
+    final String clean = raw.replaceAll(RegExp(r'^/?uploads/'), '');
+    return '${PsConfig.ps_core_url}/uploads/$clean';
+  }
+
+  Widget _buildAvatar(VendorStory story) {
+    final String rawPath = story.avatarPath ?? story.vendorLogoPath ?? '';
+    final String rawUrl = story.avatarUrl ?? story.vendorLogo ?? widget.vendorLogo ?? story.userPhoto ?? '';
+
+    // If relative path is available, use PsNetworkCircleImage
+    if (rawPath.isNotEmpty && !rawPath.startsWith('http://') && !rawPath.startsWith('https://')) {
+      return PsNetworkCircleImage(
+        photoKey: '',
+        imagePath: rawPath,
+        width: 36,
+        height: 36,
+        boxfit: BoxFit.cover,
+      );
+    }
+
+    final String finalUrl = rawUrl.isNotEmpty
+        ? rawUrl
+        : (rawPath.startsWith('http://') || rawPath.startsWith('https://') ? rawPath : '');
+
+    if (finalUrl.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: finalUrl,
+        width: 36,
+        height: 36,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => Container(
+          color: Colors.grey.shade800,
+          child: const Center(
+            child: SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: Color(0xFFED7768),
+              ),
+            ),
+          ),
+        ),
+        errorWidget: (BuildContext ctx, String url, dynamic err) {
+          print('[StoryViewer] Error loading avatar: $url - $err');
+          return Container(
+            color: Colors.grey.shade800,
+            child: const Icon(Icons.person, color: Colors.white70, size: 20),
+          );
+        },
+      );
+    }
+
+    return Container(
+      color: Colors.grey.shade800,
+      child: const Icon(Icons.person, color: Colors.white70, size: 20),
+    );
+  }
+
+  Widget _buildItemThumbnail(VendorStory story) {
+    final String imgPath = story.itemImagePath ?? story.item?.imagePath ?? '';
+    final String rawUrl = story.itemImageUrl ?? story.item?.imageUrl ?? story.item?.photo ?? '';
+
+    // If relative image path is present, use PsNetworkImage
+    if (imgPath.isNotEmpty && !imgPath.startsWith('http://') && !imgPath.startsWith('https://')) {
+      return PsNetworkImage(
+        photoKey: '',
+        defaultPhoto: DefaultPhoto(imgPath: imgPath),
+        imageAspectRation: PsConst.Aspect_Ratio_1x,
+        width: 44,
+        height: 44,
+        boxfit: BoxFit.cover,
+      );
+    }
+
+    final String finalUrl = rawUrl.isNotEmpty
+        ? rawUrl
+        : (imgPath.startsWith('http://') || imgPath.startsWith('https://')
+            ? imgPath
+            : (imgPath.isNotEmpty ? '${PsConfig.ps_app_image_url}$imgPath' : ''));
+
+    if (finalUrl.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: finalUrl,
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => Container(
+          width: 44,
+          height: 44,
+          color: Colors.grey.shade800,
+          child: const Center(
+            child: SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: Color(0xFFED7768),
+              ),
+            ),
+          ),
+        ),
+        errorWidget: (BuildContext ctx, String url, dynamic err) {
+          print('[StoryViewer] Error loading product thumbnail: $url - $err');
+          return Container(
+            width: 44,
+            height: 44,
+            color: Colors.grey.shade800,
+            child: const Icon(
+              Icons.shopping_bag_outlined,
+              color: Colors.white70,
+              size: 22,
+            ),
+          );
+        },
+      );
+    }
+
+    return Container(
+      width: 44,
+      height: 44,
+      color: Colors.grey.shade800,
+      child: const Icon(
+        Icons.shopping_bag_outlined,
+        color: Colors.white70,
+        size: 22,
+      ),
+    );
+  }
+
   void _loadSlide(int index) {
     if (_stories.isEmpty) {
       Navigator.pop(context, true);
@@ -80,6 +223,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
     _videoController = null;
 
     final VendorStory currentStory = _stories[index];
+    final String mediaUrl = _getStoryMediaUrl(currentStory);
 
     // Record view if buyer
     final PsValueHolder psValueHolder =
@@ -94,24 +238,44 @@ class _StoryViewerVieState extends State<StoryViewerView>
       storyProvider.recordView(currentStory.id!);
     }
 
-    if (currentStory.mediaType == 'video' &&
-        currentStory.mediaUrl != null &&
-        currentStory.mediaUrl!.isNotEmpty) {
-      _videoController = VideoPlayerController.networkUrl(
-        Uri.parse(currentStory.mediaUrl!),
-      )..initialize().then((_) {
-          if (mounted) {
-            setState(() {});
-            final Duration videoDuration = _videoController!.value.duration;
-            _animController.duration = videoDuration > Duration.zero
-                ? videoDuration
-                : const Duration(seconds: 15);
-            _videoController?.play();
-            if (!_isPaused) {
-              _animController.forward();
+    if (currentStory.mediaType == 'video' && mediaUrl.isNotEmpty) {
+      try {
+        _videoController = VideoPlayerController.networkUrl(
+          Uri.parse(mediaUrl),
+        )..initialize().then((_) {
+            if (mounted) {
+              setState(() {});
+              final Duration videoDuration = _videoController!.value.duration;
+              _animController.duration = videoDuration > Duration.zero
+                  ? videoDuration
+                  : const Duration(seconds: 15);
+              _videoController?.play();
+              if (!_isPaused) {
+                _animController.forward();
+              }
             }
-          }
-        });
+          }).catchError((dynamic err) {
+            print('[StoryViewer] Error initializing video: $err, url: $mediaUrl');
+            if (mounted) {
+              final int slideSeconds = currentStory.duration != null && currentStory.duration! > 0
+                  ? currentStory.duration!
+                  : 5;
+              _animController.duration = Duration(seconds: slideSeconds);
+              if (!_isPaused) {
+                _animController.forward();
+              }
+            }
+          });
+      } catch (err) {
+        print('[StoryViewer] Exception creating video controller: $err');
+        final int slideSeconds = currentStory.duration != null && currentStory.duration! > 0
+            ? currentStory.duration!
+            : 5;
+        _animController.duration = Duration(seconds: slideSeconds);
+        if (!_isPaused) {
+          _animController.forward();
+        }
+      }
     } else {
       final int slideSeconds = currentStory.duration != null && currentStory.duration! > 0
           ? currentStory.duration!
@@ -303,10 +467,6 @@ class _StoryViewerVieState extends State<StoryViewerView>
         widget.vendorName ??
         currentStory.userName ??
         'Dressy Vendeur';
-    final String displayLogo = currentStory.vendorLogo ??
-        widget.vendorLogo ??
-        currentStory.userPhoto ??
-        '';
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -345,7 +505,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
                             ),
                           ))
                     : CachedNetworkImage(
-                        imageUrl: currentStory.mediaUrl ?? '',
+                        imageUrl: _getStoryMediaUrl(currentStory),
                         fit: BoxFit.cover,
                         width: double.infinity,
                         height: double.infinity,
@@ -354,10 +514,13 @@ class _StoryViewerVieState extends State<StoryViewerView>
                             color: Color(0xFFED7768),
                           ),
                         ),
-                        errorWidget: (_, __, ___) => const Center(
-                          child: Icon(Icons.broken_image,
-                              color: Colors.white54, size: 48),
-                        ),
+                        errorWidget: (BuildContext ctx, String url, dynamic error) {
+                          print('[StoryViewer] Error loading story image: $url - $error');
+                          return const Center(
+                            child: Icon(Icons.broken_image,
+                                color: Colors.white54, size: 48),
+                          );
+                        },
                       ),
               ),
             ),
@@ -455,21 +618,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
                             ),
                           ),
                           child: ClipOval(
-                            child: displayLogo.isNotEmpty
-                                ? CachedNetworkImage(
-                                    imageUrl: displayLogo,
-                                    fit: BoxFit.cover,
-                                    errorWidget: (_, __, ___) => Container(
-                                      color: Colors.grey.shade800,
-                                      child: const Icon(Icons.storefront,
-                                          color: Colors.white70, size: 20),
-                                    ),
-                                  )
-                                : Container(
-                                    color: Colors.grey.shade800,
-                                    child: const Icon(Icons.storefront,
-                                        color: Colors.white70, size: 20),
-                                  ),
+                            child: _buildAvatar(currentStory),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -589,7 +738,8 @@ class _StoryViewerVieState extends State<StoryViewerView>
               ),
 
             // 7. Tagged Product Interactive Pill (Bottom)
-            if (currentStory.itemId != null && currentStory.item != null)
+            if ((currentStory.itemId != null && currentStory.itemId!.isNotEmpty) ||
+                currentStory.item != null)
               Positioned(
                 left: 16,
                 right: 16,
@@ -600,16 +750,19 @@ class _StoryViewerVieState extends State<StoryViewerView>
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                     child: InkWell(
                       onTap: () {
-                        _pauseStory();
-                        Navigator.pushNamed(
-                          context,
-                          RoutePaths.productDetail,
-                          arguments: ProductDetailIntentHolder(
-                            productId: currentStory.itemId!,
-                            heroTagImage: '',
-                            heroTagTitle: '',
-                          ),
-                        ).then((_) => _resumeStory());
+                        final String pId = currentStory.itemId ?? currentStory.item?.id ?? '';
+                        if (pId.isNotEmpty) {
+                          _pauseStory();
+                          Navigator.pushNamed(
+                            context,
+                            RoutePaths.productDetail,
+                            arguments: ProductDetailIntentHolder(
+                              productId: pId,
+                              heroTagImage: '',
+                              heroTagTitle: '',
+                            ),
+                          ).then((_) => _resumeStory());
+                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -627,54 +780,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
                             // Product Thumbnail
                             ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: () {
-                                final String raw = currentStory.item!.photo ?? '';
-                                final String resolvedUrl = raw.isEmpty
-                                    ? ''
-                                    : ((raw.startsWith('http://') || raw.startsWith('https://'))
-                                        ? raw
-                                        : '${PsConfig.ps_app_image_url}$raw');
-
-                                if (resolvedUrl.isNotEmpty) {
-                                  return CachedNetworkImage(
-                                    imageUrl: resolvedUrl,
-                                    width: 44,
-                                    height: 44,
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, __) => Container(
-                                      width: 44,
-                                      height: 44,
-                                      color: Colors.grey.shade800,
-                                      child: const Center(
-                                        child: SizedBox(
-                                          width: 14,
-                                          height: 14,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 1.5,
-                                            color: Color(0xFFED7768),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    errorWidget: (_, __, ___) => Container(
-                                      width: 44,
-                                      height: 44,
-                                      color: Colors.grey.shade800,
-                                      child: const Icon(
-                                          Icons.shopping_bag_outlined,
-                                          color: Colors.white70),
-                                    ),
-                                  );
-                                }
-                                return Container(
-                                  width: 44,
-                                  height: 44,
-                                  color: Colors.grey.shade800,
-                                  child: const Icon(
-                                      Icons.shopping_bag_outlined,
-                                      color: Colors.white70),
-                                );
-                              }(),
+                              child: _buildItemThumbnail(currentStory),
                             ),
                             const SizedBox(width: 10),
 
@@ -685,7 +791,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
                                 mainAxisSize: MainAxisSize.min,
                                 children: <Widget>[
                                   Text(
-                                    currentStory.item!.title ?? '',
+                                    currentStory.itemTitle ?? currentStory.item?.title ?? '',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
@@ -695,7 +801,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
                                     ),
                                   ),
                                   Text(
-                                    '${currentStory.item!.price ?? '0'} ${currentStory.item!.currencySymbol ?? 'DZD'}',
+                                    '${currentStory.itemPrice ?? currentStory.item?.price ?? '0'} ${currentStory.currencySymbol ?? currentStory.item?.currencySymbol ?? 'DZD'}',
                                     style: const TextStyle(
                                       color: Color(0xFFED7768),
                                       fontWeight: FontWeight.bold,
