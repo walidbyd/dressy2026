@@ -222,6 +222,16 @@ class Item extends PsModel
         return $this->hasMany(CoreImage::class, 'img_parent_id')->where('img_type', 'item')->orderBy('ordering', 'asc');
     }
 
+    public function defaultPhoto()
+    {
+        return $this->hasOne(CoreImage::class, 'img_parent_id')->where('img_type', 'item')->orderBy('ordering', 'asc');
+    }
+
+    public function itemCurrency()
+    {
+        return $this->belongsTo(ItemCurrency::class, 'currency_id');
+    }
+
     public function video()
     {
         return $this->hasMany(CoreImage::class, 'img_parent_id')->where('img_type', 'item-video');

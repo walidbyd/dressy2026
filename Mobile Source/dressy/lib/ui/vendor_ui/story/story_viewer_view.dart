@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../../config/ps_config.dart';
 import '../../../../config/route/route_paths.dart';
 import '../../../../core/vendor/provider/language/app_localization_provider.dart';
 import '../../../../core/vendor/provider/story/story_provider.dart';
@@ -626,23 +627,36 @@ class _StoryViewerVieState extends State<StoryViewerView>
                             // Product Thumbnail
                             ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: currentStory.item!.photo != null &&
-                                      currentStory.item!.photo!.isNotEmpty
-                                  ? CachedNetworkImage(
-                                      imageUrl: currentStory.item!.photo!,
+                              child: () {
+                                final String raw = currentStory.item!.photo ?? '';
+                                final String resolvedUrl = raw.isEmpty
+                                    ? ''
+                                    : ((raw.startsWith('http://') || raw.startsWith('https://'))
+                                        ? raw
+                                        : '${PsConfig.ps_app_image_url}$raw');
+
+                                if (resolvedUrl.isNotEmpty) {
+                                  return CachedNetworkImage(
+                                    imageUrl: resolvedUrl,
+                                    width: 44,
+                                    height: 44,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, __) => Container(
                                       width: 44,
                                       height: 44,
-                                      fit: BoxFit.cover,
-                                      errorWidget: (_, __, ___) => Container(
-                                        width: 44,
-                                        height: 44,
-                                        color: Colors.grey.shade800,
-                                        child: const Icon(
-                                            Icons.shopping_bag_outlined,
-                                            color: Colors.white70),
+                                      color: Colors.grey.shade800,
+                                      child: const Center(
+                                        child: SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 1.5,
+                                            color: Color(0xFFED7768),
+                                          ),
+                                        ),
                                       ),
-                                    )
-                                  : Container(
+                                    ),
+                                    errorWidget: (_, __, ___) => Container(
                                       width: 44,
                                       height: 44,
                                       color: Colors.grey.shade800,
@@ -650,6 +664,17 @@ class _StoryViewerVieState extends State<StoryViewerView>
                                           Icons.shopping_bag_outlined,
                                           color: Colors.white70),
                                     ),
+                                  );
+                                }
+                                return Container(
+                                  width: 44,
+                                  height: 44,
+                                  color: Colors.grey.shade800,
+                                  child: const Icon(
+                                      Icons.shopping_bag_outlined,
+                                      color: Colors.white70),
+                                );
+                              }(),
                             ),
                             const SizedBox(width: 10),
 

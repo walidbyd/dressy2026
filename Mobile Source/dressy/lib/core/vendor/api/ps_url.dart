@@ -400,4 +400,5 @@ class PsUrl {
   static const String ps_stories_feed_url = 'stories/feed?';
   static const String ps_stories_upload_url = 'stories/upload';
   static const String ps_stories_base_url = 'stories/';
+  static const String ps_stories_my_items_url = 'stories/my-items';
 }

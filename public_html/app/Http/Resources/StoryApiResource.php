@@ -28,12 +28,39 @@ class StoryApiResource extends JsonResource
         $vendorName = $vendor?->name ?? $user?->name ?? 'Dressy Vendeur';
         $vendorLogo = '';
         if ($vendor?->logo?->img_path) {
-            $vendorLogo = asset('storage/uploads/' . $vendor->logo->img_path);
+            $imgPath = $vendor->logo->img_path;
+            if (str_starts_with($imgPath, 'http://') || str_starts_with($imgPath, 'https://')) {
+                $vendorLogo = $imgPath;
+            } else {
+                $clean = ltrim($imgPath, '/');
+                $vendorLogo = (str_starts_with($clean, 'storage/') || str_starts_with($clean, 'uploads/'))
+                    ? asset($clean)
+                    : asset('storage/PSX_MPC/uploads/' . $clean);
+            }
         } elseif ($user?->user_cover_photo) {
-            $vendorLogo = asset('storage/uploads/' . $user->user_cover_photo);
+            $imgPath = $user->user_cover_photo;
+            if (str_starts_with($imgPath, 'http://') || str_starts_with($imgPath, 'https://')) {
+                $vendorLogo = $imgPath;
+            } else {
+                $clean = ltrim($imgPath, '/');
+                $vendorLogo = (str_starts_with($clean, 'storage/') || str_starts_with($clean, 'uploads/'))
+                    ? asset($clean)
+                    : asset('storage/PSX_MPC/uploads/' . $clean);
+            }
         }
 
-        $userPhoto = $user?->user_cover_photo ? asset('storage/uploads/' . $user->user_cover_photo) : '';
+        $userPhoto = '';
+        if ($user?->user_cover_photo) {
+            $imgPath = $user->user_cover_photo;
+            if (str_starts_with($imgPath, 'http://') || str_starts_with($imgPath, 'https://')) {
+                $userPhoto = $imgPath;
+            } else {
+                $clean = ltrim($imgPath, '/');
+                $userPhoto = (str_starts_with($clean, 'storage/') || str_starts_with($clean, 'uploads/'))
+                    ? asset($clean)
+                    : asset('storage/PSX_MPC/uploads/' . $clean);
+            }
+        }
 
         // Media full URLs
         $mediaUrl = $this->media_path;
@@ -54,11 +81,21 @@ class StoryApiResource extends JsonResource
             $itemPhoto = '';
             $coverImg = $item->defaultPhoto ?? $item->cover?->first();
             if ($coverImg && !empty($coverImg->img_path)) {
-                $itemPhoto = asset('storage/uploads/' . $coverImg->img_path);
+                $imgPath = $coverImg->img_path;
+                if (str_starts_with($imgPath, 'http://') || str_starts_with($imgPath, 'https://')) {
+                    $itemPhoto = $imgPath;
+                } else {
+                    $clean = ltrim($imgPath, '/');
+                    $itemPhoto = (str_starts_with($clean, 'storage/') || str_starts_with($clean, 'uploads/'))
+                        ? asset($clean)
+                        : asset('storage/PSX_MPC/uploads/' . $clean);
+                }
             }
 
             $currencySymbol = 'DZD';
-            if ($item->itemCurrency && !empty($item->itemCurrency->currency_symbol)) {
+            if ($item->currency && !empty($item->currency->currency_symbol)) {
+                $currencySymbol = $item->currency->currency_symbol;
+            } elseif ($item->itemCurrency && !empty($item->itemCurrency->currency_symbol)) {
                 $currencySymbol = $item->itemCurrency->currency_symbol;
             }
 

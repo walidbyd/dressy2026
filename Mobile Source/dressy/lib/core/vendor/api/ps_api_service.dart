@@ -55,6 +55,7 @@ import '../viewobject/search_history.dart';
 import '../viewobject/search_item_history.dart';
 import '../viewobject/search_result.dart';
 import '../viewobject/search_subcategory_history.dart';
+import '../viewobject/seller_transactions_response.dart';
 import '../viewobject/shipping_area.dart';
 import '../viewobject/shipping_city.dart';
 import '../viewobject/shipping_cost.dart';
@@ -80,7 +81,6 @@ import '../viewobject/vendor_subscription_plan.dart';
 import '../viewobject/vendor_user.dart';
 import '../viewobject/wallet.dart';
 import '../viewobject/wallet_transaction.dart';
-import '../viewobject/seller_transactions_response.dart';
 import 'common/ps_api.dart';
 import 'common/ps_api_reponse.dart';
 import 'common/ps_resource.dart';
@@ -2423,5 +2423,15 @@ class PsApiService extends PsApi {
     return await getServerCall<SellerTransactionsResponse,
             SellerTransactionsResponse>(
         SellerTransactionsResponse(), url);
+  }
+
+  ///
+  /// Get Active Seller Items for Story Tagging
+  ///
+  Future<PsResource<List<Product>>> getStoryMyItems(
+      String loginUserId, String languageCode) async {
+    final String url =
+        '${PsUrl.ps_stories_my_items_url}?login_user_id=$loginUserId&language_symbol=$languageCode';
+    return await getServerCall<Product, List<Product>>(Product(), url);
   }
 }

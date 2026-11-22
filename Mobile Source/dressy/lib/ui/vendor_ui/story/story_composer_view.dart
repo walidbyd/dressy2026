@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_video_thumbnail_plus/flutter_video_thumbnail_plus.dart';
@@ -7,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../../config/ps_config.dart';
 import '../../../../core/vendor/api/common/ps_resource.dart';
 import '../../../../core/vendor/api/common/ps_status.dart';
 import '../../../../core/vendor/api/ps_api_service.dart';
@@ -63,6 +65,64 @@ class _StoryComposerViewState extends State<StoryComposerView> {
     super.dispose();
   }
 
+  Widget _buildProductThumbnail(Product prod, {double size = 52, double radius = 10}) {
+    final String? rawImg = prod.defaultPhoto?.imgPath;
+    String fullUrl = '';
+    if (rawImg != null && rawImg.trim().isNotEmpty) {
+      if (rawImg.startsWith('http://') || rawImg.startsWith('https://')) {
+        fullUrl = rawImg;
+      } else {
+        fullUrl = '${PsConfig.ps_app_image_url}$rawImg';
+      }
+    }
+
+    Widget placeholder() {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: const Color(0xFFED7768).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(radius),
+        ),
+        child: Icon(
+          Icons.shopping_bag_outlined,
+          color: const Color(0xFFED7768),
+          size: size * 0.45,
+        ),
+      );
+    }
+
+    if (fullUrl.isEmpty) {
+      return placeholder();
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: CachedNetworkImage(
+        imageUrl: fullUrl,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => Container(
+          width: size,
+          height: size,
+          color: Colors.grey.shade200,
+          child: const Center(
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFFED7768),
+              ),
+            ),
+          ),
+        ),
+        errorWidget: (_, __, ___) => placeholder(),
+      ),
+    );
+  }
+
   void _openProductTaggingSheet(BuildContext context) {
     final PsValueHolder psValueHolder =
         Provider.of<PsValueHolder>(context, listen: false);
@@ -117,6 +177,18 @@ class _StoryComposerViewState extends State<StoryComposerView> {
               Expanded(
                 child: FutureBuilder<PsResource<List<Product>>>(
                   future: () async {
+                    final String langCode = psValueHolder.languageCode ?? 'fr';
+                    if (loginUserId.isNotEmpty && loginUserId != 'nologinuser') {
+                      try {
+                        final PsResource<List<Product>> myItemsRes =
+                            await apiService.getStoryMyItems(loginUserId, langCode);
+                        if (myItemsRes.status == PsStatus.SUCCESS &&
+                            myItemsRes.data != null &&
+                            myItemsRes.data!.isNotEmpty) {
+                          return myItemsRes;
+                        }
+                      } catch (_) {}
+                    }
                     final ProductParameterHolder holder =
                         ProductParameterHolder().getLatestParameterHolder();
                     holder.addedUserId = loginUserId;
@@ -124,7 +196,7 @@ class _StoryComposerViewState extends State<StoryComposerView> {
                     return apiService.getProductList(
                       holder.toMap(),
                       loginUserId,
-                      'fr',
+                      langCode,
                       30,
                       0,
                     );
@@ -154,7 +226,7 @@ class _StoryComposerViewState extends State<StoryComposerView> {
                     }
 
                     return ListView.separated(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       itemCount: items.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (BuildContext context, int index) {
@@ -162,31 +234,8 @@ class _StoryComposerViewState extends State<StoryComposerView> {
                         final bool isSelected = _selectedProduct?.id == prod.id;
                         return ListTile(
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 4),
-                          leading: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: prod.defaultPhoto?.imgPath != null
-                                ? Image.network(
-                                    prod.defaultPhoto!.imgPath!,
-                                    width: 48,
-                                    height: 48,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      width: 48,
-                                      height: 48,
-                                      color: Colors.grey.shade200,
-                                      child: const Icon(Icons.image,
-                                          color: Colors.grey),
-                                    ),
-                                  )
-                                : Container(
-                                    width: 48,
-                                    height: 48,
-                                    color: Colors.grey.shade200,
-                                    child: const Icon(Icons.image,
-                                        color: Colors.grey),
-                                  ),
-                          ),
+                              horizontal: 12, vertical: 6),
+                          leading: _buildProductThumbnail(prod, size: 52, radius: 10),
                           title: Text(
                             prod.title ?? '',
                             maxLines: 1,
@@ -202,9 +251,9 @@ class _StoryComposerViewState extends State<StoryComposerView> {
                           ),
                           trailing: isSelected
                               ? const Icon(Icons.check_circle,
-                                  color: Color(0xFFED7768))
+                                  color: Color(0xFFED7768), size: 26)
                               : const Icon(Icons.radio_button_unchecked,
-                                  color: Colors.grey),
+                                  color: Colors.grey, size: 24),
                           onTap: () {
                             setState(() {
                               _selectedProduct = prod;
@@ -424,18 +473,7 @@ class _StoryComposerViewState extends State<StoryComposerView> {
                     ),
                     child: Row(
                       children: <Widget>[
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFED7768),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.shopping_bag_outlined,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                        ),
+                        _buildProductThumbnail(_selectedProduct!, size: 36, radius: 8),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -452,8 +490,11 @@ class _StoryComposerViewState extends State<StoryComposerView> {
                                   fontSize: 13,
                                 ),
                               ),
+                              const SizedBox(height: 2),
                               Text(
                                 '${_selectedProduct!.originalPrice ?? _selectedProduct!.currentPrice ?? '0'} ${_selectedProduct!.itemCurrency?.currencySymbol ?? 'DZD'}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Color(0xFFED7768),
                                   fontWeight: FontWeight.bold,

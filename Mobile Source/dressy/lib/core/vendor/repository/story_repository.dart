@@ -6,6 +6,7 @@ import '../api/common/ps_resource.dart';
 import '../api/common/ps_status.dart';
 import '../api/ps_url.dart';
 import '../viewobject/common/ps_value_holder.dart';
+import '../viewobject/product.dart';
 import '../viewobject/vendor_story.dart';
 
 class StoryFeedResult {
@@ -28,6 +29,7 @@ class StoryRepository {
   Map<String, String> _buildHeaders(String loginUserId, [String? headerToken]) {
     final Map<String, String> headers = <String, String>{
       'Authorization': PsConfig.ps_bearer_token,
+      'Accept': 'application/json',
       'login_user_id': loginUserId,
     };
     if (headerToken != null && headerToken.isNotEmpty) {
@@ -84,6 +86,37 @@ class StoryRepository {
     }
   }
 
+  Future<PsResource<List<Product>>> getMyItems(
+      String loginUserId, String headerToken) async {
+    try {
+      final String url =
+          '${PsConfig.ps_app_url}${PsUrl.ps_stories_my_items_url}?login_user_id=$loginUserId';
+
+      final http.Response response = await http.get(
+        Uri.parse(url),
+        headers: _buildHeaders(loginUserId, headerToken),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final dynamic decoded = jsonDecode(response.body);
+        List<dynamic>? list;
+        if (decoded is List) {
+          list = decoded;
+        } else if (decoded is Map && decoded['data'] is List) {
+          list = decoded['data'] as List<dynamic>;
+        }
+        if (list != null) {
+          final List<Product> items = Product().fromMapList(list);
+          return PsResource<List<Product>>(PsStatus.SUCCESS, '', items);
+        }
+      }
+      return PsResource<List<Product>>(
+          PsStatus.ERROR, 'Failed to load items (${response.statusCode})', null);
+    } catch (e) {
+      return PsResource<List<Product>>(PsStatus.ERROR, e.toString(), null);
+    }
+  }
+
   Future<PsResource<VendorStory>> uploadStory({
     required File mediaFile,
     required String mediaType,
@@ -127,14 +160,24 @@ class StoryRepository {
           await request.send().timeout(const Duration(seconds: 45));
       final http.Response response = await http.Response.fromStream(streamedResponse);
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      try {
         final dynamic decoded = jsonDecode(response.body);
-        if (decoded != null && decoded['status'] == 'success' && decoded['data'] != null) {
-          final VendorStory story = VendorStory().fromMap(decoded['data']);
-          return PsResource<VendorStory>(PsStatus.SUCCESS, '', story);
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          if (decoded != null && decoded['status'] == 'success' && decoded['data'] != null) {
+            final VendorStory story = VendorStory().fromMap(decoded['data']);
+            return PsResource<VendorStory>(PsStatus.SUCCESS, '', story);
+          }
         }
+        final String errorMsg = decoded?['message']?.toString() ??
+            'Erreur de publication (${response.statusCode})';
+        return PsResource<VendorStory>(PsStatus.ERROR, errorMsg, null);
+      } catch (_) {
+        return PsResource<VendorStory>(
+          PsStatus.ERROR,
+          'Erreur serveur (${response.statusCode}): ${response.body.isNotEmpty ? response.body : 'Réponse vide'}',
+          null,
+        );
       }
-      return PsResource<VendorStory>(PsStatus.ERROR, 'Upload failed: ${response.statusCode}', null);
     } catch (e) {
       return PsResource<VendorStory>(PsStatus.ERROR, e.toString(), null);
     }

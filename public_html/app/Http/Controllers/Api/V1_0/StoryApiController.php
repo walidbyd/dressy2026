@@ -9,8 +9,12 @@ use App\Models\VendorStoryView;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Modules\Core\Entities\Item\Item;
 use Modules\Core\Entities\Vendor\Vendor;
+use Modules\Core\Transformers\Api\App\V1_0\Item\ItemApiResource;
 
 class StoryApiController extends Controller
 {
@@ -19,66 +23,144 @@ class StoryApiController extends Controller
      */
     public function feed(Request $request)
     {
-        $loginUserId = $request->header('login_user_id') 
-            ?? $request->query('login_user_id') 
-            ?? $request->input('login_user_id') 
-            ?? $request->user()?->id;
+        try {
+            $loginUserId = $request->header('login_user_id') 
+                ?? $request->query('login_user_id') 
+                ?? $request->input('login_user_id') 
+                ?? $request->user()?->id;
 
-        $now = Carbon::now();
+            $now = Carbon::now();
 
-        $activeStories = VendorStory::where('expires_at', '>', $now)
-            ->with(['user', 'vendor.logo', 'item.defaultPhoto', 'item.itemCurrency'])
-            ->orderBy('created_at', 'asc')
-            ->get();
+            $activeStories = VendorStory::where('expires_at', '>', $now)
+                ->with(['user', 'vendor.logo', 'item.cover', 'item.currency'])
+                ->orderBy('created_at', 'asc')
+                ->get();
 
-        // Group by vendor or seller
-        $myStories = [];
-        $vendorsMap = [];
+            // Group by vendor or seller
+            $myStories = [];
+            $vendorsMap = [];
 
-        foreach ($activeStories as $story) {
-            $isMine = (!empty($loginUserId) && (string)$loginUserId !== 'nologinuser' && (string)$loginUserId === (string)$story->user_id);
+            foreach ($activeStories as $story) {
+                $isMine = (!empty($loginUserId) && (string)$loginUserId !== 'nologinuser' && (string)$loginUserId === (string)$story->user_id);
 
-            if ($isMine) {
-                $myStories[] = new StoryApiResource($story);
-            }
-
-            // Grouping key: vendor_id if exists, otherwise "user_" . user_id
-            $groupKey = $story->vendor_id ? 'vendor_' . $story->vendor_id : 'user_' . $story->user_id;
-
-            if (!isset($vendorsMap[$groupKey])) {
-                $user = $story->user;
-                $vendor = $story->vendor;
-                $vendorName = $vendor?->name ?? $user?->name ?? 'Dressy Vendeur';
-                $vendorLogo = '';
-                if ($vendor?->logo?->img_path) {
-                    $vendorLogo = asset('storage/uploads/' . $vendor->logo->img_path);
-                } elseif ($user?->user_cover_photo) {
-                    $vendorLogo = asset('storage/uploads/' . $user->user_cover_photo);
+                if ($isMine) {
+                    $myStories[] = new StoryApiResource($story);
                 }
 
-                $vendorsMap[$groupKey] = [
-                    'group_key' => $groupKey,
-                    'vendor_id' => $story->vendor_id ? (string) $story->vendor_id : '',
-                    'vendor_user_id' => (string) $story->user_id,
-                    'vendor_name' => $vendorName,
-                    'vendor_logo' => $vendorLogo,
-                    'is_mine' => $isMine,
-                    'has_unseen' => true,
-                    'stories' => [],
-                ];
+                // Grouping key: vendor_id if exists and > 0, otherwise "user_" . user_id
+                $hasVendor = !empty($story->vendor_id) && (int)$story->vendor_id > 0;
+                $groupKey = $hasVendor ? 'vendor_' . $story->vendor_id : 'user_' . $story->user_id;
+
+                if (!isset($vendorsMap[$groupKey])) {
+                    $user = $story->user;
+                    $vendor = $story->vendor;
+                    $vendorName = $vendor?->name ?? $user?->name ?? 'Dressy Vendeur';
+                    $vendorLogo = '';
+                    if ($vendor?->logo?->img_path) {
+                        $imgPath = $vendor->logo->img_path;
+                        if (str_starts_with($imgPath, 'http://') || str_starts_with($imgPath, 'https://')) {
+                            $vendorLogo = $imgPath;
+                        } else {
+                            $clean = ltrim($imgPath, '/');
+                            $vendorLogo = (str_starts_with($clean, 'storage/') || str_starts_with($clean, 'uploads/'))
+                                ? asset($clean)
+                                : asset('storage/PSX_MPC/uploads/' . $clean);
+                        }
+                    } elseif ($user?->user_cover_photo) {
+                        $imgPath = $user->user_cover_photo;
+                        if (str_starts_with($imgPath, 'http://') || str_starts_with($imgPath, 'https://')) {
+                            $vendorLogo = $imgPath;
+                        } else {
+                            $clean = ltrim($imgPath, '/');
+                            $vendorLogo = (str_starts_with($clean, 'storage/') || str_starts_with($clean, 'uploads/'))
+                                ? asset($clean)
+                                : asset('storage/PSX_MPC/uploads/' . $clean);
+                        }
+                    }
+
+                    $vendorsMap[$groupKey] = [
+                        'group_key' => $groupKey,
+                        'vendor_id' => $hasVendor ? (string) $story->vendor_id : '',
+                        'vendor_user_id' => (string) $story->user_id,
+                        'vendor_name' => $vendorName,
+                        'vendor_logo' => $vendorLogo,
+                        'is_mine' => $isMine,
+                        'has_unseen' => true,
+                        'stories' => [],
+                    ];
+                }
+
+                $vendorsMap[$groupKey]['stories'][] = new StoryApiResource($story);
             }
 
-            $vendorsMap[$groupKey]['stories'][] = new StoryApiResource($story);
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'my_stories' => $myStories,
+                    'stories_by_vendor' => array_values($vendorsMap),
+                    'total_active' => $activeStories->count(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Stories feed error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erreur lors du chargement des stories: ' . $e->getMessage(),
+                'data' => [
+                    'my_stories' => [],
+                    'stories_by_vendor' => [],
+                    'total_active' => 0,
+                ],
+            ], 500);
         }
+    }
 
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'my_stories' => $myStories,
-                'stories_by_vendor' => array_values($vendorsMap),
-                'total_active' => $activeStories->count(),
-            ],
-        ]);
+    /**
+     * Get active items belonging to the authenticated seller/vendor for story tagging.
+     */
+    public function myItems(Request $request)
+    {
+        try {
+            $loginUserId = $request->header('login_user_id') 
+                ?? $request->query('login_user_id') 
+                ?? $request->input('login_user_id') 
+                ?? $request->user()?->id;
+
+            if (empty($loginUserId) || (string)$loginUserId === 'nologinuser') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Authentification requise pour charger vos articles.',
+                ], 401);
+            }
+
+            $vendorId = Vendor::where('owner_user_id', $loginUserId)->value('id');
+
+            $items = Item::where('status', 1)
+                ->where(function ($query) use ($loginUserId, $vendorId) {
+                    $query->where('added_user_id', $loginUserId);
+                    if (!empty($vendorId)) {
+                        $query->orWhere('vendor_id', $vendorId);
+                    }
+                })
+                ->with([
+                    'cover' => function ($q) {
+                        $q->where('img_type', 'item')->orderBy('ordering', 'asc');
+                    },
+                    'currency',
+                    'category',
+                ])
+                ->latest('id')
+                ->limit(60)
+                ->get();
+
+            return ItemApiResource::collection($items);
+        } catch (\Throwable $e) {
+            Log::error('Error fetching seller story items: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erreur lors du chargement des articles: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -86,97 +168,153 @@ class StoryApiController extends Controller
      */
     public function upload(Request $request)
     {
-        $loginUserId = $request->header('login_user_id') 
-            ?? $request->input('login_user_id') 
-            ?? $request->user()?->id;
+        try {
+            $loginUserId = $request->header('login_user_id') 
+                ?? $request->input('login_user_id') 
+                ?? $request->query('login_user_id')
+                ?? $request->user()?->id;
 
-        if (empty($loginUserId) || $loginUserId === 'nologinuser') {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Authentification requise pour publier une story.',
-            ], 401);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'media_file' => 'required_without:media_path|file|max:25600', // max 25MB
-            'caption' => 'nullable|string|max:500',
-            'item_id' => 'nullable',
-            'filter_preset' => 'nullable|string|max:32',
-            'media_type' => 'nullable|string|in:image,video',
-            'duration' => 'nullable|numeric',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $validator->errors()->first(),
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        // Detect vendor profile if user owns one
-        $vendor = Vendor::where('owner_user_id', $loginUserId)->first();
-
-        $mediaType = $request->input('media_type', 'image');
-        $mediaPath = '';
-        $thumbnailPath = '';
-
-        $storiesDir = public_path('uploads/stories');
-        if (!File::isDirectory($storiesDir)) {
-            File::makeDirectory($storiesDir, 0755, true, true);
-        }
-
-        if ($request->hasFile('media_file')) {
-            $file = $request->file('media_file');
-            $extension = strtolower($file->getClientOriginalExtension());
-            if (in_array($extension, ['mp4', 'mov', 'avi', 'm4v', 'webm'])) {
-                $mediaType = 'video';
-            } else {
-                $mediaType = 'image';
+            if (empty($loginUserId) || (string)$loginUserId === 'nologinuser') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Authentification requise pour publier une story.',
+                ], 401);
             }
 
-            $fileName = 'story_' . $loginUserId . '_' . time() . '_' . uniqid() . '.' . $extension;
-            $file->move($storiesDir, $fileName);
-            $mediaPath = 'uploads/stories/' . $fileName;
-        } elseif ($request->filled('media_path')) {
-            $mediaPath = $request->input('media_path');
+            // Support multiple multipart file field names: media_file, media, file, image
+            $file = $request->file('media_file') 
+                ?? $request->file('media') 
+                ?? $request->file('file') 
+                ?? $request->file('image');
+
+            $mediaPath = '';
+            $thumbnailPath = '';
+            $mediaType = $request->input('media_type', 'image');
+
+            if (!$file && !$request->filled('media_path')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Veuillez sélectionner un fichier photo ou vidéo.',
+                ], 422);
+            }
+
+            // Ensure destination directory exists in public/uploads/stories
+            $uploadSubdir = 'uploads/stories/' . date('Y/m');
+            $storiesDir = public_path($uploadSubdir);
+            try {
+                File::ensureDirectoryExists($storiesDir, 0755, true);
+            } catch (\Throwable $dirEx) {
+                $uploadSubdir = 'uploads/stories';
+                $storiesDir = public_path($uploadSubdir);
+                File::ensureDirectoryExists($storiesDir, 0755, true);
+            }
+
+            if ($file) {
+                // Validate size (max 25MB)
+                $maxBytes = 25 * 1024 * 1024;
+                if ($file->getSize() > $maxBytes) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Le fichier média ne doit pas dépasser 25 Mo.',
+                    ], 422);
+                }
+
+                $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'gif', 'mp4', 'mov', 'avi', 'm4v', 'webm', '3gp'];
+                if (!in_array($extension, $allowedExtensions)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Format de fichier non supporté (autorisés: JPG, PNG, WEBP, MP4, MOV).',
+                    ], 422);
+                }
+
+                if (in_array($extension, ['mp4', 'mov', 'avi', 'm4v', 'webm', '3gp'])) {
+                    $mediaType = 'video';
+                } else {
+                    $mediaType = 'image';
+                }
+
+                $fileName = 'story_' . $loginUserId . '_' . time() . '_' . uniqid() . '.' . $extension;
+                $file->move($storiesDir, $fileName);
+                $mediaPath = $uploadSubdir . '/' . $fileName;
+            } elseif ($request->filled('media_path')) {
+                $mediaPath = $request->input('media_path');
+            }
+
+            // Thumbnail processing for videos
+            $thumb = $request->file('thumbnail_file') 
+                ?? $request->file('thumbnail') 
+                ?? $request->file('thumb');
+
+            if ($thumb) {
+                $thumbExt = strtolower($thumb->getClientOriginalExtension() ?: 'jpg');
+                $thumbName = 'thumb_' . $loginUserId . '_' . time() . '_' . uniqid() . '.' . $thumbExt;
+                $thumb->move($storiesDir, $thumbName);
+                $thumbnailPath = $uploadSubdir . '/' . $thumbName;
+            } elseif ($mediaType === 'image') {
+                $thumbnailPath = $mediaPath;
+            }
+
+            $duration = (int) $request->input('duration', ($mediaType === 'video' ? 15 : 5));
+            $filterPreset = $request->input('filter_preset', 'original');
+
+            // Detect vendor profile if user owns one
+            $vendor = Vendor::where('owner_user_id', $loginUserId)->first();
+
+            // Assemble story data with Schema::hasColumn guards for DB resiliency
+            $storyData = [
+                'user_id' => $loginUserId,
+                'media_type' => $mediaType,
+                'media_path' => $mediaPath,
+                'thumbnail_path' => $thumbnailPath,
+                'caption' => $request->input('caption'),
+                'duration' => $duration,
+                'expires_at' => Carbon::now()->addHours(24),
+                'added_date' => Carbon::now(),
+                'added_user_id' => $loginUserId,
+            ];
+
+            if (Schema::hasColumn('psx_vendor_stories', 'vendor_id')) {
+                $storyData['vendor_id'] = $vendor ? $vendor->id : 0;
+            }
+
+            if (Schema::hasColumn('psx_vendor_stories', 'item_id')) {
+                $rawItemId = $request->input('item_id');
+                $storyData['item_id'] = (!empty($rawItemId) && is_numeric($rawItemId)) ? (int)$rawItemId : null;
+            }
+
+            if (Schema::hasColumn('psx_vendor_stories', 'filter_preset')) {
+                $storyData['filter_preset'] = $filterPreset;
+            }
+
+            if (Schema::hasColumn('psx_vendor_stories', 'views_count')) {
+                $storyData['views_count'] = 0;
+            }
+
+            $story = VendorStory::create($storyData);
+
+            // Safely eager load relations
+            try {
+                $story->load(['user', 'vendor.logo']);
+                if (Schema::hasColumn('psx_vendor_stories', 'item_id') && !empty($story->item_id)) {
+                    $story->load(['item.cover', 'item.currency']);
+                }
+            } catch (\Throwable $relEx) {
+                Log::warning('Story relation eager loading warning: ' . $relEx->getMessage());
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Story publiée avec succès.',
+                'data' => new StoryApiResource($story),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Story upload failed: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erreur lors de la publication de la story : ' . $e->getMessage(),
+            ], 500);
         }
-
-        if ($request->hasFile('thumbnail_file')) {
-            $thumb = $request->file('thumbnail_file');
-            $thumbName = 'thumb_' . $loginUserId . '_' . time() . '_' . uniqid() . '.' . strtolower($thumb->getClientOriginalExtension());
-            $thumb->move($storiesDir, $thumbName);
-            $thumbnailPath = 'uploads/stories/' . $thumbName;
-        } elseif ($mediaType === 'image') {
-            $thumbnailPath = $mediaPath;
-        }
-
-        $duration = (int) $request->input('duration', ($mediaType === 'video' ? 15 : 5));
-        $filterPreset = $request->input('filter_preset', 'original');
-
-        $story = VendorStory::create([
-            'user_id' => $loginUserId,
-            'vendor_id' => $vendor?->id,
-            'media_type' => $mediaType,
-            'media_path' => $mediaPath,
-            'thumbnail_path' => $thumbnailPath,
-            'caption' => $request->input('caption'),
-            'item_id' => $request->input('item_id') ? (int) $request->input('item_id') : null,
-            'filter_preset' => $filterPreset,
-            'views_count' => 0,
-            'duration' => $duration,
-            'expires_at' => Carbon::now()->addHours(24),
-            'added_date' => Carbon::now(),
-            'added_user_id' => $loginUserId,
-        ]);
-
-        $story->load(['user', 'vendor.logo', 'item.defaultPhoto', 'item.itemCurrency']);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Story publiée avec succès.',
-            'data' => new StoryApiResource($story),
-        ]);
     }
 
     /**

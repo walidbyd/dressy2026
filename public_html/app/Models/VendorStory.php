@@ -5,7 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Modules\Core\Entities\Item\Product;
+use Modules\Core\Entities\Item\Item;
 use Modules\Core\Entities\Vendor\Vendor;
 
 class VendorStory extends Model
@@ -49,7 +49,7 @@ class VendorStory extends Model
 
     public function item()
     {
-        return $this->belongsTo(Product::class, 'item_id');
+        return $this->belongsTo(Item::class, 'item_id');
     }
 
     public function views()
