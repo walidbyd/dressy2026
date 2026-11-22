@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
@@ -10,13 +11,18 @@ import '../../../../config/route/route_paths.dart';
 import '../../../../core/vendor/constant/ps_constants.dart';
 import '../../../../core/vendor/provider/language/app_localization_provider.dart';
 import '../../../../core/vendor/provider/story/story_provider.dart';
+import '../../../../core/vendor/provider/user/user_provider.dart';
+import '../../../../core/vendor/utils/ps_progress_dialog.dart';
 import '../../../../core/vendor/utils/story_filter_helper.dart';
 import '../../../../core/vendor/viewobject/common/ps_value_holder.dart';
 import '../../../../core/vendor/viewobject/default_photo.dart';
 import '../../../../core/vendor/viewobject/holder/intent_holder/product_detail_intent_holder.dart';
 import '../../../../core/vendor/viewobject/holder/intent_holder/user_intent_holder.dart';
 import '../../../../core/vendor/viewobject/holder/intent_holder/vendor_user_intent_holder.dart';
+import '../../../../core/vendor/viewobject/holder/user_block_parameter_holder.dart';
+import '../../../../core/vendor/viewobject/holder/user_report_item_parameter_holder.dart';
 import '../../../../core/vendor/viewobject/vendor_story.dart';
+import '../common/dialog/confirm_dialog_view.dart';
 import '../common/ps_ui_widget.dart';
 
 class StoryViewerView extends StatefulWidget {
@@ -516,6 +522,90 @@ class _StoryViewerVieState extends State<StoryViewerView>
     }
   }
 
+  void _reportStory(BuildContext context, VendorStory story) {
+    _pauseStory();
+    showDialog<dynamic>(
+      context: context,
+      builder: (BuildContext ctx) => ConfirmDialogView(
+        description:
+            'Voulez-vous vraiment signaler cette story pour contenu inapproprié ?',
+        leftButtonText: 'dialog__cancel'.tr,
+        rightButtonText: 'item_detail__report_item'.tr,
+        onAgreeTap: () async {
+          final PsValueHolder psValueHolder =
+              Provider.of<PsValueHolder>(context, listen: false);
+          final String loginUserId = psValueHolder.loginUserId ?? '';
+          if (loginUserId.isEmpty || loginUserId == 'nologinuser') {
+            Navigator.pop(ctx);
+            _resumeStory();
+            Fluttertoast.showToast(
+                msg: 'Veuillez vous connecter pour signaler une story.');
+            return;
+          }
+          await PsProgressDialog.showDialog(context);
+          try {
+            final UserProvider userProvider =
+                Provider.of<UserProvider>(context, listen: false);
+            final UserReportItemParameterHolder holder =
+                UserReportItemParameterHolder(
+                    itemId: story.itemId ?? story.id,
+                    reportedUserId: loginUserId);
+            await userProvider.userReportItem(holder.toMap(), loginUserId);
+          } catch (_) {}
+          await PsProgressDialog.dismissDialog();
+          Fluttertoast.showToast(msg: 'Merci. Votre signalement a été envoyé.');
+          _closeViewer();
+        },
+      ),
+    ).then((_) {
+      if (!_isClosing && mounted) {
+        _resumeStory();
+      }
+    });
+  }
+
+  void _blockUser(BuildContext context, VendorStory story) {
+    _pauseStory();
+    showDialog<dynamic>(
+      context: context,
+      builder: (BuildContext ctx) => ConfirmDialogView(
+        description:
+            'item_detail__confirm_dialog_block_user'.tr,
+        leftButtonText: 'dialog__cancel'.tr,
+        rightButtonText: 'item_detail__block_user'.tr,
+        onAgreeTap: () async {
+          final PsValueHolder psValueHolder =
+              Provider.of<PsValueHolder>(context, listen: false);
+          final String loginUserId = psValueHolder.loginUserId ?? '';
+          if (loginUserId.isEmpty || loginUserId == 'nologinuser') {
+            Navigator.pop(ctx);
+            _resumeStory();
+            Fluttertoast.showToast(
+                msg: 'Veuillez vous connecter pour bloquer un utilisateur.');
+            return;
+          }
+          await PsProgressDialog.showDialog(context);
+          try {
+            final UserProvider userProvider =
+                Provider.of<UserProvider>(context, listen: false);
+            final UserBlockParameterHolder holder = UserBlockParameterHolder(
+              loginUserId: loginUserId,
+              addedUserId: story.userId,
+            );
+            await userProvider.blockUser(holder.toMap(), loginUserId, 'fr');
+          } catch (_) {}
+          await PsProgressDialog.dismissDialog();
+          Fluttertoast.showToast(msg: 'Utilisateur bloqué avec succès.');
+          _closeViewer();
+        },
+      ),
+    ).then((_) {
+      if (!_isClosing && mounted) {
+        _resumeStory();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_stories.isEmpty) {
@@ -747,6 +837,45 @@ class _StoryViewerVieState extends State<StoryViewerView>
                             icon: const Icon(Icons.delete_outline_rounded,
                                 color: Colors.white, size: 22),
                             onPressed: () => _confirmDeleteStory(context),
+                          ),
+
+                        // Moderation (Report / Block) for Other Users
+                        if (!isOwner)
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert,
+                                color: Colors.white, size: 24),
+                            onSelected: (String val) {
+                              if (val == 'report') {
+                                _reportStory(context, currentStory);
+                              } else if (val == 'block') {
+                                _blockUser(context, currentStory);
+                              }
+                            },
+                            itemBuilder: (BuildContext context) =>
+                                <PopupMenuEntry<String>>[
+                              PopupMenuItem<String>(
+                                value: 'report',
+                                child: Row(
+                                  children: <Widget>[
+                                    const Icon(Icons.flag_outlined,
+                                        size: 18, color: Colors.redAccent),
+                                    const SizedBox(width: 8),
+                                    Text('item_detail__report_item'.tr),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'block',
+                                child: Row(
+                                  children: <Widget>[
+                                    const Icon(Icons.block_outlined,
+                                        size: 18, color: Colors.redAccent),
+                                    const SizedBox(width: 8),
+                                    Text('item_detail__block_user'.tr),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
 
                         // Close Button

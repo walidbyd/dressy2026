@@ -12,7 +12,7 @@ description: Dressy - La mode seconde main en Algérie
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 
-version: 1.5.6+42
+version: 1.5.6+43
 publish_to: none
 
 environment:
@@ -49,9 +49,6 @@ dependencies:
   flutter_facebook_auth: ^7.1.1
   photo_view: ^0.15.0
   progress_dialog_null_safe: ^3.0.0
-  # flutter_braintree: ^4.0.0
-  flutter_braintree: 
-    path : ./packages/flutter-braintree
   package_info_plus: ^8.1.0
   flutter_credit_card: ^4.0.1
   fluttertoast: ^8.2.12
@@ -59,9 +56,6 @@ dependencies:
   permission_handler_platform_interface: ^4.2.3
   geolocator: ^14.0.2
   share_plus: ^11.0.0
-  razorpay_flutter: ^1.4.0
-  flutter_paystack: ^1.0.7
-  in_app_purchase: ^3.2.0
   flutter_linkify: ^6.0.0
   google_maps_flutter: ^2.9.0
   flutter_datetime_picker_plus: ^2.2.0
@@ -75,7 +69,6 @@ dependencies:
   device_info_plus: ^11.3.3
   platform_device_id_plus: ^1.0.7
   encrypt: ^5.0.3
-  flutter_stripe: ^11.2.0
   flutter_svg: ^2.0.11
   firebase_app_check: 0.4.0
   remixicon: ^1.2.0
@@ -83,7 +76,6 @@ dependencies:
   calendar_date_picker2: ^2.0.1
   email_validator: ^3.0.0
   badges: ^3.1.2
-  flutterwave_standard_smart: ^1.0.4
   in_app_review: ^2.0.9
   flutter_image_compress: ^2.3.0
   app_links: ^6.4.0
@@ -98,10 +90,6 @@ dev_dependencies:
     sdk: flutter
 
 dependency_overrides:  
-  flutter_paystack:
-    git:
-      url: https://github.com/Panacea-Soft/flutter_paystack
-      ref: v1.0.9
   flutter_credit_card:
     git:
       url: https://github.com/Panacea-Soft/flutter_credit_card

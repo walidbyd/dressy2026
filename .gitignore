@@ -2,6 +2,13 @@
 **/.env
 **/.env.*
 !**/.env.example
+*.jks
+**/*.jks
+*.keystore
+**/*.keystore
+key.properties
+**/key.properties
+**/google-services.json
 
 # Composer & Vendor
 /vendor/

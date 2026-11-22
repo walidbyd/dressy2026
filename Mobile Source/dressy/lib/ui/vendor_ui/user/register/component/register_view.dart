@@ -173,6 +173,71 @@ class _RegisterViewState extends State<RegisterView>
                           CustomGoToLoginTextWidget(
                             onSignInSelected: widget.goToLoginSelected,
                           ),
+                          const SizedBox(height: PsDimens.space12),
+
+                          // Terms of Service & Privacy Policy Notice
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: PsDimens.space24),
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: <Widget>[
+                                Text(
+                                  'En vous inscrivant, vous acceptez nos ',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Utils.isLightMode(context)
+                                        ? PsColors.text600
+                                        : PsColors.text400,
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      RoutePaths.termsAndCondition,
+                                    );
+                                  },
+                                  child: const Text(
+                                    'Conditions Générales',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFED7768),
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  ' et notre ',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Utils.isLightMode(context)
+                                        ? PsColors.text600
+                                        : PsColors.text400,
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      RoutePaths.privacyPolicy,
+                                    );
+                                  },
+                                  child: const Text(
+                                    'Politique de Confidentialité',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFED7768),
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           _spacingWidget,
                           _spacingWidget,
                         ],

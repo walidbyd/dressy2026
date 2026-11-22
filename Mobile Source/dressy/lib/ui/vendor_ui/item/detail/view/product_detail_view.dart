@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:nested/nested.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -19,7 +20,10 @@ import '../../../../../core/vendor/provider/order_id/order_id_provider.dart';
 import '../../../../../core/vendor/provider/product/favourite_item_provider.dart';
 import '../../../../../core/vendor/provider/product/product_provider.dart';
 import '../../../../../core/vendor/provider/product/related_product_provider.dart';
+import '../../../../../core/vendor/provider/user/user_provider.dart';
+import '../../../../../core/vendor/utils/ps_progress_dialog.dart';
 import '../../../../../core/vendor/utils/utils.dart';
+import '../../../../../core/vendor/viewobject/api_status.dart';
 import '../../../../../core/vendor/viewobject/common/ps_value_holder.dart';
 import '../../../../../core/vendor/viewobject/default_photo.dart';
 import '../../../../../core/vendor/viewobject/holder/billing_address_holder.dart';
@@ -28,6 +32,8 @@ import '../../../../../core/vendor/viewobject/holder/intent_holder/user_intent_h
 import '../../../../../core/vendor/viewobject/holder/intent_holder/vendor_user_intent_holder.dart';
 import '../../../../../core/vendor/viewobject/holder/request_path_holder.dart';
 import '../../../../../core/vendor/viewobject/holder/shipping_address_holder.dart';
+import '../../../../../core/vendor/viewobject/holder/user_block_parameter_holder.dart';
+import '../../../../../core/vendor/viewobject/holder/user_report_item_parameter_holder.dart';
 import '../../../../../core/vendor/viewobject/holder/widget_provider_dyanmic.dart';
 import '../../../../../core/vendor/viewobject/product.dart';
 import '../../../../../core/vendor/viewobject/shopping_cart_item.dart';
@@ -35,6 +41,7 @@ import '../../../../custom_ui/item/detail/component/sticky_bottom/owner_action/o
 import '../../../../custom_ui/item/related_item/component/horizontal/related_product_list_widget.dart';
 import '../../../common/bluemark_icon.dart';
 import '../../../common/dialog/check_item_dialog.dart';
+import '../../../common/dialog/confirm_dialog_view.dart';
 import '../../../common/ps_ui_widget.dart';
 import '../../../sort_widget/ps_dynamic_provider.dart';
 
@@ -211,6 +218,102 @@ class ProductDetailState<T extends ProductDetailView>
         'isSingleItemCheckout': true,
       });
     });
+  }
+
+  void _showReportDialog(BuildContext context) {
+    final ItemDetailProvider? itemDetailProvider =
+        Provider.of<ItemDetailProvider>(context, listen: false);
+    if (itemDetailProvider == null || !itemDetailProvider.hasData) {
+      return;
+    }
+    final Product currentProduct = itemDetailProvider.product;
+    final PsValueHolder psValueHolder =
+        Provider.of<PsValueHolder>(context, listen: false);
+    final String loginUserId = Utils.checkUserLoginId(psValueHolder);
+    if (Utils.isLoginUserEmpty(psValueHolder)) {
+      Navigator.pushNamed(context, RoutePaths.login_container);
+      return;
+    }
+    showDialog<dynamic>(
+      context: context,
+      builder: (BuildContext ctx) => ConfirmDialogView(
+        description: 'item_detail__confirm_dialog_report_item'.tr,
+        leftButtonText: 'dialog__cancel'.tr,
+        rightButtonText: 'item_detail__report_item'.tr,
+        onAgreeTap: () async {
+          await PsProgressDialog.showDialog(context);
+          final UserProvider userProvider =
+              Provider.of<UserProvider>(context, listen: false);
+          final UserReportItemParameterHolder holder =
+              UserReportItemParameterHolder(
+            itemId: currentProduct.id,
+            reportedUserId: loginUserId,
+          );
+          final PsResource<ApiStatus> res =
+              await userProvider.userReportItem(holder.toMap(), loginUserId);
+          await PsProgressDialog.dismissDialog();
+          if (res.status == PsStatus.SUCCESS) {
+            Fluttertoast.showToast(msg: 'Merci. Votre signalement a été envoyé.');
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              RoutePaths.home,
+              (Route<dynamic> route) => false,
+              arguments: true,
+            );
+          } else {
+            Fluttertoast.showToast(msg: res.message);
+          }
+        },
+      ),
+    );
+  }
+
+  void _showBlockDialog(BuildContext context) {
+    final ItemDetailProvider? itemDetailProvider =
+        Provider.of<ItemDetailProvider>(context, listen: false);
+    if (itemDetailProvider == null || !itemDetailProvider.hasData) {
+      return;
+    }
+    final Product currentProduct = itemDetailProvider.product;
+    final PsValueHolder psValueHolder =
+        Provider.of<PsValueHolder>(context, listen: false);
+    final String loginUserId = Utils.checkUserLoginId(psValueHolder);
+    if (Utils.isLoginUserEmpty(psValueHolder)) {
+      Navigator.pushNamed(context, RoutePaths.login_container);
+      return;
+    }
+    showDialog<dynamic>(
+      context: context,
+      builder: (BuildContext ctx) => ConfirmDialogView(
+        description: 'item_detail__confirm_dialog_block_user'.tr,
+        leftButtonText: 'dialog__cancel'.tr,
+        rightButtonText: 'item_detail__block_user'.tr,
+        onAgreeTap: () async {
+          await PsProgressDialog.showDialog(context);
+          final UserProvider userProvider =
+              Provider.of<UserProvider>(context, listen: false);
+          final UserBlockParameterHolder holder = UserBlockParameterHolder(
+            loginUserId: loginUserId,
+            addedUserId: currentProduct.addedUserId,
+          );
+          final PsResource<ApiStatus> res = await userProvider.blockUser(
+            holder.toMap(),
+            loginUserId,
+            psValueHolder.languageCode ?? 'fr',
+          );
+          await PsProgressDialog.dismissDialog();
+          if (res.status == PsStatus.SUCCESS || res.data?.status != null) {
+            Fluttertoast.showToast(msg: 'Utilisateur bloqué avec succès.');
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              RoutePaths.home,
+              (Route<dynamic> route) => false,
+              arguments: true,
+            );
+          } else {
+            Fluttertoast.showToast(msg: res.message);
+          }
+        },
+      ),
+    );
   }
 
   Widget _buildBottomCTA(
@@ -391,6 +494,44 @@ class ProductDetailState<T extends ProductDetailView>
                   ),
                 );
               },
+            ),
+            PopupMenuButton<String>(
+              icon: Icon(
+                Icons.more_vert,
+                size: 22,
+                color: isLight ? const Color(0xFF1F2937) : Colors.white,
+              ),
+              onSelected: (String val) {
+                if (val == 'report') {
+                  _showReportDialog(context);
+                } else if (val == 'block') {
+                  _showBlockDialog(context);
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'report',
+                  child: Row(
+                    children: <Widget>[
+                      const Icon(Icons.flag_outlined,
+                          size: 18, color: Colors.redAccent),
+                      const SizedBox(width: 8),
+                      Text('item_detail__report_item'.tr),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'block',
+                  child: Row(
+                    children: <Widget>[
+                      const Icon(Icons.block_outlined,
+                          size: 18, color: Colors.redAccent),
+                      const SizedBox(width: 8),
+                      Text('item_detail__block_user'.tr),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
