@@ -37,6 +37,7 @@ import '../../../../core/vendor/utils/utils.dart';
 import '../../../../core/vendor/viewobject/common/ps_value_holder.dart';
 import '../../../../core/vendor/viewobject/holder/chat_history_parameter_holder.dart';
 import '../../../../core/vendor/viewobject/holder/intent_holder/product_detail_intent_holder.dart';
+import '../../../../core/vendor/viewobject/holder/intent_holder/user_intent_holder.dart';
 import '../../../../core/vendor/viewobject/holder/product_parameter_holder.dart';
 import '../../../../core/vendor/viewobject/holder/request_path_holder.dart';
 import '../../../../core/vendor/viewobject/holder/subscripe_topic_parameter_holder.dart';
@@ -165,96 +166,85 @@ class _HomeViewState extends State<DashboardView>
     // resumeStateDynamicLinks(context);
   }
 
+  StreamSubscription<Uri>? _linkSubscription;
+  final AppLinks _appLinks = AppLinks();
+
   @override
   void dispose() {
+    _linkSubscription?.cancel();
     animationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  // ignore: deprecated_member_use
-  // FirebaseDynamicLinks dynamicLinks = FirebaseDynamicLinks.instance;
-  // Future<void> resumeStateDynamicLinks(BuildContext context) async {
-  //   String? itemId = '';
+  void _handleDeepLinkUri(Uri uri, BuildContext context) {
+    Utils.psPrint('Handling Deep Link: ');
+    String? itemId;
+    String? profileId;
 
-  //   // ignore: deprecated_member_use
-  //   dynamicLinks.onLink.listen((PendingDynamicLinkData dynamicLinkData) {
-  //     final Uri deepLink = dynamicLinkData.link;
-  //     final Map<String, String> queryParams = deepLink.queryParameters;
-  //     if (queryParams.isNotEmpty) {
-  //       itemId = queryParams['item_id'];
-  //     }
-  //     final ProductDetailIntentHolder holder = ProductDetailIntentHolder(
-  //         productId: itemId,
-  //         heroTagImage: '-1' + itemId! + PsConst.HERO_TAG__IMAGE,
-  //         heroTagTitle: '-1' + itemId! + PsConst.HERO_TAG__TITLE);
-  //     Navigator.popUntil(context, (Route<dynamic> route) {
-  //       if (route.settings.name == RoutePaths.productDetail) {
-  //         return false;
-  //       } else {
-  //         Navigator.pushNamed(context, RoutePaths.productDetail,
-  //             arguments: holder);
-  //         return true;
-  //       }
-  //     });
-  //   }).onError((dynamic e) {
-  //     print('=>error$e');
-  //   });
-  //   // ignore: deprecated_member_use
-  //   FirebaseDynamicLinks.instance.onLink;
-  // }
-  final AppLinks _appLinks = AppLinks();
-  // Future<void> resumeStateDynamicLinks(BuildContext context) async {
-  //   String? itemId = '';
-  //   // Listen for incoming deep links
-  //   _appLinks.uriLinkStream.listen((Uri deepLink) {
-  //     final Map<String, String> queryParams = deepLink.queryParameters;
-  //     if (queryParams.isNotEmpty) {
-  //       itemId = queryParams['item_id'];
-  //     }
-
-  //     if(itemId != '') {
-  //       final ProductDetailIntentHolder holder = ProductDetailIntentHolder(
-  //         productId: itemId,
-  //         heroTagImage: '-1' + itemId! + PsConst.HERO_TAG__IMAGE,
-  //         heroTagTitle: '-1' + itemId! + PsConst.HERO_TAG__TITLE,
-  //       );
-
-  //       Navigator.pushNamed(context, RoutePaths.productDetail,
-  //           arguments: holder);
-    
-  //     }
-
-  //   }).onError((dynamic e) {
-  //     print('Error: $e');
-  //   });
-  // }
-
-  Future<void> initDynamicLinks(BuildContext context) async {
-    try {
-      String? itemId = '';
-      final Uri? deepLinks = await _appLinks.getLatestLink().timeout(const Duration(seconds: 3));
-      if (deepLinks != null) {
-        final Map<String, String> queryParameters = deepLinks.queryParameters;
-        if (queryParameters.isNotEmpty) {
-          itemId = queryParameters['item_id'];
-          if (itemId == null || itemId == '') {
-            return;
-          }
-          final ProductDetailIntentHolder holder = ProductDetailIntentHolder(
-              productId: itemId,
-              heroTagImage: '-1' + itemId + PsConst.HERO_TAG__IMAGE,
-              heroTagTitle: '-1' + itemId + PsConst.HERO_TAG__TITLE);
-          Navigator.pushNamed(context, RoutePaths.productDetail,
-              arguments: holder);
-        }
+    // Check custom scheme dressy://item/123 or dressy://profile/456
+    if (uri.scheme == 'dressy') {
+      if (uri.host == 'item') {
+        itemId = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+      } else if (uri.host == 'profile') {
+        profileId = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
       }
-    } catch (e) {
-      Utils.psPrint('Error in initDynamicLinks: $e');
+    }
+
+    // Check universal web link: https://dressy-dz.com/item/123 or https://dressy-dz.com/profile/456
+    final List<String> segments = uri.pathSegments;
+    if (segments.isNotEmpty) {
+      if (segments[0] == 'item' && segments.length > 1) {
+        itemId = segments[1];
+      } else if (segments[0] == 'profile' && segments.length > 1) {
+        profileId = segments[1];
+      }
+    }
+
+    // Fallback: query parameters
+    if (itemId == null || itemId.isEmpty) {
+      itemId = uri.queryParameters['item_id'];
+    }
+
+    if (itemId != null && itemId.isNotEmpty) {
+      final ProductDetailIntentHolder holder = ProductDetailIntentHolder(
+        productId: itemId,
+        heroTagImage: '-1' + itemId + PsConst.HERO_TAG__IMAGE,
+        heroTagTitle: '-1' + itemId + PsConst.HERO_TAG__TITLE,
+      );
+      Navigator.pushNamed(context, RoutePaths.productDetail, arguments: holder);
+    } else if (profileId != null && profileId.isNotEmpty) {
+      Navigator.pushNamed(
+        context,
+        RoutePaths.userDetail,
+        arguments: UserIntentHolder(userId: profileId, userName: ''),
+      );
     }
   }
 
-    // if (!isResumed) {
+  Future<void> initDynamicLinks(BuildContext context) async {
+    try {
+      final Uri? initialUri = await _appLinks.getInitialLink();
+      if (initialUri != null) {
+        _handleDeepLinkUri(initialUri, context);
+      }
+    } catch (e) {
+      Utils.psPrint('Error getInitialLink: ');
+    }
+
+    try {
+      _linkSubscription?.cancel();
+      _linkSubscription = _appLinks.uriLinkStream.listen((Uri uri) {
+        _handleDeepLinkUri(uri, context);
+      }, onError: (dynamic err) {
+        Utils.psPrint('Error in uriLinkStream: ');
+      });
+    } catch (e) {
+      Utils.psPrint('Error listening to uriLinkStream: ');
+    }
+  }
+
+  // if (!isResumed) {
     // ignore: prefer_final_locals
     // final PendingDynamicLinkData? data =
     //     // ignore: deprecated_member_use
@@ -532,13 +522,15 @@ class _HomeViewState extends State<DashboardView>
                   create: (BuildContext context) {
                     addToCartProvider = AddToCartProvider(context: context);
 
-                    addToCartProvider.loadData(
-                        dataConfig: DataConfiguration(
-                            dataSourceType: DataSourceType.SERVER_DIRECT),
-                        requestPathHolder: RequestPathHolder(
-                            isCheckoutPage: PsConst.ZERO,
-                            loginUserId: psValueHolder?.loginUserId,
-                            languageCode: psValueHolder?.languageCode));
+                    if (!Utils.isLoginUserEmpty(psValueHolder)) {
+                      addToCartProvider.loadData(
+                          dataConfig: DataConfiguration(
+                              dataSourceType: DataSourceType.SERVER_DIRECT),
+                          requestPathHolder: RequestPathHolder(
+                              isCheckoutPage: PsConst.ZERO,
+                              loginUserId: psValueHolder?.loginUserId,
+                              languageCode: psValueHolder?.languageCode));
+                    }
                     return addToCartProvider;
                   }),
             ],

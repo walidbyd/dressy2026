@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../../../config/ps_colors.dart';
 import '../../../../../../config/ps_config.dart';
@@ -752,6 +753,22 @@ class _UserShoreDetailViewState extends State<UserVendorDetailView>
                 child: Scaffold(
                   appBar: PsAppbarWidget(
                     appBarTitle: widget.vendorUserName ?? '',
+                    actionWidgets: <Widget>[
+                      IconButton(
+                        icon: const Icon(Icons.share_outlined, size: 22),
+                        tooltip: 'share_profile'.tr,
+                        onPressed: () {
+                          final String vendorUrl =
+                              'https://dressy-dz.com/profile/${widget.vendorId ?? ''}';
+                          SharePlus.instance.share(
+                            ShareParams(
+                              text:
+                                  '${widget.vendorUserName ?? 'Dressy'}\n$vendorUrl',
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   body: NestedScrollView(
                     controller: scrollController,

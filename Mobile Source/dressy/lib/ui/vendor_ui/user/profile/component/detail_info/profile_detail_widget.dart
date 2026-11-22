@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../../../config/ps_colors.dart';
 import '../../../../../../config/route/route_paths.dart';
-import '../../../../../../core/vendor/constant/ps_constants.dart';
 import '../../../../../../core/vendor/constant/ps_dimens.dart';
 import '../../../../../../core/vendor/provider/language/app_localization_provider.dart';
 import '../../../../../../core/vendor/provider/story/story_provider.dart';
@@ -15,15 +15,8 @@ import '../../../../../../core/vendor/viewobject/common/ps_value_holder.dart';
 import '../../../../../../core/vendor/viewobject/holder/intent_holder/item_list_intent_holder.dart';
 import '../../../../../../core/vendor/viewobject/user.dart';
 import '../../../../../../core/vendor/viewobject/vendor_story.dart';
-import '../../../../../custom_ui/user/profile/component/detail_info/widgets/bluemark_info.dart';
-import '../../../../../custom_ui/user/profile/component/detail_info/widgets/follower_count.dart';
-import '../../../../../custom_ui/user/profile/component/detail_info/widgets/following_count.dart';
-import '../../../../../custom_ui/user/profile/component/detail_info/widgets/join_date_widget.dart';
-import '../../../../../custom_ui/user/profile/component/detail_info/widgets/own_item_count.dart';
-import '../../../../../custom_ui/user/profile/component/detail_info/widgets/post_left_count.dart';
-import '../../../../../custom_ui/user/profile/component/detail_info/widgets/profile_photo.dart';
-import '../../../../../custom_ui/user/profile/component/detail_info/widgets/rating_widget.dart';
 import '../../../../common/bluemark_icon.dart';
+import '../../../../common/ps_ui_widget.dart';
 
 class ProfileDetailWidget extends StatefulWidget {
   const ProfileDetailWidget(
@@ -61,12 +54,7 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
     final PsValueHolder psValueHolder =
         Provider.of<PsValueHolder>(context, listen: false);
     animation = curveAnimation(widget.animationController!);
-    const Widget _dividerWidget = Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.0),
-      child: Divider(
-        height: 1,
-      ),
-    );
+
 
     return SliverToBoxAdapter(
       child: Consumer2<UserProvider, StoryProvider>(builder:
@@ -80,107 +68,113 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
               animation: widget.animationController!,
               child: Column(
                 children: <Widget>[
-                  const SizedBox(height: PsDimens.space8),
-                  CustomProfilePhoto(),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      top: PsDimens.space6,
-                    ),
-                    child: Column(
-                      //crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: <Widget>[
-                            Flexible(
-                              child: Text(
-                                provider.user.data!.name ?? '',
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (user.isVefifiedBlueMarkUser)
-                              const BluemarkIcon(icon: Icons.verified_user),
-                            const SizedBox(width: 8.0),
-                            InkWell(
-                              onTap: () {
-                                Navigator.pushNamed(
-                                    context, RoutePaths.ratingList,
-                                    arguments: user.userId);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8.0, vertical: 3.0),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFAF7F2),
-                                  border: Border.all(
-                                      color: const Color(0xFFE0D8CE)),
-                                  borderRadius: BorderRadius.circular(16.0),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    const Icon(Icons.star_rounded,
-                                        size: 16.0, color: Color(0xFFFFB800)),
-                                    const SizedBox(width: 3.0),
-                                    Text(
-                                      (user.overallRating != null &&
-                                              user.overallRating!.isNotEmpty &&
-                                              user.overallRating != '0')
-                                          ? (double.tryParse(user.overallRating!)
-                                                  ?.toStringAsFixed(1) ??
-                                              user.overallRating!)
-                                          : '4.9',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: const Color(0xFF2D2D2D),
-                                            fontSize: 12.0,
-                                          ),
-                                    ),
-                                  ],
+                  const SizedBox(height: PsDimens.space12),
+                  // Centered Avatar with #ED7768 accent ring
+                  Center(
+                    child: Container(
+                      width: 86.0,
+                      height: 86.0,
+                      padding: const EdgeInsets.all(2.5),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFED7768),
+                          width: 2.5,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: (user.userCoverPhoto != null &&
+                                user.userCoverPhoto!.isNotEmpty)
+                            ? PsNetworkCircleImageForUser(
+                                photoKey: '',
+                                imagePath: user.userCoverPhoto,
+                                width: 80.0,
+                                height: 80.0,
+                                boxfit: BoxFit.cover,
+                                onTap: () {},
+                              )
+                            : CircleAvatar(
+                                backgroundColor: const Color(0xFFFDEEEB),
+                                child: Text(
+                                  user.name?.isNotEmpty == true
+                                      ? user.name![0].toUpperCase()
+                                      : 'D',
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFED7768),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        Visibility(
-                          visible: false,
-                          maintainState: true,
-                          child: CustomRatingWidget(
-                            user: provider.user.data,
-                            starCount: 5,
-                          ),
-                        ),
-                        const CustomJoinDateWidget(),
-                        if (!user.isVefifiedBlueMarkUser)
-                          const CustomBluemarkInfoWidget(),
-                      ],
+                      ),
                     ),
                   ),
-                  // Storefront 4 Tappable Counters
+                  const SizedBox(height: 10),
+                  // Display Name & Verified Badge
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Flexible(
+                        child: Text(
+                          user.name ?? '',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 19,
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (user.isVefifiedBlueMarkUser) ...<Widget>[
+                        const SizedBox(width: 4.0),
+                        const BluemarkIcon(),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  // Membre depuis pill
+                  if (user.addedDate != null && user.addedDate!.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10.0, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: Utils.isLightMode(context)
+                            ? const Color(0xFFF3F4F6)
+                            : const Color(0xFF374151),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Membre depuis ${user.addedDate}',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: Utils.isLightMode(context)
+                              ? PsColors.text600
+                              : PsColors.text300,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  // Unified 4-Column Stats Card
                   Container(
                     margin: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 12.0),
+                        horizontal: 16.0, vertical: 4.0),
                     padding: const EdgeInsets.symmetric(
-                        vertical: 4.0, horizontal: 8.0),
+                        vertical: 8.0, horizontal: 8.0),
                     decoration: BoxDecoration(
                       color: Utils.isLightMode(context)
                           ? const Color(0xFFFAF7F2)
-                          : Colors.black12,
-                      borderRadius: BorderRadius.circular(16.0),
+                          : PsColors.achromatic800,
+                      borderRadius: BorderRadius.circular(14.0),
                       border: Border.all(
                         color: Utils.isLightMode(context)
                             ? const Color(0xFFEBE5DC)
-                            : Colors.white10,
+                            : PsColors.achromatic700,
                       ),
                     ),
                     child: Row(
@@ -236,8 +230,14 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
                                 : Colors.white24),
                         _buildStorefrontCounter(
                           context,
-                          count: user.ratingCount ?? '0',
-                          label: 'vendor_reviews'.tr,
+                          count: (user.overallRating != null &&
+                                  user.overallRating!.isNotEmpty &&
+                                  user.overallRating != '0')
+                              ? '${double.tryParse(user.overallRating!)?.toStringAsFixed(1) ?? user.overallRating!} ★'
+                              : (user.ratingCount != null && user.ratingCount != '0'
+                                  ? user.ratingCount!
+                                  : '5.0 ★'),
+                          label: 'Avis ★',
                           onTap: () {
                             Navigator.pushNamed(
                                 context, RoutePaths.ratingList,
@@ -247,24 +247,9 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
                       ],
                     ),
                   ),
-                  // Preserved original counter row (hidden cleanly)
-                  Visibility(
-                    visible: false,
-                    maintainState: true,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        if (psValueHolder.isPaidApp == PsConst.ONE)
-                          CustomPostLeftInfo(),
-                        CustomOwnerItemCountInfo(),
-                        CustomFollowerCount(),
-                        CustomFollowingCount(),
-                      ],
-                    ),
-                  ),
+                  const SizedBox(height: 6),
                   _buildStoriesSection(
                       context, storyProvider, user, psValueHolder),
-                  _dividerWidget,
                 ],
               ),
               builder: (BuildContext context, Widget? child) {

@@ -14,6 +14,8 @@ import '../../../../core/vendor/utils/story_filter_helper.dart';
 import '../../../../core/vendor/viewobject/common/ps_value_holder.dart';
 import '../../../../core/vendor/viewobject/default_photo.dart';
 import '../../../../core/vendor/viewobject/holder/intent_holder/product_detail_intent_holder.dart';
+import '../../../../core/vendor/viewobject/holder/intent_holder/user_intent_holder.dart';
+import '../../../../core/vendor/viewobject/holder/intent_holder/vendor_user_intent_holder.dart';
 import '../../../../core/vendor/viewobject/vendor_story.dart';
 import '../common/ps_ui_widget.dart';
 
@@ -57,6 +59,42 @@ class _StoryViewerVieState extends State<StoryViewerView>
     _videoController = null;
     if (mounted) {
       Navigator.pop(context, true);
+    }
+  }
+
+  void _navigateToProfile(VendorStory story, String displayName) {
+    if (_isClosing) {
+      return;
+    }
+    _isClosing = true;
+    _animController.stop();
+    _videoController?.pause();
+    _videoController?.dispose();
+    _videoController = null;
+
+    if (story.vendorId != null && story.vendorId!.isNotEmpty) {
+      Navigator.pushReplacementNamed(
+        context,
+        RoutePaths.userVendorDetail,
+        arguments: VendorUserIntentHolder(
+          vendorId: story.vendorId,
+          vendorUserId: story.userId ?? '',
+          vendorUserName: displayName,
+        ),
+      );
+    } else if (story.userId != null && story.userId!.isNotEmpty) {
+      Navigator.pushReplacementNamed(
+        context,
+        RoutePaths.userDetail,
+        arguments: UserIntentHolder(
+          userId: story.userId,
+          userName: displayName,
+        ),
+      );
+    } else {
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
     }
   }
 
@@ -645,52 +683,61 @@ class _StoryViewerVieState extends State<StoryViewerView>
                     // User / Vendor Header Row
                     Row(
                       children: <Widget>[
-                        // Logo Avatar with Warm Coral Ring
-                        Container(
-                          width: 40,
-                          height: 40,
-                          padding: const EdgeInsets.all(2.0),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: <Color>[
-                                Color(0xFFED7768),
-                                Color(0xFFF4A261),
-                              ],
-                            ),
-                          ),
-                          child: ClipOval(
-                            child: _buildAvatar(currentStory),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-
-                        // Name & Time
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              Text(
-                                displayName,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (currentStory.timeAgo != null &&
-                                  currentStory.timeAgo!.isNotEmpty)
-                                Text(
-                                  currentStory.timeAgo!,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 11,
+                          child: InkWell(
+                            onTap: () => _navigateToProfile(currentStory, displayName),
+                            child: Row(
+                              children: <Widget>[
+                                // Logo Avatar with Warm Coral Ring
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  padding: const EdgeInsets.all(2.0),
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      colors: <Color>[
+                                        Color(0xFFED7768),
+                                        Color(0xFFF4A261),
+                                      ],
+                                    ),
+                                  ),
+                                  child: ClipOval(
+                                    child: _buildAvatar(currentStory),
                                   ),
                                 ),
-                            ],
+                                const SizedBox(width: 10),
+
+                                // Name & Time
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      Text(
+                                        displayName,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (currentStory.timeAgo != null &&
+                                          currentStory.timeAgo!.isNotEmpty)
+                                        Text(
+                                          currentStory.timeAgo!,
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
 

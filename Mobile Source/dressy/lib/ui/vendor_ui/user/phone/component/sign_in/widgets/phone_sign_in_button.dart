@@ -45,7 +45,10 @@ class __SendButtonWidgetState extends State<PhoneSignInButton> {
 
       final String userNameToPass =
           widget.isSignUp ? widget.nameController.text.trim() : '';
-      final String purePhone = widget.phoneController.text.trim();
+      String purePhone = widget.phoneController.text.trim().replaceAll(RegExp(r'\D'), '');
+      if (purePhone.startsWith('0')) {
+        purePhone = purePhone.substring(1);
+      }
 
       if (widget.phoneSignInSelected != null) {
         widget.phoneSignInSelected!(
@@ -79,9 +82,12 @@ class __SendButtonWidgetState extends State<PhoneSignInButton> {
             );
           });
     };
+    String sendPhone = widget.phoneController.text.trim().replaceAll(RegExp(r'\D'), '');
+    if (sendPhone.startsWith('0')) {
+      sendPhone = sendPhone.substring(1);
+    }
     await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber:
-            provider!.selectedCountryCode + widget.phoneController.text,
+        phoneNumber: '+213' + sendPhone,
         codeAutoRetrievalTimeout: autoRetrieve,
         codeSent: smsCodeSent,
         timeout: const Duration(minutes: 2),
@@ -146,18 +152,21 @@ class __SendButtonWidgetState extends State<PhoneSignInButton> {
                           return;
                         }
 
-                        final String digitsOnly =
+                        String digitsOnly =
                             purePhone.replaceAll(RegExp(r'\D'), '');
-                        if (digitsOnly.length < 8) {
+                        if (digitsOnly.startsWith('0')) {
+                          digitsOnly = digitsOnly.substring(1);
+                        }
+                        if (digitsOnly.length != 9 || !RegExp(r'^[567]\d{8}$').hasMatch(digitsOnly)) {
                           callWarningDialog(
-                              context, 'phone_number_invalid'.tr);
+                              context, 'phone_number_algeria_invalid'.tr);
                           return;
                         }
 
                         await PsProgressDialog.showDialog(context);
 
                         final String fullFormattedPhone =
-                            provider!.selectedCountryCode + '-' + purePhone;
+                            provider!.selectedCountryCode + '-' + digitsOnly;
                         final Map<String, dynamic> checkMap =
                             <String, dynamic>{
                           'loginMethod': 'phone',

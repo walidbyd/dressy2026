@@ -1217,4 +1217,127 @@ Route::get('/terms', function () {
     return redirect('/terms-and-conditions');
 })->name('public.terms');
 
+// Universal Deep-Link Endpoints & Web Fallbacks
+Route::get('/.well-known/assetlinks.json', function () {
+    $path = public_path('.well-known/assetlinks.json');
+    if (file_exists($path)) {
+        return response()->file($path, ['Content-Type' => 'application/json']);
+    }
+    return response()->json([
+        [
+            'relation' => ['delegate_permission/common.handle_all_urls'],
+            'target' => [
+                'namespace' => 'android_app',
+                'package_name' => 'com.dressy.app',
+                'sha256_cert_fingerprints' => [
+                    'FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C'
+                ]
+            ]
+        ]
+    ]);
+});
+
+Route::get('/.well-known/apple-app-site-association', function () {
+    $path = public_path('.well-known/apple-app-site-association');
+    if (file_exists($path)) {
+        return response()->file($path, ['Content-Type' => 'application/json']);
+    }
+    return response()->json([
+        'applinks' => [
+            'apps' => [],
+            'details' => [
+                [
+                    'appID' => '8282564142.com.dressy.app',
+                    'paths' => ['/item/*', '/profile/*']
+                ]
+            ]
+        ]
+    ]);
+});
+
+Route::get('/item/{id}', function ($id) {
+    $item = \Illuminate\Support\Facades\DB::table('psx_items')->where('id', $id)->first();
+    if (!$item) {
+        return redirect('/');
+    }
+
+    $image = \Illuminate\Support\Facades\DB::table('psx_core_images')
+        ->where('img_parent_id', $id)
+        ->where('img_type', 'item')
+        ->first();
+
+    $imageUrl = $image ? asset('storage/' . $image->img_path) : asset('LOGO_DRESSY_APP.png');
+
+    // Get seller info
+    $sellerName = null;
+    $sellerAvatar = asset('LOGO_DRESSY_APP.png');
+    $location = null;
+
+    if (!empty($item->vendor_id) && $item->vendor_id != '0') {
+        $vendor = \Illuminate\Support\Facades\DB::table('psx_vendors')->where('id', $item->vendor_id)->first();
+        if ($vendor) {
+            $sellerName = $vendor->name;
+            $location = $vendor->address;
+            $vendorLogo = \Illuminate\Support\Facades\DB::table('psx_core_images')
+                ->where('img_parent_id', $vendor->id)
+                ->where('img_type', 'vendor-logo')
+                ->first();
+            if ($vendorLogo) {
+                $sellerAvatar = asset('storage/' . $vendorLogo->img_path);
+            }
+        }
+    }
+
+    if (!$sellerName && !empty($item->added_user_id)) {
+        $user = \Illuminate\Support\Facades\DB::table('users')->where('id', $item->added_user_id)->first();
+        if ($user) {
+            $sellerName = $user->name;
+            if (!empty($user->user_profile_photo)) {
+                $sellerAvatar = asset('storage/' . $user->user_profile_photo);
+            }
+        }
+    }
+
+    if (!empty($item->item_location_id)) {
+        $loc = \Illuminate\Support\Facades\DB::table('psx_item_locations')->where('id', $item->item_location_id)->first();
+        if ($loc) {
+            $location = $loc->name;
+        }
+    }
+
+    return view('preview.item', compact('item', 'imageUrl', 'sellerName', 'sellerAvatar', 'location'));
+})->name('public.item.preview');
+
+Route::get('/profile/{id}', function ($id) {
+    // Check if vendor first
+    $vendor = \Illuminate\Support\Facades\DB::table('psx_vendors')->where('id', $id)->first();
+    if ($vendor) {
+        $name = $vendor->name;
+        $location = $vendor->address ?? 'Algérie';
+        $logo = \Illuminate\Support\Facades\DB::table('psx_core_images')
+            ->where('img_parent_id', $vendor->id)
+            ->where('img_type', 'vendor-logo')
+            ->first();
+        $avatarUrl = $logo ? asset('storage/' . $logo->img_path) : asset('LOGO_DRESSY_APP.png');
+        $itemCount = \Illuminate\Support\Facades\DB::table('psx_items')->where('vendor_id', $vendor->id)->where('status', 1)->count();
+        $followers = 0;
+        $rating = '5.0';
+        return view('preview.profile', compact('id', 'name', 'location', 'avatarUrl', 'itemCount', 'followers', 'rating'));
+    }
+
+    // Check user
+    $user = \Illuminate\Support\Facades\DB::table('users')->where('id', $id)->first();
+    if ($user) {
+        $name = $user->name;
+        $location = $user->user_address ?? 'Algérie';
+        $avatarUrl = !empty($user->user_profile_photo) ? asset('storage/' . $user->user_profile_photo) : asset('LOGO_DRESSY_APP.png');
+        $itemCount = \Illuminate\Support\Facades\DB::table('psx_items')->where('added_user_id', $user->id)->where('status', 1)->count();
+        $followers = $user->follower_count ?? 0;
+        $rating = !empty($user->overall_rating) ? $user->overall_rating : '5.0';
+        return view('preview.profile', compact('id', 'name', 'location', 'avatarUrl', 'itemCount', 'followers', 'rating'));
+    }
+
+    return redirect('/');
+})->name('public.profile.preview');
+
 Route::get('/{shortCode}', [DynamicLinkController::class, 'redirect'])->name('shortcode');

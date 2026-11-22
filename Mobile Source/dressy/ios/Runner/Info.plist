@@ -52,6 +52,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.dressy.app.app</string>
+				<string>dressy</string>
 			</array>
 		</dict>
 		<dict>

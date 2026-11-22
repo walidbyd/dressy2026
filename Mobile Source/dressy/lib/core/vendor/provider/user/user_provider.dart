@@ -213,7 +213,7 @@ class UserProvider extends PsProvider<User> {
 
     isConnectedToInternet = await Utils.checkInternetConnectivity();
 
-    return await _repo!.postUserImageUpload(
+    final dynamic resource = await _repo!.postUserImageUpload(
         userId,
         psValueHolder!.headerToken!,
         platformName,
@@ -221,6 +221,16 @@ class UserProvider extends PsProvider<User> {
         isConnectedToInternet,
         PsStatus.PROGRESS_LOADING,
         languageCode);
+
+    isLoading = false;
+    if (resource is PsResource<User> && resource.status == PsStatus.SUCCESS && resource.data != null) {
+      user.data = resource.data;
+      super.data = resource;
+      dataStreamController?.add(resource);
+      notifyListeners();
+    }
+
+    return resource;
   }
 
   Future<dynamic> postForgotPassword(

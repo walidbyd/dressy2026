@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../../../../../../config/route/route_paths.dart';
 
 import '../../../../../../core/vendor/provider/category/category_provider.dart';
 import '../../../../../../core/vendor/provider/chat/user_unread_message_provider.dart';
@@ -156,6 +159,32 @@ class _ProfilePageState extends State<ProfileView>
                 onPressed: () => widget.scaffoldKey.currentState?.openDrawer(),
               )),
               actionWidgets: <Widget>[
+                IconButton(
+                  icon: const Icon(Icons.share_outlined, size: 22),
+                  tooltip: 'share_profile'.tr,
+                  onPressed: () {
+                    final String shareUserId =
+                        psValueHolder?.loginUserId ?? widget.userId ?? '';
+                    final String profileUrl =
+                        'https://dressy-dz.com/profile/$shareUserId';
+                    SharePlus.instance.share(
+                      ShareParams(
+                        text: 'Découvrez mon dressing sur Dressy !\n$profileUrl',
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 22),
+                  tooltip: 'edit_profile__title'.tr,
+                  onPressed: () async {
+                    final dynamic result = await Navigator.pushNamed(
+                        context, RoutePaths.editProfile);
+                    if (result == true) {
+                      widget.loadUserData(psValueHolder?.loginUserId);
+                    }
+                  },
+                ),
                 ProfilePopUpWidget(
                   callLogout: widget.callLogoutCallBack,
                   onDeactivate: widget.onDeactivate,

@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "8282564142.com.dressy.app",
+        "paths": [
+          "/item/*",
+          "/profile/*"
+        ]
+      }
+    ]
+  }
+}

@@ -68,6 +68,11 @@ class CartApiController extends Controller
 
     public function getAllItemFromCart(Request $request)
     {
+        if (empty($request->login_user_id) || $request->login_user_id === 'nologinuser') {
+            $msg = __('core__api_record_not_found', [], $request->language_symbol);
+            return responseMsgApi($msg, Constants::noContentStatusCode);
+        }
+
         // prepare validation
         $validator = Validator::make($request->all(), [
             'login_user_id' => 'required',

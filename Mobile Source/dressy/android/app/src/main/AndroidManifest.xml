@@ -75,12 +75,23 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
-            <intent-filter>
+            <!-- Universal App Links -->
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:host="https://www.panacea-soft.com" android:scheme="http" />
-                <data android:host="https://www.panacea-soft.com" android:scheme="https" />
+                <data android:scheme="https" android:host="dressy-dz.com" android:pathPrefix="/item" />
+                <data android:scheme="https" android:host="dressy-dz.com" android:pathPrefix="/profile" />
+                <data android:scheme="https" android:host="www.dressy-dz.com" android:pathPrefix="/item" />
+                <data android:scheme="https" android:host="www.dressy-dz.com" android:pathPrefix="/profile" />
+            </intent-filter>
+
+            <!-- Custom URI Scheme dressy:// -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="dressy" />
             </intent-filter>
            
             <intent-filter>

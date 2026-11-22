@@ -61,6 +61,7 @@ class _EditProfileViewState extends State<EditProfileView>
   // final TextEditingController idTextController = TextEditingController();
 
   bool bindDataFirstTime = true;
+  bool _isSaving = false;
   late AppLocalization langProvider;
   List<CustomField> customFieldList = <CustomField>[];
 
@@ -407,6 +408,9 @@ class _EditProfileViewState extends State<EditProfileView>
   }
 
   dynamic onTapSave(BuildContext context, UserProvider provider) async {
+    if (_isSaving) {
+      return;
+    }
     const String userWhatsapp = 'ps-usr00012';
     bool hasCountryCode(String number) {
       return RegExp(r'^\+\d{2,}').hasMatch(number);
@@ -434,6 +438,23 @@ class _EditProfileViewState extends State<EditProfileView>
       final bool hasPhone = (provider.user.data?.userPhone != null &&
               provider.user.data!.userPhone!.isNotEmpty) ||
           purePhoneNum.isNotEmpty;
+
+      if (purePhoneNum.isNotEmpty) {
+        String digits = purePhoneNum.replaceAll(RegExp(r'\D'), '');
+        if (digits.startsWith('0')) {
+          digits = digits.substring(1);
+        }
+        if (digits.length != 9 || !RegExp(r'^[567]\d{8}$').hasMatch(digits)) {
+          showDialog<dynamic>(
+              context: context,
+              builder: (BuildContext context) {
+                return ErrorDialog(
+                  message: 'phone_number_algeria_invalid'.tr,
+                );
+              });
+          return;
+        }
+      }
       if (trimmedEmail.isNotEmpty && (Utils.checkEmailFormat(trimmedEmail) != true)) {
         showDialog<dynamic>(
             context: context,
@@ -480,6 +501,7 @@ class _EditProfileViewState extends State<EditProfileView>
           isShowPhone: '0',
           userRelation: userProvider?.userRelationList ?? <EditProfileUserRelation>[],
         );
+        _isSaving = true;
         await PsProgressDialog.showDialog(context);
         try {
           final PsResource<User> _apiStatus = await provider.postProfileUpdate(
@@ -488,6 +510,9 @@ class _EditProfileViewState extends State<EditProfileView>
               langProvider.currentLocale.languageCode);
           if (PsProgressDialog.isShowing()) {
             await PsProgressDialog.dismissDialog();
+          }
+          if (!mounted) {
+            return;
           }
           if (_apiStatus.data != null) {
             provider.data = _apiStatus;
@@ -508,34 +533,37 @@ class _EditProfileViewState extends State<EditProfileView>
                 builder: (BuildContext contet) {
                   return SuccessDialog(
                     message: 'edit_profile__success'.tr,
-                    onPressed: () {
-                      Navigator.pop(context, true);
-                    },
                   );
                 });
-            if (context.mounted) {
+            if (mounted) {
               Navigator.pop(context, true);
             }
           } else {
-            showDialog<dynamic>(
-                context: context,
-                builder: (BuildContext context) {
-                  return ErrorDialog(
-                    message: _apiStatus.message,
-                  );
-                });
+            if (mounted) {
+              showDialog<dynamic>(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return ErrorDialog(
+                      message: _apiStatus.message,
+                    );
+                  });
+            }
           }
         } catch (e) {
           if (PsProgressDialog.isShowing()) {
             await PsProgressDialog.dismissDialog();
           }
-          showDialog<dynamic>(
-              context: context,
-              builder: (BuildContext context) {
-                return ErrorDialog(
-                  message: e.toString(),
-                );
-              });
+          if (mounted) {
+            showDialog<dynamic>(
+                context: context,
+                builder: (BuildContext context) {
+                  return ErrorDialog(
+                    message: e.toString(),
+                  );
+                });
+          }
+        } finally {
+          _isSaving = false;
         }
       } else {
         showDialog<dynamic>(

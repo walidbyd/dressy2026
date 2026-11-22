@@ -343,8 +343,10 @@ class ItemApiController extends PsApiController
 
             if ($validatedData['status'] == 'disable') {
                 $paidItemHistory = $this->paidItemHistoryService->get(itemId: $itemId);
-                $paidItemHistoryData = $this->preparePaidItemHistoryStatusData();
-                $this->paidItemHistoryService->update($paidItemHistory->id, $paidItemHistoryData);
+                if (!empty($paidItemHistory) && isset($paidItemHistory->id)) {
+                    $paidItemHistoryData = $this->preparePaidItemHistoryStatusData();
+                    $this->paidItemHistoryService->update($paidItemHistory->id, $paidItemHistoryData);
+                }
             }
 
             $itemObj->status = $status;
