@@ -472,4 +472,13 @@ Route::prefix('chabit')->controller(\App\Http\Controllers\Api\V1_0\ChabitApiCont
     Route::post('/threads/{id}/language', 'setLanguage')->name('chabit.threads.language');
 });
 
+// 24-Hour Seller Stories API
+Route::prefix('stories')->controller(\App\Http\Controllers\Api\V1_0\StoryApiController::class)->group(function () {
+    Route::get('/feed', 'feed')->name('stories.feed');
+    Route::post('/upload', 'upload')->name('stories.upload');
+    Route::post('/{id}/view', 'view')->name('stories.view');
+    Route::delete('/{id}', 'destroy')->name('stories.destroy');
+    Route::get('/user/{userId}', 'userStories')->name('stories.user');
+});
+
 // Route::prefix('generate/short_code',);

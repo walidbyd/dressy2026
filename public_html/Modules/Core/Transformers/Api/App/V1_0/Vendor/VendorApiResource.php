@@ -133,6 +133,26 @@ class VendorApiResource extends JsonResource
 
         $isOwner = !empty($loginUserId) && $loginUserId != 'nologinuser' && (string)$loginUserId === (string)$ownerId;
 
+        $activeStories = [];
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('psx_vendor_stories')) {
+                $activeStories = \App\Models\VendorStory::where(function ($q) use ($ownerId, $vendorId) {
+                    if ($vendorId) {
+                        $q->where('vendor_id', $vendorId);
+                    }
+                    if ($ownerId) {
+                        $q->orWhere('user_id', $ownerId);
+                    }
+                })
+                ->where('expires_at', '>', Carbon::now())
+                ->with(['user', 'vendor.logo', 'item.defaultPhoto', 'item.itemCurrency'])
+                ->orderBy('created_at', 'asc')
+                ->get();
+            }
+        } catch (\Throwable $e) {
+            $activeStories = [];
+        }
+
         return [
             'id' => checkAndGetValue($this, 'id'),
             'owner_user_id' => checkAndGetValue($this, 'owner_user_id'),
@@ -163,6 +183,9 @@ class VendorApiResource extends JsonResource
             'is_empty_object' => checkAndGetValue($this, 'id', 1),
             'updated_flag' => checkAndGetValue($this, 'updated_flag'),
             'vendorRelation' => VendorInfoApiResource::collection($this->vendorInfo ?? []),
+            'active_stories_count' => count($activeStories),
+            'has_active_stories' => count($activeStories) > 0,
+            'stories' => \App\Http\Resources\StoryApiResource::collection($activeStories),
         ];
     }
 }

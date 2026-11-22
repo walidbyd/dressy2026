@@ -179,4 +179,6 @@ class RoutePaths {
   static const String sellerOrderDetail = '/sellerOrderDetail';
   static const String sellerTransactions = '/sellerTransactions';
   static const String wallet = '/wallet';
+  static const String storyComposer = '/storyComposer';
+  static const String storyViewer = '/storyViewer';
 }

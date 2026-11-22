@@ -36,6 +36,7 @@ import '../../core/vendor/viewobject/noti.dart';
 import '../../core/vendor/viewobject/product.dart';
 import '../../core/vendor/viewobject/ps_app_info.dart';
 import '../../core/vendor/viewobject/shopping_cart_item.dart';
+import '../../core/vendor/viewobject/vendor_story.dart';
 import '../../ui/custom_ui/add_to_cart/view/add_to_cart_view.dart';
 import '../../ui/custom_ui/all_search/view/search_history_list_containter_view.dart';
 import '../../ui/custom_ui/app_info/view/app_info_view.dart';
@@ -155,6 +156,8 @@ import '../../ui/vendor_ui/checkout/component/shipping_address/shipping_country_
 import '../../ui/vendor_ui/item/entry/view/custom_camera_view.dart';
 import '../../ui/vendor_ui/my_sales/view/my_sales_list_view.dart';
 import '../../ui/vendor_ui/my_sales/view/seller_order_detail_view.dart';
+import '../../ui/vendor_ui/story/story_composer_view.dart';
+import '../../ui/vendor_ui/story/story_viewer_view.dart';
 import '../../ui/vendor_ui/user/transaction/seller_transactions_view.dart';
 import '../../ui/vendor_ui/wallet/view/wallet_view.dart';
 
@@ -1195,6 +1198,51 @@ Route<dynamic> generateRoute(RouteSettings settings) {
       return MaterialPageRoute<dynamic>(builder: (BuildContext context) {
         return ChabitChatScreen(threadId: threadId);
       });
+    case '${RoutePaths.storyComposer}':
+      final Object? args = settings.arguments;
+      String mediaPath = '';
+      String mediaType = 'image';
+      if (args is Map<String, dynamic>) {
+        mediaPath = args['mediaPath']?.toString() ?? '';
+        mediaType = args['mediaType']?.toString() ?? 'image';
+      }
+      return MaterialPageRoute<dynamic>(
+        settings: const RouteSettings(name: RoutePaths.storyComposer),
+        builder: (BuildContext context) {
+          return StoryComposerView(
+            mediaPath: mediaPath,
+            mediaType: mediaType,
+          );
+        },
+      );
+    case '${RoutePaths.storyViewer}':
+      final Object? args = settings.arguments;
+      List<VendorStory> stories = <VendorStory>[];
+      int initialIndex = 0;
+      String? vendorName;
+      String? vendorLogo;
+      if (args is Map<String, dynamic>) {
+        if (args['stories'] is List<VendorStory>) {
+          stories = args['stories'] as List<VendorStory>;
+        }
+        initialIndex =
+            int.tryParse(args['initialIndex']?.toString() ?? '0') ?? 0;
+        vendorName = args['vendorName']?.toString();
+        vendorLogo = args['vendorLogo']?.toString();
+      } else if (args is List<VendorStory>) {
+        stories = args;
+      }
+      return MaterialPageRoute<dynamic>(
+        settings: const RouteSettings(name: RoutePaths.storyViewer),
+        builder: (BuildContext context) {
+          return StoryViewerView(
+            stories: stories,
+            initialIndex: initialIndex,
+            vendorName: vendorName,
+            vendorLogo: vendorLogo,
+          );
+        },
+      );
     default:
       return PageRouteBuilder<dynamic>(
           pageBuilder: (_, Animation<double> a1, Animation<double> a2) =>

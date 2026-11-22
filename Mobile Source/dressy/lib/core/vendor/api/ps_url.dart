@@ -396,4 +396,8 @@ class PsUrl {
   static const String ps_get_all_theme_info_for_mobile= 'theme/get_all_theme_info_for_mobile?';
 
    static const String ps_subscribe_topic = 'firebase/topic_subscribe_for_noti?';
+
+  static const String ps_stories_feed_url = 'stories/feed?';
+  static const String ps_stories_upload_url = 'stories/upload';
+  static const String ps_stories_base_url = 'stories/';
 }
