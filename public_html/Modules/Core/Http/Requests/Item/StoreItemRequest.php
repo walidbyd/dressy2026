@@ -54,7 +54,7 @@ class StoreItemRequest extends FormRequest
             ],
             [
                 'fieldName' => 'description',
-                'rules' => 'required|min:10',
+                'rules' => 'nullable|string',
             ],
             [
                 'fieldName' => 'category_id',

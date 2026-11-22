@@ -532,7 +532,7 @@
   "item_entry__select_township": "حدد بلدة",
   "item_entry__price": "سعر",
   "item_entry__currency": "رمز العملة",
-  "item_entry__description": "وصف",
+  "item_entry__description": "الوصف (اختياري)",
   "item_entry__discount_title": "تخفيض (٪)",
   "item_entry__contact_number": "رقم الاتصال",
   "item_entry__discount_info": "أدخل سعر الخصم",
@@ -926,8 +926,8 @@
   "order_id": "رقم التعريف الخاص بالطلب",
   "order_items": "أغراض",
   "order_item": "غرض",
-  "dashboard__latest_vendor": "أحدث بائع",
-  "latest_vendor": "أحدث بائع",
+  "dashboard__latest_vendor": "قائمة البائعين",
+  "latest_vendor": "قائمة البائعين",
   "subscription_expired": "صلاحية الاشتراك",
   "vendor_flutterwave": "دفع آمن",
   "item_promote__flutterwave": "دفع آمن",
@@ -1142,5 +1142,7 @@
   "condition": "الحالة",
   "size": "المقاس",
   "brand": "الماركة",
-  "empty_cart_explore": "اكتشف المنتجات"
+  "empty_cart_explore": "اكتشف المنتجات",
+  "filter__brand": "الماركة",
+  "brand_search_hint": "ابحث أو أدخل ماركة..."
 }

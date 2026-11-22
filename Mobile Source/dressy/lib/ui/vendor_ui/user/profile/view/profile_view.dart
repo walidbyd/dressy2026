@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../../../config/ps_colors.dart';
 import '../../../../../../config/route/route_paths.dart';
 
 import '../../../../../../core/vendor/provider/category/category_provider.dart';
@@ -17,7 +19,6 @@ import '../../../../../core/vendor/viewobject/holder/request_path_holder.dart';
 import '../../../../../core/vendor/viewobject/holder/user_unread_message_parameter_holder.dart';
 import '../../../../../core/vendor/viewobject/holder/widget_provider_dyanmic.dart';
 import '../../../common/dialog/set_user_name_and_pwd_dialog.dart';
-import '../../../common/ps_app_bar_widget.dart';
 import '../../../sort_widget/ps_dynamic_provider.dart';
 import '../../../sort_widget/ps_dynamic_widget.dart';
 import '../component/detail_info/widgets/profile_pop_up.dart';
@@ -147,58 +148,74 @@ class _ProfilePageState extends State<ProfileView>
             productParameterHolder:
                 ProductParameterHolder().getPopularParameterHolder(),
             userId: widget.userId),
-        child: Container(
-          margin: EdgeInsets.only(
-              top: MediaQuery.of(context).viewPadding.top),
-          child: Scaffold(
-            appBar: PsAppbarWidget(
-              appBarTitle: 'profile__title'.tr,
-              leading: Center(
-                  child: IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: () => widget.scaffoldKey.currentState?.openDrawer(),
-              )),
-              actionWidgets: <Widget>[
-                IconButton(
-                  icon: const Icon(Icons.share_outlined, size: 22),
-                  tooltip: 'share_profile'.tr,
-                  onPressed: () {
-                    final String shareUserId =
-                        psValueHolder?.loginUserId ?? widget.userId ?? '';
-                    final String profileUrl =
-                        'https://dressy-dz.com/profile/$shareUserId';
-                    SharePlus.instance.share(
-                      ShareParams(
-                        text: 'Découvrez mon dressing sur Dressy !\n$profileUrl',
-                      ),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 22),
-                  tooltip: 'edit_profile__title'.tr,
-                  onPressed: () async {
-                    final dynamic result = await Navigator.pushNamed(
-                        context, RoutePaths.editProfile);
-                    if (result == true) {
-                      widget.loadUserData(psValueHolder?.loginUserId);
-                    }
-                  },
-                ),
-                ProfilePopUpWidget(
-                  callLogout: widget.callLogoutCallBack,
-                  onDeactivate: widget.onDeactivate,
-                  scaffoldKey: widget.scaffoldKey,
-                ),
-              ],
+        child: Scaffold(
+          appBar: AppBar(
+            systemOverlayStyle: SystemUiOverlayStyle(
+              statusBarIconBrightness: Utils.getBrightnessForAppBar(context),
             ),
-            body: PsDynamicWidget(
-                isGrid: true,
-                animationController: widget.animationController,
-                scrollController: scrollController,
-                widgetList: widgetProviderDynamic!.widgetList,
-                callLogoutCallBack: widget.callLogoutCallBack),
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            elevation: 0,
+            toolbarHeight: kToolbarHeight,
+            leading: Center(
+              child: IconButton(
+                icon: const Icon(Icons.menu),
+                color: Utils.isLightMode(context)
+                    ? PsColors.achromatic900
+                    : PsColors.achromatic50,
+                onPressed: () => widget.scaffoldKey.currentState?.openDrawer(),
+              ),
+            ),
+            title: Text(
+              'profile__title'.tr,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Utils.isLightMode(context)
+                        ? PsColors.achromatic900
+                        : PsColors.achromatic50,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            centerTitle: false,
+            actions: <Widget>[
+              IconButton(
+                icon: const Icon(Icons.share_outlined, size: 22),
+                tooltip: 'share_profile'.tr,
+                onPressed: () {
+                  final String shareUserId =
+                      psValueHolder?.loginUserId ?? widget.userId ?? '';
+                  final String profileUrl =
+                      'https://dressy-dz.com/profile/$shareUserId';
+                  SharePlus.instance.share(
+                    ShareParams(
+                      text: 'Découvrez mon dressing sur Dressy !\n$profileUrl',
+                    ),
+                  );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 22),
+                tooltip: 'edit_profile__title'.tr,
+                onPressed: () async {
+                  final dynamic result = await Navigator.pushNamed(
+                      context, RoutePaths.editProfile);
+                  if (result == true) {
+                    widget.loadUserData(psValueHolder?.loginUserId);
+                  }
+                },
+              ),
+              ProfilePopUpWidget(
+                callLogout: widget.callLogoutCallBack,
+                onDeactivate: widget.onDeactivate,
+                scaffoldKey: widget.scaffoldKey,
+              ),
+              const SizedBox(width: 4),
+            ],
           ),
+          body: PsDynamicWidget(
+              isGrid: true,
+              animationController: widget.animationController,
+              scrollController: scrollController,
+              widgetList: widgetProviderDynamic!.widgetList,
+              callLogoutCallBack: widget.callLogoutCallBack),
         ));
   }
 }

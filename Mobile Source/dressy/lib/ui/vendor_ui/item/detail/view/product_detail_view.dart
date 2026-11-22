@@ -462,9 +462,6 @@ class ProductDetailState<T extends ProductDetailView>
               final bool isVerified =
                   product.user?.isVerifyBlueMark == '1' ||
                       product.user?.isVefifiedBlueMarkUser == true;
-              final String sellerCity = product.itemLocation?.name ??
-                  product.user?.userAddress ??
-                  '';
               final double? rating =
                   double.tryParse(product.user?.overallRating ?? '');
               final int reviewCount =
@@ -782,16 +779,6 @@ class ProductDetailState<T extends ProductDetailView>
                                                 ],
                                               ],
                                             ),
-                                            if (sellerCity.isNotEmpty) ...<Widget>[
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                sellerCity,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: PsColors.text500,
-                                                ),
-                                              ),
-                                            ],
                                           ],
                                         ),
                                       ),
@@ -943,30 +930,6 @@ class ProductDetailState<T extends ProductDetailView>
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                              ],
-
-                              // Location pin line
-                              if (product.itemLocation?.name != null &&
-                                  product.itemLocation!.name!.isNotEmpty) ...<Widget>[
-                                Row(
-                                  children: <Widget>[
-                                    Icon(
-                                      Icons.location_on_outlined,
-                                      size: 16,
-                                      color: PsColors.text400,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      product.itemLocation!.name!,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                        color: PsColors.text600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
                               ],
 
                               // Description

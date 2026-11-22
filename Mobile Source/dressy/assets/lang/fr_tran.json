@@ -532,7 +532,7 @@
   "item_entry__select_township": "Sélectionner le canton",
   "item_entry__price": "Prix",
   "item_entry__currency": "Symbole de la monnaie",
-  "item_entry__description": "La description",
+  "item_entry__description": "Description (optionnel)",
   "item_entry__discount_title": "Remise (%)",
   "item_entry__contact_number": "Numéro de contact",
   "item_entry__discount_info": "Saisir le pourcentage de réduction",
@@ -927,8 +927,8 @@
   "order_id": "numéro de commande",
   "order_items": "Articles",
   "order_item": "Article",
-  "dashboard__latest_vendor": "Dernier fournisseur",
-  "latest_vendor": "Dernier fournisseur",
+  "dashboard__latest_vendor": "Liste de vendeurs",
+  "latest_vendor": "Liste de vendeurs",
   "subscription_expired": "Abonnement expiré",
   "vendor_flutterwave": "Flutterwave",
   "item_promote__flutterwave": "Paiement sécurisé",
@@ -1142,5 +1142,7 @@
   "condition": "État",
   "size": "Taille",
   "brand": "Marque",
-  "empty_cart_explore": "Découvrir les articles"
+  "empty_cart_explore": "Découvrir les articles",
+  "filter__brand": "Marque",
+  "brand_search_hint": "Rechercher ou entrer une marque..."
 }

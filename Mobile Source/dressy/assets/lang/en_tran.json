@@ -533,7 +533,7 @@
   "item_entry__select_township": "Select Township",
   "item_entry__price": "Price",
   "item_entry__currency": "Currency Symbol",
-  "item_entry__description": "Description",
+  "item_entry__description": "Description (optional)",
   "item_entry__discount_title": "Discount (%)",
   "item_entry__contact_number": "Contact Number",
   "item_entry__discount_info": "Enter discount rate",
@@ -928,8 +928,8 @@
   "order_id": "Order ID",
   "order_items": "Items",
   "order_item": "Item",
-  "dashboard__latest_vendor": "Latest Vendor",
-  "latest_vendor": "Latest Vendor",
+  "dashboard__latest_vendor": "Vendors List",
+  "latest_vendor": "Vendors List",
   "subscription_expired": "Subscription expired",
   "vendor_flutterwave": "Flutterwave",
   "item_promote__flutterwave": "Flutterwave",
@@ -1142,5 +1142,7 @@
   "condition": "Condition",
   "size": "Size",
   "brand": "Brand",
-  "empty_cart_explore": "Discover items"
+  "empty_cart_explore": "Discover items",
+  "filter__brand": "Brand",
+  "brand_search_hint": "Search or enter a brand..."
 }

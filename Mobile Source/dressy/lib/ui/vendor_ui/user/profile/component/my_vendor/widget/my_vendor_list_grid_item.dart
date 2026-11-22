@@ -51,9 +51,6 @@ class _MyVendorListGridItemState extends State<MyVendorListGridItem> {
     final String shopName = (widget.vendorUser.name != null && widget.vendorUser.name!.isNotEmpty)
         ? widget.vendorUser.name!
         : 'default__user_name'.tr;
-    final String wilaya = (widget.vendorUser.address != null && widget.vendorUser.address!.isNotEmpty)
-        ? widget.vendorUser.address!
-        : '';
     final String productCount = widget.vendorUser.productCount ?? '0';
 
     return AnimatedBuilder(
@@ -176,20 +173,6 @@ class _MyVendorListGridItemState extends State<MyVendorListGridItem> {
                                       color: isLight ? PsColors.text500 : PsColors.text400,
                                     ),
                                   ),
-                                  if (wilaya.isNotEmpty) ...<Widget>[
-                                    const SizedBox(width: 6),
-                                    Flexible(
-                                      child: Text(
-                                        '• $wilaya',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: isLight ? PsColors.text500 : PsColors.text400,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
                                 ],
                               ),
                             ],

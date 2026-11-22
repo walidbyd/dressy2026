@@ -1883,6 +1883,8 @@ class ItemService extends PsService
                                 } else {
                                     $query->having($value['core_keys_id'], $detail->name);
                                 }
+                            } else {
+                                $query->havingRaw("`{$value['core_keys_id']}` LIKE ?", ['%'.$value['value'].'%']);
                             }
                         }
                     }
@@ -2033,6 +2035,8 @@ class ItemService extends PsService
                                 $detail = CustomFieldAttribute::find($value['value']);
                                 if ($detail) {
                                     $query->having($value['core_keys_id'], $detail->name);
+                                } else {
+                                    $query->havingRaw("`{$value['core_keys_id']}` LIKE ?", ['%'.$value['value'].'%']);
                                 }
                             }
                         }

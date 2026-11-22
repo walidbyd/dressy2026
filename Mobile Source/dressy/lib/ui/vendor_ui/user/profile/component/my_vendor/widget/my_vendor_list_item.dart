@@ -51,9 +51,6 @@ class _MyVendorListItemState extends State<MyVendorListItem> {
     final String shopName = (widget.vendorUser.name != null && widget.vendorUser.name!.isNotEmpty)
         ? widget.vendorUser.name!
         : 'default__user_name'.tr;
-    final String wilaya = (widget.vendorUser.address != null && widget.vendorUser.address!.isNotEmpty)
-        ? widget.vendorUser.address!
-        : '';
     final String productCount = widget.vendorUser.productCount ?? '0';
 
     return AnimatedBuilder(
@@ -181,34 +178,6 @@ class _MyVendorListItemState extends State<MyVendorListItem> {
                             ),
                           ],
                         ),
-
-                        // Wilaya / Location
-                        if (wilaya.isNotEmpty) ...<Widget>[
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              Icon(
-                                Icons.location_on_outlined,
-                                size: 13,
-                                color: isLight ? PsColors.text500 : PsColors.text400,
-                              ),
-                              const SizedBox(width: 2),
-                              Flexible(
-                                child: Text(
-                                  wilaya,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isLight ? PsColors.text500 : PsColors.text400,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
                       ],
                     ),
                   ),
