@@ -43,6 +43,22 @@ class _StoryViewerVieState extends State<StoryViewerView>
   VideoPlayerController? _videoController;
   bool _isPaused = false;
   bool _isDeleting = false;
+  bool _isClosing = false;
+  late void Function(AnimationStatus) _statusListener;
+
+  void _closeViewer() {
+    if (_isClosing) {
+      return;
+    }
+    _isClosing = true;
+    _animController.stop();
+    _videoController?.pause();
+    _videoController?.dispose();
+    _videoController = null;
+    if (mounted) {
+      Navigator.pop(context, true);
+    }
+  }
 
   @override
   void initState() {
@@ -51,14 +67,15 @@ class _StoryViewerVieState extends State<StoryViewerView>
     _currentIndex = widget.initialIndex < _stories.length ? widget.initialIndex : 0;
 
     _animController = AnimationController(vsync: this);
-    _animController.addStatusListener((AnimationStatus status) {
-      if (status == AnimationStatus.completed) {
+    _statusListener = (AnimationStatus status) {
+      if (!_isClosing && mounted && status == AnimationStatus.completed) {
         _onSlideComplete();
       }
-    });
+    };
+    _animController.addStatusListener(_statusListener);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && !_isClosing) {
         _loadSlide(_currentIndex);
       }
     });
@@ -66,6 +83,8 @@ class _StoryViewerVieState extends State<StoryViewerView>
 
   @override
   void dispose() {
+    _isClosing = true;
+    _animController.removeStatusListener(_statusListener);
     _animController.dispose();
     _videoController?.dispose();
     super.dispose();
@@ -212,8 +231,11 @@ class _StoryViewerVieState extends State<StoryViewerView>
   }
 
   void _loadSlide(int index) {
+    if (_isClosing || !mounted) {
+      return;
+    }
     if (_stories.isEmpty) {
-      Navigator.pop(context, true);
+      _closeViewer();
       return;
     }
 
@@ -243,7 +265,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
         _videoController = VideoPlayerController.networkUrl(
           Uri.parse(mediaUrl),
         )..initialize().then((_) {
-            if (mounted) {
+            if (mounted && !_isClosing) {
               setState(() {});
               final Duration videoDuration = _videoController!.value.duration;
               _animController.duration = videoDuration > Duration.zero
@@ -256,7 +278,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
             }
           }).catchError((dynamic err) {
             print('[StoryViewer] Error initializing video: $err, url: $mediaUrl');
-            if (mounted) {
+            if (mounted && !_isClosing) {
               final int slideSeconds = currentStory.duration != null && currentStory.duration! > 0
                   ? currentStory.duration!
                   : 5;
@@ -272,7 +294,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
             ? currentStory.duration!
             : 5;
         _animController.duration = Duration(seconds: slideSeconds);
-        if (!_isPaused) {
+        if (!_isPaused && !_isClosing) {
           _animController.forward();
         }
       }
@@ -281,27 +303,32 @@ class _StoryViewerVieState extends State<StoryViewerView>
           ? currentStory.duration!
           : 5;
       _animController.duration = Duration(seconds: slideSeconds);
-      if (!_isPaused) {
+      if (!_isPaused && !_isClosing) {
         _animController.forward();
       }
     }
 
-    setState(() {});
+    if (mounted && !_isClosing) {
+      setState(() {});
+    }
   }
 
   void _onSlideComplete() {
+    if (_isClosing || !mounted) {
+      return;
+    }
     if (_currentIndex < _stories.length - 1) {
       setState(() {
         _currentIndex++;
       });
       _loadSlide(_currentIndex);
     } else {
-      Navigator.pop(context, true);
+      _closeViewer();
     }
   }
 
   void _pauseStory() {
-    if (!_isPaused) {
+    if (!_isPaused && !_isClosing) {
       setState(() {
         _isPaused = true;
       });
@@ -311,7 +338,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
   }
 
   void _resumeStory() {
-    if (_isPaused && !_isDeleting) {
+    if (_isPaused && !_isDeleting && !_isClosing) {
       setState(() {
         _isPaused = false;
       });
@@ -321,6 +348,9 @@ class _StoryViewerVieState extends State<StoryViewerView>
   }
 
   void _previousSlide() {
+    if (_isClosing || !mounted) {
+      return;
+    }
     if (_currentIndex > 0) {
       setState(() {
         _currentIndex--;
@@ -332,13 +362,16 @@ class _StoryViewerVieState extends State<StoryViewerView>
   }
 
   void _nextSlide() {
+    if (_isClosing || !mounted) {
+      return;
+    }
     if (_currentIndex < _stories.length - 1) {
       setState(() {
         _currentIndex++;
       });
       _loadSlide(_currentIndex);
     } else {
-      Navigator.pop(context, true);
+      _closeViewer();
     }
   }
 
@@ -429,7 +462,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
 
           _stories.removeAt(_currentIndex);
           if (_stories.isEmpty) {
-            Navigator.pop(context, true);
+            _closeViewer();
           } else {
             if (_currentIndex >= _stories.length) {
               _currentIndex = _stories.length - 1;
@@ -468,16 +501,25 @@ class _StoryViewerVieState extends State<StoryViewerView>
         currentStory.userName ??
         'Dressy Vendeur';
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: GestureDetector(
-        onLongPressStart: (_) => _pauseStory(),
-        onLongPressEnd: (_) => _resumeStory(),
-        onVerticalDragEnd: (DragEndDetails details) {
-          if (details.primaryVelocity != null && details.primaryVelocity! > 300) {
-            Navigator.pop(context, true);
-          }
-        },
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        _isClosing = true;
+        _animController.stop();
+        _videoController?.pause();
+        _videoController?.dispose();
+        _videoController = null;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: GestureDetector(
+          onLongPressStart: (_) => _pauseStory(),
+          onLongPressEnd: (_) => _resumeStory(),
+          onVerticalDragEnd: (DragEndDetails details) {
+            if (details.primaryVelocity != null && details.primaryVelocity! > 300) {
+              _closeViewer();
+            }
+          },
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
@@ -664,7 +706,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
                         IconButton(
                           icon: const Icon(Icons.close,
                               color: Colors.white, size: 24),
-                          onPressed: () => Navigator.pop(context, true),
+                          onPressed: _closeViewer,
                         ),
                       ],
                     ),
@@ -847,6 +889,7 @@ class _StoryViewerVieState extends State<StoryViewerView>
           ],
         ),
       ),
+    ),
     );
   }
 

@@ -480,6 +480,7 @@ Route::prefix('stories')->controller(\App\Http\Controllers\Api\V1_0\StoryApiCont
     Route::post('/{id}/view', 'view')->name('stories.view');
     Route::delete('/{id}', 'destroy')->name('stories.destroy');
     Route::get('/user/{userId}', 'userStories')->name('stories.user');
+    Route::get('/vendor/{vendorId}', 'vendorStories')->name('stories.vendor');
 });
 
 // Route::prefix('generate/short_code',);

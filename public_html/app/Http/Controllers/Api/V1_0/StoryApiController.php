@@ -105,12 +105,23 @@ class StoryApiController extends Controller
                         'avatar_url' => $avatarUrl,
                         'is_mine' => $isMine,
                         'has_unseen' => true,
+                        'latest_story_at' => '',
+                        'has_active_stories' => true,
                         'stories' => [],
                     ];
                 }
 
                 $vendorsMap[$groupKey]['stories'][] = new StoryApiResource($story);
+                $storyCreatedAt = $story->created_at ? $story->created_at->format('Y-m-d H:i:s') : (string) $story->added_date;
+                if (empty($vendorsMap[$groupKey]['latest_story_at']) || strcmp($storyCreatedAt, $vendorsMap[$groupKey]['latest_story_at']) > 0) {
+                    $vendorsMap[$groupKey]['latest_story_at'] = $storyCreatedAt;
+                }
             }
+
+            // Order vendors so that latest stories appear first
+            uasort($vendorsMap, function ($a, $b) {
+                return strcmp($b['latest_story_at'] ?? '', $a['latest_story_at'] ?? '');
+            });
 
             return response()->json([
                 'status' => 'success',
@@ -277,8 +288,15 @@ class StoryApiController extends Controller
             $duration = (int) $request->input('duration', ($mediaType === 'video' ? 15 : 5));
             $filterPreset = $request->input('filter_preset', 'original');
 
-            // Detect vendor profile if user owns one
-            $vendor = Vendor::where('owner_user_id', $loginUserId)->first();
+            // Detect vendor profile if passed or if user owns one
+            $rawVendorId = $request->input('vendor_id');
+            $vendor = null;
+            if (!empty($rawVendorId) && (int)$rawVendorId > 0) {
+                $vendor = Vendor::find($rawVendorId);
+            }
+            if (!$vendor) {
+                $vendor = Vendor::where('owner_user_id', $loginUserId)->first();
+            }
 
             // Assemble story data with Schema::hasColumn guards for DB resiliency
             $storyData = [
@@ -425,17 +443,21 @@ class StoryApiController extends Controller
     }
 
     /**
-     * Get active stories for a specific user or vendor.
+     * Get active stories for a specific user (and their vendor if any).
      */
     public function userStories(Request $request, $userId)
     {
         $now = Carbon::now();
+        $vendorId = Vendor::where('owner_user_id', $userId)->value('id');
+
         $stories = VendorStory::where('expires_at', '>', $now)
-            ->where(function ($q) use ($userId) {
-                $q->where('user_id', $userId)
-                  ->orWhere('vendor_id', $userId);
+            ->where(function ($q) use ($userId, $vendorId) {
+                $q->where('user_id', $userId);
+                if (!empty($vendorId)) {
+                    $q->orWhere('vendor_id', $vendorId);
+                }
             })
-            ->with(['user', 'vendor.logo', 'item.defaultPhoto', 'item.itemCurrency'])
+            ->with(['user', 'vendor.logo', 'item.cover', 'item.currency'])
             ->orderBy('created_at', 'asc')
             ->get();
 
@@ -443,6 +465,37 @@ class StoryApiController extends Controller
             'status' => 'success',
             'data' => StoryApiResource::collection($stories),
             'count' => $stories->count(),
+            'has_active_stories' => $stories->count() > 0,
+            'latest_story_at' => $stories->max('created_at')?->format('Y-m-d H:i:s') ?? '',
+        ]);
+    }
+
+    /**
+     * Get active stories for a specific vendor (and its owner user).
+     */
+    public function vendorStories(Request $request, $vendorId)
+    {
+        $now = Carbon::now();
+        $vendor = Vendor::find($vendorId);
+        $ownerUserId = $vendor?->owner_user_id;
+
+        $stories = VendorStory::where('expires_at', '>', $now)
+            ->where(function ($q) use ($vendorId, $ownerUserId) {
+                $q->where('vendor_id', $vendorId);
+                if (!empty($ownerUserId)) {
+                    $q->orWhere('user_id', $ownerUserId);
+                }
+            })
+            ->with(['user', 'vendor.logo', 'item.cover', 'item.currency'])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => StoryApiResource::collection($stories),
+            'count' => $stories->count(),
+            'has_active_stories' => $stories->count() > 0,
+            'latest_story_at' => $stories->max('created_at')?->format('Y-m-d H:i:s') ?? '',
         ]);
     }
 }

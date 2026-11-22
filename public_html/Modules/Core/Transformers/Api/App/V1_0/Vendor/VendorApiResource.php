@@ -153,6 +153,13 @@ class VendorApiResource extends JsonResource
             $activeStories = [];
         }
 
+        $latestStoryAt = '';
+        if (count($activeStories) > 0) {
+            $latestStoryAt = $activeStories->max('created_at')?->format('Y-m-d H:i:s') ?? '';
+        } elseif (!empty($this->latest_story_at)) {
+            $latestStoryAt = (string) $this->latest_story_at;
+        }
+
         return [
             'id' => checkAndGetValue($this, 'id'),
             'owner_user_id' => checkAndGetValue($this, 'owner_user_id'),
@@ -183,6 +190,8 @@ class VendorApiResource extends JsonResource
             'is_empty_object' => checkAndGetValue($this, 'id', 1),
             'updated_flag' => checkAndGetValue($this, 'updated_flag'),
             'vendorRelation' => VendorInfoApiResource::collection($this->vendorInfo ?? []),
+            'latest_story_at' => (string) $latestStoryAt,
+            'has_active_story' => count($activeStories) > 0,
             'active_stories_count' => count($activeStories),
             'has_active_stories' => count($activeStories) > 0,
             'stories' => \App\Http\Resources\StoryApiResource::collection($activeStories),

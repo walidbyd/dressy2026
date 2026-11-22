@@ -7,9 +7,16 @@ import '../../../../../../config/route/route_paths.dart';
 import '../../../../../../core/vendor/constant/ps_dimens.dart';
 import '../../../../../../core/vendor/provider/language/app_localization_provider.dart';
 import '../../../../../../core/vendor/provider/story/story_provider.dart';
+import '../../../../../../core/vendor/provider/vendor/search_vendor_provider.dart';
+import '../../../../../../core/vendor/repository/vendor_search_repository.dart';
 import '../../../../../../core/vendor/utils/utils.dart';
 import '../../../../../../core/vendor/viewobject/common/ps_value_holder.dart';
+import '../../../../../../core/vendor/viewobject/default_photo.dart';
+import '../../../../../../core/vendor/viewobject/holder/intent_holder/vendor_user_intent_holder.dart';
+import '../../../../../../core/vendor/viewobject/holder/request_path_holder.dart';
+import '../../../../../../core/vendor/viewobject/holder/vendor_search_parameter_holder.dart';
 import '../../../../../../core/vendor/viewobject/vendor_story.dart';
+import '../../../../../../core/vendor/viewobject/vendor_user.dart';
 import '../../../../common/ps_ui_widget.dart';
 
 class LatestVendorListWidget extends StatefulWidget {
@@ -182,7 +189,7 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
           children: <Widget>[
             Stack(
               children: <Widget>[
-                // Gradient Story Ring in brand coral
+                // Gradient Story Ring in brand coral if has stories, else thin coral border
                 Container(
                   width: 64,
                   height: 64,
@@ -299,29 +306,41 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
     );
   }
 
-  Widget _buildStoryGroupItem(
-      BuildContext context, VendorStoriesGroup group, StoryProvider storyProvider) {
-    final String displayName = group.vendorName ?? 'Vendeur';
-    final String avatarPath = group.avatarPath ?? group.vendorLogoPath ?? '';
-    final String avatarUrl = group.avatarUrl ?? group.vendorLogo ?? '';
-    final bool isVendor = group.vendorId != null && group.vendorId!.isNotEmpty && group.vendorId != '0';
+  Widget _buildVendorItem(
+      BuildContext context,
+      VendorUser vendor,
+      StoryProvider storyProvider,
+      bool hasActiveStories,
+      List<VendorStory> stories) {
+    final String displayName = vendor.name ?? 'Vendeur';
+    final String avatarPath = vendor.logo?.imgPath ?? '';
 
     return GestureDetector(
       onTap: () {
-        if (group.stories.isNotEmpty) {
+        if (hasActiveStories && stories.isNotEmpty) {
           Navigator.pushNamed(
             context,
             RoutePaths.storyViewer,
             arguments: <String, dynamic>{
-              'stories': group.stories,
-              'vendorName': group.vendorName,
-              'vendorLogo': avatarUrl.isNotEmpty ? avatarUrl : group.vendorLogo,
+              'stories': stories,
+              'vendorName': vendor.name,
+              'vendorLogo': avatarPath,
             },
           ).then((_) {
             if (mounted) {
               storyProvider.loadFeed();
             }
           });
+        } else {
+          Navigator.pushNamed(
+            context,
+            RoutePaths.userVendorDetail,
+            arguments: VendorUserIntentHolder(
+              vendorId: vendor.id,
+              vendorUserName: vendor.name,
+              vendorUserId: vendor.ownerUserId,
+            ),
+          );
         }
       },
       child: Container(
@@ -333,21 +352,31 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
           children: <Widget>[
             Stack(
               children: <Widget>[
-                // Coral gradient ring for active stories
+                // Coral gradient ring for active stories, neutral border for vendors without stories
                 Container(
                   width: 64,
                   height: 64,
                   padding: const EdgeInsets.all(2.5),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: <Color>[
-                        Color(0xFFED7768),
-                        Color(0xFFF4A261),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    gradient: hasActiveStories
+                        ? const LinearGradient(
+                            colors: <Color>[
+                              Color(0xFFED7768),
+                              Color(0xFFF4A261),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    border: hasActiveStories
+                        ? null
+                        : Border.all(
+                            color: Utils.isLightMode(context)
+                                ? PsColors.achromatic200
+                                : PsColors.achromatic700,
+                            width: 1.5,
+                          ),
                   ),
                   child: Container(
                     padding: const EdgeInsets.all(2),
@@ -366,51 +395,33 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
                               height: 56,
                               boxfit: BoxFit.cover,
                             )
-                          : (avatarUrl.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: avatarUrl,
-                                  width: 56,
-                                  height: 56,
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, __) => Container(
-                                    color: Utils.isLightMode(context)
-                                        ? PsColors.text100
-                                        : PsColors.text700,
-                                  ),
-                                  errorWidget: (_, __, ___) => Icon(
-                                    isVendor ? Icons.storefront : Icons.person,
-                                    size: 28,
-                                    color: const Color(0xFFED7768),
-                                  ),
-                                )
-                              : Icon(
-                                  isVendor ? Icons.storefront : Icons.person,
-                                  size: 28,
-                                  color: const Color(0xFFED7768),
-                                )),
+                          : const Icon(
+                              Icons.storefront,
+                              size: 28,
+                              color: Color(0xFFED7768),
+                            ),
                     ),
                   ),
                 ),
-                // Small verified checkmark badge at bottom-right for verified vendors
-                if (isVendor)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(1.5),
-                      decoration: BoxDecoration(
-                        color: Utils.isLightMode(context)
-                            ? PsColors.backgroundColor
-                            : PsColors.achromatic800,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check_circle,
-                        size: 16,
-                        color: Color(0xFFED7768),
-                      ),
+                // Small verified checkmark badge at bottom-right
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(1.5),
+                    decoration: BoxDecoration(
+                      color: Utils.isLightMode(context)
+                          ? PsColors.backgroundColor
+                          : PsColors.achromatic800,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_circle,
+                      size: 16,
+                      color: Color(0xFFED7768),
                     ),
                   ),
+                ),
               ],
             ),
             const SizedBox(height: 5),
@@ -423,7 +434,7 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: hasActiveStories ? FontWeight.w600 : FontWeight.w500,
                   color: Utils.isLightMode(context)
                       ? PsColors.text800
                       : PsColors.text100,
@@ -472,121 +483,221 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
   Widget build(BuildContext context) {
     final PsValueHolder valueHolder =
         Provider.of<PsValueHolder>(context, listen: false);
+    final VendorSearchRepository vendorSearchRepository =
+        Provider.of<VendorSearchRepository>(context);
 
     final bool isUserLoggedIn = Utils.checkUserLoginId(valueHolder) != 'nologinuser' &&
         Utils.checkUserLoginId(valueHolder).isNotEmpty;
 
-    return SliverToBoxAdapter(
-        child: Consumer<StoryProvider>(
-          builder: (BuildContext context, StoryProvider storyProvider, Widget? child) {
-            final List<VendorStoriesGroup> activeGroups = storyProvider.storiesByVendor;
-            final bool isLoading = storyProvider.isLoading;
+    return ChangeNotifierProvider<VendorSearchProvider?>(
+      lazy: false,
+      create: (BuildContext context) {
+        final VendorSearchProvider provider = VendorSearchProvider(
+          repo: vendorSearchRepository,
+        );
+        provider.loadDataList(
+          requestPathHolder: RequestPathHolder(
+            loginUserId: Utils.checkUserLoginId(valueHolder),
+            ownerUserId: Utils.checkUserLoginId(valueHolder),
+          ),
+          requestBodyHolder: VendorSearchParameterHolder().getAllVendor(),
+        );
+        return provider;
+      },
+      child: Consumer2<StoryProvider, VendorSearchProvider>(
+        builder: (BuildContext context, StoryProvider storyProvider,
+            VendorSearchProvider vendorSearchProvider, Widget? child) {
+          final bool isStoryLoading = storyProvider.isLoading;
+          final bool isVendorLoading = vendorSearchProvider.isLoading;
 
-            // If no stories exist and user is not logged in, hide section entirely
-            if (!isLoading && activeGroups.isEmpty && !isUserLoggedIn && !storyProvider.hasMyActiveStories) {
-              return const SizedBox.shrink();
+          // Merge vendors from VendorSearchProvider and StoryProvider
+          final List<VendorUser> mergedVendors = <VendorUser>[];
+          final Set<String> seenVendorIds = <String>{};
+          final Set<String> seenOwnerIds = <String>{};
+
+          if (vendorSearchProvider.vendorList.data != null) {
+            for (final VendorUser v in vendorSearchProvider.vendorList.data!) {
+              mergedVendors.add(v);
+              if (v.id != null && v.id!.isNotEmpty) {
+                seenVendorIds.add(v.id!);
+              }
+              if (v.ownerUserId != null && v.ownerUserId!.isNotEmpty) {
+                seenOwnerIds.add(v.ownerUserId!);
+              }
             }
+          }
 
-            // Total items: 1 (My Story) + active vendor story groups
-            final int totalItems = isUserLoggedIn
-                ? (isLoading && activeGroups.isEmpty ? 1 + 3 : 1 + activeGroups.length)
-                : (isLoading && activeGroups.isEmpty ? 3 : activeGroups.length);
-
-            if (totalItems == 0) {
-              return const SizedBox.shrink();
+          // Add any active story groups from StoryProvider not yet in mergedVendors
+          for (final VendorStoriesGroup g in storyProvider.storiesByVendor) {
+            final bool alreadyExists = (g.vendorId != null && seenVendorIds.contains(g.vendorId)) ||
+                (g.vendorUserId != null && seenOwnerIds.contains(g.vendorUserId));
+            if (!alreadyExists && g.stories.isNotEmpty) {
+              mergedVendors.add(
+                VendorUser(
+                  id: g.vendorId ?? '',
+                  ownerUserId: g.vendorUserId ?? '',
+                  name: g.vendorName ?? 'Vendeur',
+                  logo: DefaultPhoto(imgPath: g.avatarPath),
+                  hasActiveStory: true,
+                  hasActiveStories: true,
+                  latestStoryAt: g.latestStoryAt,
+                  stories: g.stories,
+                ),
+              );
             }
+          }
 
-            return Column(
+          // Sort vendors: active stories first (sorted by latestStoryAt DESC), then vendors without stories
+          mergedVendors.sort((VendorUser a, VendorUser b) {
+            final bool aHasStory = a.hasActiveStory == true ||
+                a.hasActiveStories == true ||
+                (a.latestStoryAt != null && a.latestStoryAt!.isNotEmpty) ||
+                storyProvider.storiesByVendor.any((VendorStoriesGroup g) =>
+                    (a.id != null && a.id!.isNotEmpty && g.vendorId == a.id) ||
+                    (a.ownerUserId != null && a.ownerUserId!.isNotEmpty && g.vendorUserId == a.ownerUserId));
+
+            final bool bHasStory = b.hasActiveStory == true ||
+                b.hasActiveStories == true ||
+                (b.latestStoryAt != null && b.latestStoryAt!.isNotEmpty) ||
+                storyProvider.storiesByVendor.any((VendorStoriesGroup g) =>
+                    (b.id != null && b.id!.isNotEmpty && g.vendorId == b.id) ||
+                    (b.ownerUserId != null && b.ownerUserId!.isNotEmpty && g.vendorUserId == b.ownerUserId));
+
+            if (aHasStory && !bHasStory) {
+              return -1;
+            }
+            if (!aHasStory && bHasStory) {
+              return 1;
+            }
+            if (aHasStory && bHasStory) {
+              return (b.latestStoryAt ?? '').compareTo(a.latestStoryAt ?? '');
+            }
+            return 0;
+          });
+
+          // Total items: 1 (My Story if logged in) + vendors (or shimmers if loading)
+          final bool showLoading = (isStoryLoading || isVendorLoading) && mergedVendors.isEmpty;
+          final int vendorCount = showLoading ? 4 : mergedVendors.length;
+          final int totalItems = isUserLoggedIn ? 1 + vendorCount : vendorCount;
+
+          if (totalItems == 0) {
+            return const SizedBox.shrink();
+          }
+
+          return SliverToBoxAdapter(
+            child: Column(
               children: <Widget>[
-                  // Header Row with "Vendors" and "See all" pill
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: PsDimens.space16,
-                      right: PsDimens.space16,
-                      top: PsDimens.space8,
-                      bottom: PsDimens.space8,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        Text(
-                          'home__vendors'.tr.isNotEmpty &&
-                                  'home__vendors'.tr != 'home__vendors'
-                              ? 'home__vendors'.tr
-                              : 'dashboard__latest_vendor'.tr,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 17,
-                                    color: Utils.isLightMode(context)
-                                        ? PsColors.text900
-                                        : PsColors.text50,
-                                  ),
-                        ),
-                        InkWell(
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              RoutePaths.latestVendorList,
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: const Color(0xFFED7768).withValues(alpha: 0.4),
-                              ),
+                // Header Row with "Vendors" and "See all" pill
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: PsDimens.space16,
+                    right: PsDimens.space16,
+                    top: PsDimens.space8,
+                    bottom: PsDimens.space8,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        'home__vendors'.tr.isNotEmpty &&
+                                'home__vendors'.tr != 'home__vendors'
+                            ? 'home__vendors'.tr
+                            : 'dashboard__latest_vendor'.tr,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17,
+                                  color: Utils.isLightMode(context)
+                                      ? PsColors.text900
+                                      : PsColors.text50,
+                                ),
+                      ),
+                      InkWell(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            RoutePaths.latestVendorList,
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFFED7768).withValues(alpha: 0.4),
                             ),
-                            child: Text(
-                              'home__see_all'.tr.isNotEmpty &&
-                                      'home__see_all'.tr != 'home__see_all'
-                                  ? 'home__see_all'.tr
-                                  : 'profile__view_all'.tr,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFFED7768),
-                              ),
+                          ),
+                          child: Text(
+                            'home__see_all'.tr.isNotEmpty &&
+                                    'home__see_all'.tr != 'home__see_all'
+                                ? 'home__see_all'.tr
+                                : 'profile__view_all'.tr,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFED7768),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-              // Instagram-Style Stories Horizontal List:
-              // Index 0 is always the seller's "+ Ajouter votre story" ring.
-              // Subsequent items are strictly active stories from psx_vendor_stories where expires_at > NOW().
-              Container(
-                height: 98,
-                child: ListView.builder(
-                  shrinkWrap: false,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: PsDimens.space10),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: totalItems,
-                  itemBuilder: (BuildContext context, int index) {
-                    if (isUserLoggedIn && index == 0) {
-                      return _buildMyStoryItem(
-                          context, storyProvider, valueHolder);
-                    }
-                    final int groupIndex = isUserLoggedIn ? index - 1 : index;
-                    if (isLoading && activeGroups.isEmpty) {
-                      return _buildShimmerItem(context);
-                    }
-                    if (groupIndex < activeGroups.length) {
-                      final VendorStoriesGroup group = activeGroups[groupIndex];
-                      return _buildStoryGroupItem(
-                          context, group, storyProvider);
-                    }
-                    return const SizedBox.shrink();
-                  },
                 ),
-              ),
-            ],
+                // Horizontal Story / Vendor List
+                Container(
+                  height: 98,
+                  child: ListView.builder(
+                    shrinkWrap: false,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: PsDimens.space10),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: totalItems,
+                    itemBuilder: (BuildContext context, int index) {
+                      if (isUserLoggedIn && index == 0) {
+                        return _buildMyStoryItem(
+                            context, storyProvider, valueHolder);
+                      }
+                      final int vendorIndex = isUserLoggedIn ? index - 1 : index;
+                      if (showLoading) {
+                        return _buildShimmerItem(context);
+                      }
+                      if (vendorIndex < mergedVendors.length) {
+                        final VendorUser vendor = mergedVendors[vendorIndex];
+
+                        // Find active stories for this vendor
+                        List<VendorStory> stories = vendor.stories ?? <VendorStory>[];
+                        if (stories.isEmpty) {
+                          for (final VendorStoriesGroup g in storyProvider.storiesByVendor) {
+                            if ((vendor.id != null && vendor.id!.isNotEmpty && g.vendorId == vendor.id) ||
+                                (vendor.ownerUserId != null && vendor.ownerUserId!.isNotEmpty && g.vendorUserId == vendor.ownerUserId)) {
+                              stories = g.stories;
+                              break;
+                            }
+                          }
+                        }
+
+                        final bool hasStories = stories.isNotEmpty ||
+                            vendor.hasActiveStory == true ||
+                            vendor.hasActiveStories == true ||
+                            (vendor.latestStoryAt != null && vendor.latestStoryAt!.isNotEmpty);
+
+                        return _buildVendorItem(
+                          context,
+                          vendor,
+                          storyProvider,
+                          hasStories,
+                          stories,
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),

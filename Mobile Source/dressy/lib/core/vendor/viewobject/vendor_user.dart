@@ -37,7 +37,9 @@ class VendorUser extends PsObject<VendorUser> {
       this.isFollowed,
       this.stories,
       this.hasActiveStories,
-      this.activeStoriesCount});
+      this.hasActiveStory,
+      this.activeStoriesCount,
+      this.latestStoryAt});
 
   String? id;
   String? ownerUserId;
@@ -71,7 +73,9 @@ class VendorUser extends PsObject<VendorUser> {
   List<VendorRelation>? vendorRelation;
   List<VendorStory>? stories;
   bool? hasActiveStories;
+  bool? hasActiveStory;
   int? activeStoriesCount;
+  String? latestStoryAt;
 
   @override
   VendorUser fromMap(dynamic dynamicData) {
@@ -111,9 +115,14 @@ class VendorUser extends PsObject<VendorUser> {
           : null,
       hasActiveStories: dynamicData['has_active_stories'] == true ||
           dynamicData['has_active_stories'] == '1',
+      hasActiveStory: dynamicData['has_active_story'] == true ||
+          dynamicData['has_active_story'] == '1' ||
+          dynamicData['has_active_stories'] == true ||
+          dynamicData['has_active_stories'] == '1',
       activeStoriesCount: int.tryParse(
               dynamicData['active_stories_count']?.toString() ?? '0') ??
           0,
+      latestStoryAt: dynamicData['latest_story_at']?.toString(),
     );
   }
 
@@ -170,7 +179,9 @@ class VendorUser extends PsObject<VendorUser> {
       data['stories'] =
           object.stories != null ? VendorStory().toMapList(object.stories!) : null;
       data['has_active_stories'] = object.hasActiveStories;
+      data['has_active_story'] = object.hasActiveStory;
       data['active_stories_count'] = object.activeStoriesCount;
+      data['latest_story_at'] = object.latestStoryAt;
 
       return data;
     } else {

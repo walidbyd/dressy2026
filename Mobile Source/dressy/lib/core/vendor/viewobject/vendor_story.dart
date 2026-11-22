@@ -254,6 +254,7 @@ class VendorStoriesGroup {
     this.isMine = false,
     this.hasUnseen = true,
     this.stories = const <VendorStory>[],
+    this.latestStoryAt,
   });
 
   factory VendorStoriesGroup.fromMap(dynamic dynamicData) {
@@ -278,6 +279,7 @@ class VendorStoriesGroup {
         isMine: dynamicData['is_mine'] == true || dynamicData['is_mine'] == '1',
         hasUnseen: dynamicData['has_unseen'] == true || dynamicData['has_unseen'] == '1',
         stories: parsedStories,
+        latestStoryAt: dynamicData['latest_story_at']?.toString(),
       );
     }
     return VendorStoriesGroup();
@@ -286,6 +288,7 @@ class VendorStoriesGroup {
   String? groupKey;
   String? vendorId;
   String? vendorUserId;
+  String? get userId => vendorUserId;
   String? vendorName;
   String? vendorLogo;
   String? vendorLogoPath;
@@ -294,4 +297,5 @@ class VendorStoriesGroup {
   bool isMine;
   bool hasUnseen;
   List<VendorStory> stories;
+  String? latestStoryAt;
 }

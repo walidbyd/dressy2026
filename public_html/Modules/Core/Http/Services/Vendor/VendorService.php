@@ -20,6 +20,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Modules\Core\Constants\Constants;
 use Modules\Core\Entities\Configuration\Setting;
@@ -161,7 +162,12 @@ class VendorService extends PsService implements VendorServiceInterface
         return PsCache::remember([VendorCache::BASE], VendorCache::GET_ALL_EXPIRY, $param,
             function () use ($ownerId, $status, $relation, $pagPerPage, $conds, $limit, $offset, $ids) {
 
+                $hasStoryTable = Schema::hasTable('psx_vendor_stories');
+
                 $vendors = Vendor::select(Vendor::tableName.'.*')
+                    ->when($hasStoryTable, function ($q) {
+                        $q->selectRaw('(SELECT MAX(created_at) FROM psx_vendor_stories WHERE (psx_vendor_stories.vendor_id = psx_vendors.id OR psx_vendor_stories.user_id = psx_vendors.owner_user_id) AND expires_at > NOW()) as latest_story_at');
+                    })
                     ->when(isset($conds['order_by']) && $conds['order_by'], function ($q) use ($conds) {
                         if ($conds['order_by'] == 'owner_name') {
                             $q->select([Vendor::tableName.'.*', User::tableName.'.'.User::name.' as owner_name', User::tableName.'.'.User::status.' as user_status']);
@@ -195,7 +201,16 @@ class VendorService extends PsService implements VendorServiceInterface
                         $query->limit($limit);
                     })->when($offset, function ($query, $offset) {
                         $query->offset($offset);
-                    })->orderBy(Vendor::tableName.'.'.Vendor::status, 'asc')->orderBy(Vendor::tableName.'.'.Vendor::id, 'desc');
+                    });
+
+                if ($hasStoryTable && (empty($conds) || empty($conds['order_by']))) {
+                    $vendors = $vendors->orderByRaw('CASE WHEN latest_story_at IS NOT NULL THEN 0 ELSE 1 END ASC')
+                        ->orderBy('latest_story_at', 'desc')
+                        ->orderBy(Vendor::tableName.'.'.Vendor::status, 'asc')
+                        ->orderBy(Vendor::tableName.'.'.Vendor::id, 'desc');
+                } else {
+                    $vendors = $vendors->orderBy(Vendor::tableName.'.'.Vendor::status, 'asc')->orderBy(Vendor::tableName.'.'.Vendor::id, 'desc');
+                }
 
                 if ($pagPerPage) {
                     $vendors = $vendors->paginate($pagPerPage)->onEachSide(1)->withQueryString();
@@ -370,8 +385,6 @@ class VendorService extends PsService implements VendorServiceInterface
             } else {
                 $query->orderBy($conds['order_by'], $conds['order_type']);
             }
-        } else {
-            $query->orderBy(Vendor::tableName.'.'.Vendor::CREATED_AT, 'desc');
         }
 
         if (isset($conds['added_date_range']) && $conds['added_date_range']) {
