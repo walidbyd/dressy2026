@@ -62,7 +62,7 @@ class StoreItemApiRequest extends FormRequest
             ],
             [
                 'fieldName' => 'location_township_id',
-                'rules' => 'required|exists:psx_location_townships,id',
+                'rules' => 'nullable',
             ],
             [
                 'fieldName' => 'currency_id',

@@ -17,7 +17,17 @@ class LocationCityApiController extends PsApiController
 
     public function search(Request $request)
     {
-        // Get Limit and Offset
+        // Auto-sync wilayas from Yalidine if database table is missing or has fewer cities
+        try {
+            $activeCount = \Illuminate\Support\Facades\DB::table('psx_location_cities')->where('status', 1)->count();
+            if ($activeCount < 58) {
+                app(\App\Services\YalidineService::class)->syncMissingWilayasToDatabase();
+            }
+        } catch (\Throwable $e) {
+            // Ignore during search
+        }
+
+        // Get Limit and Offset (generous limit so full Wilayas are available)
         [$limit, $offset] = $this->getLimitOffsetFromSetting($request);
 
         // Prepare Filter Conditions
@@ -32,7 +42,7 @@ class LocationCityApiController extends PsApiController
     private function getLimitOffsetFromSetting($request)
     {
         $offset = $request->offset;
-        $limit = $request->limit ?: $this->getDefaultLimit();
+        $limit = $request->limit ?: 100;
 
         return [$limit, $offset];
     }
@@ -41,8 +51,8 @@ class LocationCityApiController extends PsApiController
     {
         return [
             'searchterm' => $request->keyword,
-            'order_by' => $request->order_by,
-            'order_type' => $request->order_type,
+            'order_by' => $request->order_by ?: 'ordering',
+            'order_type' => $request->order_type ?: 'asc',
         ];
     }
 }

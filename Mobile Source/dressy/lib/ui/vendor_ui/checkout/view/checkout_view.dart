@@ -340,12 +340,12 @@ class _CheckoutViewState extends State<CheckoutView>
         final List<_WilayaOption> parsed = <_WilayaOption>[];
         for (final dynamic item in list) {
           if (item is Map<String, dynamic>) {
-            final int? code = int.tryParse(item['code']?.toString() ?? '');
+            final int? code = int.tryParse(item['code']?.toString() ?? item['id']?.toString() ?? '');
             final String nameFr =
-                (item['name_fr'] ?? item['nameFr'] ?? '').toString().trim();
+                (item['name_fr'] ?? item['name'] ?? item['nameFr'] ?? '').toString().trim();
             final String nameAr =
                 (item['name_ar'] ?? item['nameAr'] ?? '').toString().trim();
-            if (code != null && code >= 1 && code <= 58 && nameFr.isNotEmpty) {
+            if (code != null && code >= 1 && nameFr.isNotEmpty) {
               parsed.add(_WilayaOption(
                   code: code, nameFr: nameFr, nameAr: nameAr));
             }
@@ -366,7 +366,7 @@ class _CheckoutViewState extends State<CheckoutView>
         }
       }
     } catch (_) {
-      // Keep built-in 58-wilaya fallback seamlessly
+      // Keep fallback wilayas seamlessly
     } finally {
       if (mounted) {
         setState(() {
@@ -432,7 +432,7 @@ class _CheckoutViewState extends State<CheckoutView>
         for (final dynamic item in list) {
           if (item is Map<String, dynamic>) {
             final String nameFr =
-                (item['name_fr'] ?? item['nameFr'] ?? '').toString().trim();
+                (item['name_fr'] ?? item['name'] ?? item['nameFr'] ?? '').toString().trim();
             final String nameAr =
                 (item['name_ar'] ?? item['nameAr'] ?? '').toString().trim();
             if (nameFr.isNotEmpty) {
@@ -446,11 +446,44 @@ class _CheckoutViewState extends State<CheckoutView>
           }
         }
 
+        // Also parse stop desk centers if returned
+        final List<dynamic> rawCenters = decoded is Map<String, dynamic>
+            ? (decoded['centers'] as List<dynamic>? ?? <dynamic>[])
+            : <dynamic>[];
+        final List<_StopDeskOption> parsedDesks = <_StopDeskOption>[];
+        for (final dynamic c in rawCenters) {
+          if (c is Map<String, dynamic>) {
+            final String id = (c['center_id'] ?? c['id'] ?? '').toString().trim();
+            final String name = (c['name'] ?? '').toString().trim();
+            final String cName = (c['commune_name'] ?? c['commune'] ?? _selectedWilayaNameFr).toString().trim();
+            final String addr = (c['address'] ?? cName).toString().trim();
+            if (id.isNotEmpty && name.isNotEmpty) {
+              parsedDesks.add(_StopDeskOption(
+                id: id,
+                name: name,
+                communeName: cName,
+                address: addr,
+              ));
+            }
+          }
+        }
+
         if (parsed.isNotEmpty) {
+          parsed.sort((_CommuneOption a, _CommuneOption b) =>
+              a.nameFr.compareTo(b.nameFr));
           setState(() {
             _communes = parsed;
             _selectedCommuneName = parsed.first.nameFr;
             _selectedCommuneNameAr = parsed.first.nameAr;
+            if (parsedDesks.isNotEmpty) {
+              _stopDesks = parsedDesks;
+              if (_selectedStopDeskId == null ||
+                  !_stopDesks.any((_StopDeskOption d) => d.id == _selectedStopDeskId)) {
+                _selectedStopDeskId = _stopDesks.first.id;
+                _selectedStopDeskName = _stopDesks.first.name;
+                _selectedStopDeskCommune = _stopDesks.first.communeName;
+              }
+            }
           });
           return;
         }
@@ -722,7 +755,7 @@ class _CheckoutViewState extends State<CheckoutView>
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
                     child: Text(
-                      'Choisir votre Wilaya (58 Wilayas)',
+                      'Choisir votre Wilaya',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -811,7 +844,12 @@ class _CheckoutViewState extends State<CheckoutView>
 
   Future<void> _showCommunePickerSheet() async {
     if (_communes.isEmpty) {
-      return;
+      if (!_isLoadingCommunes) {
+        await _fetchCommunes(_selectedWilayaCode);
+      }
+      if (_communes.isEmpty) {
+        return;
+      }
     }
     String query = '';
     final _CommuneOption? selected = await showModalBottomSheet<_CommuneOption>(

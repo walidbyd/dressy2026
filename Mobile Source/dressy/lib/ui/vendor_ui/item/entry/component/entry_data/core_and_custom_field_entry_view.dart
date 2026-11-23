@@ -25,7 +25,6 @@ import '../../../../../../core/vendor/utils/utils.dart';
 import '../../../../../custom_ui/item/entry/component/entry_data/upload_submit_button.dart';
 import '../../../../../custom_ui/item/entry/component/entry_data/widgets/choose_city_widget.dart';
 import '../../../../../custom_ui/item/entry/component/entry_data/widgets/choose_subcategory_widget.dart';
-import '../../../../../custom_ui/item/entry/component/entry_data/widgets/choose_township_widget.dart';
 import '../../../../../custom_ui/item/entry/component/entry_data/widgets/entry_description.dart';
 import '../../../../../custom_ui/item/entry/component/entry_data/widgets/entry_discount_widget.dart';
 import '../../../../../custom_ui/item/entry/component/entry_data/widgets/entry_price_range_widget.dart';
@@ -452,6 +451,7 @@ class _CustomFieldEntryContainerState
                     );
                   }),
               //Location City
+              //Location City (Wilaya Only)
               CoreFieldContainer(
                 child: CustomChooseCityDropDownWidget(
                   userInputAddressController: userInputAddress,
@@ -462,21 +462,8 @@ class _CustomFieldEntryContainerState
                 ),
                 coreField: itemEntryFieldProvider.cityCoreField,
               ),
-              //Location Township (Hidden cleanly)
-              if (valueHolder.isSubLocation == PsConst.ONE)
-                Visibility(
-                  visible: false,
-                  maintainState: true,
-                  child: CoreFieldContainer(
-                    child: CustomChooseTownshipDropDownWidget(
-                        userInputAddressController: userInputAddress,
-                        townshipController: locationTownshipController,
-                        updateMap: updateMap,
-                        isMandatory:
-                            itemEntryFieldProvider.townshipCoreField.isMandatory),
-                    coreField: itemEntryFieldProvider.townshipCoreField,
-                  ),
-                ),
+              // Commune/Township is strictly disabled for product posting (Wilaya-only)
+              const SizedBox.shrink(),
               // Map Container (Hidden cleanly)
               Visibility(
                 visible: false,

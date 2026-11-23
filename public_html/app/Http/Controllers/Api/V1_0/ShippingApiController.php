@@ -18,7 +18,8 @@ class ShippingApiController extends Controller
 
     /**
      * GET /api/v1.0/shipping/wilayas
-     * Returns the 58 shippable Algerian wilayas as { code, name_fr, name_ar }.
+     * Returns all deliverable Algerian wilayas as { code, name_fr, name_ar, name }.
+     * Dynamically fetched from Yalidine API v1 without capping at 58.
      */
     public function wilayas(): JsonResponse
     {
@@ -27,11 +28,12 @@ class ShippingApiController extends Controller
 
         foreach ($wilayas as $w) {
             $code = (int) ($w['id'] ?? $w['code'] ?? 0);
+            $rawName = (string) ($w['name'] ?? $w['clean_name'] ?? '');
             $formatted[] = [
                 'code' => $code,
-                'name_fr' => $this->shippingService->getWilayaNameFr($code),
+                'name_fr' => $rawName ?: $this->shippingService->getWilayaNameFr($code),
                 'name_ar' => $this->shippingService->getWilayaNameAr($code),
-                'name' => $w['name'] ?? $this->shippingService->getWilayaNameFr($code),
+                'name' => $rawName ?: $this->shippingService->getWilayaNameFr($code),
             ];
         }
 
@@ -45,21 +47,22 @@ class ShippingApiController extends Controller
 
     /**
      * GET /api/v1.0/shipping/communes?wilaya={code}
-     * Returns communes/regions for the requested wilaya as { id, name_fr, name_ar, wilaya_code }.
+     * Returns communes/regions and stop-desk centers for the requested wilaya.
      */
     public function communes(Request $request): JsonResponse
     {
         $wilayaRaw = $request->query('wilaya', $request->query('wilaya_code', $request->query('wilaya_id')));
         $wilayaCode = $this->shippingService->tryParseWilayaCode($wilayaRaw);
 
-        if ($wilayaCode === null) {
+        if ($wilayaCode === null || $wilayaCode < 1) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'A valid wilaya code (1-58) is required.',
+                'message' => 'A valid wilaya code is required.',
             ], 422);
         }
 
         $communes = $this->shippingService->getCommunes($wilayaCode);
+        $centers = $this->shippingService->getCenters($wilayaCode);
         $formatted = [];
 
         foreach ($communes as $c) {
@@ -67,6 +70,7 @@ class ShippingApiController extends Controller
                 'id' => (int) ($c['id'] ?? 0),
                 'name_fr' => (string) ($c['name'] ?? ''),
                 'name_ar' => '',
+                'name' => (string) ($c['name'] ?? ''),
                 'wilaya_code' => $wilayaCode,
                 'has_stop_desk' => (bool) ($c['has_stop_desk'] ?? false),
             ];
@@ -80,6 +84,7 @@ class ShippingApiController extends Controller
             'wilaya_name_ar' => $this->shippingService->getWilayaNameAr($wilayaCode),
             'count' => count($formatted),
             'communes' => $formatted,
+            'centers' => $centers,
         ]);
     }
 
@@ -96,10 +101,10 @@ class ShippingApiController extends Controller
             ?? $request->input('wilaya');
 
         $toWilayaCode = $this->shippingService->tryParseWilayaCode($toWilayaRaw);
-        if ($toWilayaCode === null) {
+        if ($toWilayaCode === null || $toWilayaCode < 1) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'A valid to_wilaya_code (1-58) is required.',
+                'message' => 'A valid to_wilaya_code is required.',
             ], 422);
         }
 

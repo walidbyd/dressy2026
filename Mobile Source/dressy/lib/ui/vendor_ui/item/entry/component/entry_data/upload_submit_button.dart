@@ -201,12 +201,7 @@ class UploadSubmitButtonState extends State<UploadSubmitButton> {
       return false;
     }
 
-    if (itemEntryFieldProvider.townshipCoreField.isVisible &&
-        itemEntryFieldProvider.townshipCoreField.isMandatory &&
-        itemEntryProvider.itemLocationTownshipId!.isEmpty) {
-      showMandatoryAlert('item_entry_need_township_id'.tr);
-      return false;
-    }
+    // Product location is strictly Wilaya-only (Commune/Township is never required)
 
     if (!itemEntryProvider.isAggreTermsAndPolicy) {
       showMandatoryAlert('login__warning_agree_privacy'.tr);

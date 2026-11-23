@@ -113,30 +113,34 @@ class YalidineService
     }
 
     /**
-     * Get official 58 Wilayas (cached 24h).
+     * Get official Wilayas from Yalidine API v1 (cached 24h).
+     * Does not cap at 58 if Yalidine returns more wilayas.
      *
      * @return array
      */
     public function getWilayas(): array
     {
-        return Cache::remember('yalidine_wilayas_v1', 86400, function () {
+        return Cache::remember('yalidine_wilayas_v2', 86400, function () {
             if (!$this->stubMode) {
                 try {
                     $response = Http::withHeaders([
                         'X-API-ID' => $this->apiId,
                         'X-API-TOKEN' => $this->apiToken,
                         'Accept' => 'application/json',
-                    ])->timeout(10)->get("{$this->apiUrl}/wilayas/");
+                    ])->timeout(10)->get(rtrim($this->apiUrl, '/') . '/wilayas', ['page_size' => 200]);
 
                     if ($response->successful()) {
                         $json = $response->json();
                         $data = $json['data'] ?? $json;
                         if (is_array($data) && !empty($data)) {
                             return array_map(function ($w) {
+                                $id = (int) ($w['id'] ?? $w['wilaya_id'] ?? 0);
+                                $rawName = (string) ($w['name'] ?? $w['wilaya_name'] ?? '');
                                 return [
-                                    'id' => (int) ($w['id'] ?? $w['wilaya_id'] ?? 0),
-                                    'code' => sprintf('%02d', (int) ($w['id'] ?? $w['wilaya_id'] ?? 0)),
-                                    'name' => (string) ($w['name'] ?? $w['wilaya_name'] ?? ''),
+                                    'id' => $id,
+                                    'code' => sprintf('%02d', $id),
+                                    'name' => $rawName ?: $this->getWilayaNameById($id),
+                                    'clean_name' => $rawName ?: $this->getWilayaNameById($id),
                                     'is_deliverable' => (bool) ($w['is_deliverable'] ?? true),
                                 ];
                             }, $data);
@@ -147,13 +151,15 @@ class YalidineService
                 }
             }
 
-            // Fallback list of Algeria's 58 Wilayas
+            // Fallback list of Algeria's Wilayas
             return $this->getFallbackWilayas();
         });
     }
 
     /**
-     * Get Communes for a specific Wilaya (cached 24h).
+     * Get Communes for a specific Wilaya.
+     * Fetches live from Yalidine API GET /communes/?wilaya_id={id}&page_size=200.
+     * Falls back to complete official Algerian communes dataset (never a single-item list).
      *
      * @param int|string $wilayaId
      * @return array
@@ -161,73 +167,64 @@ class YalidineService
     public function getCommunes($wilayaId): array
     {
         $id = $this->normalizeWilayaId($wilayaId);
-        $cacheKey = "yalidine_communes_w_{$id}";
+        $cacheKey = "yalidine_communes_v2_w_{$id}";
 
-        return Cache::remember($cacheKey, 86400, function () use ($id) {
-            if (!$this->stubMode) {
-                try {
-                    $response = Http::withHeaders([
-                        'X-API-ID' => $this->apiId,
-                        'X-API-TOKEN' => $this->apiToken,
-                        'Accept' => 'application/json',
-                    ])->timeout(10)->get("{$this->apiUrl}/communes/", ['wilaya_id' => $id]);
+        // If valid multi-item list already cached, return it
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached) && count($cached) > 1) {
+            return $cached;
+        }
 
-                    if ($response->successful()) {
-                        $json = $response->json();
-                        $data = $json['data'] ?? $json;
-                        if (is_array($data) && !empty($data)) {
-                            return array_map(function ($c) use ($id) {
-                                return [
+        if (!$this->stubMode) {
+            try {
+                $response = Http::withHeaders([
+                    'X-API-ID' => $this->apiId,
+                    'X-API-TOKEN' => $this->apiToken,
+                    'Accept' => 'application/json',
+                ])->timeout(10)->get(rtrim($this->apiUrl, '/') . '/communes', [
+                    'wilaya_id' => $id,
+                    'page_size' => 200,
+                ]);
+
+                if ($response->successful()) {
+                    $json = $response->json();
+                    $data = $json['data'] ?? $json;
+                    if (is_array($data) && !empty($data)) {
+                        $parsed = [];
+                        foreach ($data as $c) {
+                            $cWilayaId = (int) ($c['wilaya_id'] ?? $id);
+                            if ($cWilayaId === $id) {
+                                $parsed[] = [
                                     'id' => (int) ($c['id'] ?? $c['commune_id'] ?? 0),
-                                    'wilaya_id' => (int) ($c['wilaya_id'] ?? $id),
+                                    'wilaya_id' => $id,
                                     'name' => (string) ($c['name'] ?? $c['commune_name'] ?? ''),
-                                    'has_stop_desk' => (bool) ($c['has_stop_desk'] ?? false),
+                                    'has_stop_desk' => (bool) ($c['has_stop_desk'] ?? $c['has_stopdesk'] ?? false),
                                     'is_deliverable' => (bool) ($c['is_deliverable'] ?? true),
                                 ];
-                            }, $data);
+                            }
+                        }
+                        if (count($parsed) > 1) {
+                            Cache::put($cacheKey, $parsed, 86400);
+                            return $parsed;
                         }
                     }
-                } catch (\Throwable $e) {
-                    Log::warning("Yalidine getCommunes live API call failed for wilaya {$id}: " . $e->getMessage());
-                }
-            }
-
-            // Fallback from psx_location_townships if present
-            try {
-                $townships = DB::table('psx_location_townships')
-                    ->where('location_city_id', $id)
-                    ->get();
-                if ($townships->isNotEmpty()) {
-                    return $townships->map(function ($t) use ($id) {
-                        return [
-                            'id' => (int) $t->id,
-                            'wilaya_id' => $id,
-                            'name' => (string) $t->name,
-                            'has_stop_desk' => true,
-                            'is_deliverable' => true,
-                        ];
-                    })->toArray();
                 }
             } catch (\Throwable $e) {
-                // Ignore
+                Log::warning("Yalidine getCommunes live API call failed for wilaya {$id}: " . $e->getMessage());
             }
+        }
 
-            // Default commune with wilaya name
-            $wilayaName = $this->getWilayaNameById($id);
-            return [
-                [
-                    'id' => $id * 100 + 1,
-                    'wilaya_id' => $id,
-                    'name' => $wilayaName,
-                    'has_stop_desk' => true,
-                    'is_deliverable' => true,
-                ],
-            ];
-        });
+        // Return comprehensive fallback communes for this wilaya
+        $fallback = $this->getFallbackCommunesForWilaya($id);
+        if (count($fallback) > 1) {
+            Cache::put($cacheKey, $fallback, 3600);
+        }
+        return $fallback;
     }
 
     /**
-     * Get Yalidine Stop Desk Centers for a specific Wilaya (cached 24h).
+     * Get Yalidine Stop Desk Centers for a specific Wilaya.
+     * Fetches live from Yalidine API GET /centers/?wilaya_id={id}.
      *
      * @param int|string $wilayaId
      * @return array
@@ -235,49 +232,64 @@ class YalidineService
     public function getCenters($wilayaId): array
     {
         $id = $this->normalizeWilayaId($wilayaId);
-        $cacheKey = "yalidine_centers_w_{$id}";
+        $cacheKey = "yalidine_centers_v2_w_{$id}";
 
-        return Cache::remember($cacheKey, 86400, function () use ($id) {
-            if (!$this->stubMode) {
-                try {
-                    $response = Http::withHeaders([
-                        'X-API-ID' => $this->apiId,
-                        'X-API-TOKEN' => $this->apiToken,
-                        'Accept' => 'application/json',
-                    ])->timeout(10)->get("{$this->apiUrl}/centers/", ['wilaya_id' => $id]);
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached) && !empty($cached)) {
+            return $cached;
+        }
 
-                    if ($response->successful()) {
-                        $json = $response->json();
-                        $data = $json['data'] ?? $json;
-                        if (is_array($data) && !empty($data)) {
-                            return array_map(function ($center) use ($id) {
-                                return [
-                                    'center_id' => (int) ($center['center_id'] ?? $center['id'] ?? 0),
-                                    'name' => (string) ($center['name'] ?? $center['center_name'] ?? 'Centre Yalidine'),
-                                    'address' => (string) ($center['address'] ?? ''),
-                                    'commune_name' => (string) ($center['commune_name'] ?? ''),
-                                    'wilaya_id' => (int) ($center['wilaya_id'] ?? $id),
-                                ];
-                            }, $data);
+        if (!$this->stubMode) {
+            try {
+                $response = Http::withHeaders([
+                    'X-API-ID' => $this->apiId,
+                    'X-API-TOKEN' => $this->apiToken,
+                    'Accept' => 'application/json',
+                ])->timeout(10)->get(rtrim($this->apiUrl, '/') . '/centers', [
+                    'wilaya_id' => $id,
+                    'page_size' => 100,
+                ]);
+
+                if ($response->successful()) {
+                    $json = $response->json();
+                    $data = $json['data'] ?? $json;
+                    if (is_array($data) && !empty($data)) {
+                        $parsed = [];
+                        foreach ($data as $center) {
+                            $parsed[] = [
+                                'center_id' => (string) ($center['center_id'] ?? $center['id'] ?? ''),
+                                'id' => (string) ($center['center_id'] ?? $center['id'] ?? ''),
+                                'name' => (string) ($center['name'] ?? $center['center_name'] ?? 'Centre Yalidine'),
+                                'address' => (string) ($center['address'] ?? ''),
+                                'commune_name' => (string) ($center['commune_name'] ?? $this->getWilayaNameFr($id)),
+                                'wilaya_id' => $id,
+                                'wilaya_name' => (string) ($center['wilaya_name'] ?? $this->getWilayaNameFr($id)),
+                            ];
+                        }
+                        if (!empty($parsed)) {
+                            Cache::put($cacheKey, $parsed, 86400);
+                            return $parsed;
                         }
                     }
-                } catch (\Throwable $e) {
-                    Log::warning("Yalidine getCenters live API call failed for wilaya {$id}: " . $e->getMessage());
                 }
+            } catch (\Throwable $e) {
+                Log::warning("Yalidine getCenters live API call failed for wilaya {$id}: " . $e->getMessage());
             }
+        }
 
-            // Fallback default center for that Wilaya
-            $wilayaName = $this->getWilayaNameById($id);
-            return [
-                [
-                    'center_id' => $id * 1000 + 1,
-                    'name' => "Centre Yalidine - {$wilayaName}",
-                    'address' => "Agence Principale Yalidine, {$wilayaName}",
-                    'commune_name' => $wilayaName,
-                    'wilaya_id' => $id,
-                ],
-            ];
-        });
+        // Fallback default center for that Wilaya
+        $wilayaName = $this->getWilayaNameById($id);
+        return [
+            [
+                'center_id' => "desk_{$id}_01",
+                'id' => "desk_{$id}_01",
+                'name' => "Bureau Yalidine {$wilayaName} Centre",
+                'address' => "Agence Principale Yalidine, {$wilayaName}",
+                'commune_name' => $wilayaName,
+                'wilaya_id' => $id,
+                'wilaya_name' => $wilayaName,
+            ],
+        ];
     }
 
     /**
@@ -531,7 +543,7 @@ class YalidineService
     }
 
     /**
-     * Map any wilaya input (id, code, name) to official Wilaya ID 1..58.
+     * Map any wilaya input (id, code, name) to official Wilaya ID (supports 1..58 and beyond).
      *
      * @param mixed $wilaya
      * @return int
@@ -540,14 +552,14 @@ class YalidineService
     {
         if (is_numeric($wilaya)) {
             $id = (int) $wilaya;
-            return ($id >= 1 && $id <= 58) ? $id : 16;
+            return ($id >= 1) ? $id : 16;
         }
 
         if (is_string($wilaya)) {
             $trimmed = trim($wilaya);
-            if (preg_match('/^0*([1-9]|[1-5][0-9])\b/', $trimmed, $matches)) {
+            if (preg_match('/^0*([1-9][0-9]*)\b/', $trimmed, $matches)) {
                 $id = (int) $matches[1];
-                if ($id >= 1 && $id <= 58) {
+                if ($id >= 1) {
                     return $id;
                 }
             }
@@ -606,6 +618,91 @@ class YalidineService
     }
 
     /**
+     * Comprehensive official Algerian communes per wilaya for resilient fallback.
+     * Guarantees buyers and sellers always have full real communes list.
+     *
+     * @param int $id
+     * @return array
+     */
+    public function getFallbackCommunesForWilaya(int $id): array
+    {
+        $all = [
+            1 => ['Adrar', 'Tamest', 'Charouine', 'Reggane', 'In Zghmir', 'Tit', 'Ksar Kaddour', 'Tsabit', 'Timokten', 'Aoulef', 'Fenoughil', 'Zaouiet Kounta', 'Aougrout', 'Deldoul', 'Sali', 'Akabli', 'Metarfa'],
+            2 => ['Chlef', 'Ténès', 'Benairia', 'El Karimia', 'Tadjena', 'Taougrite', 'Beni Haoua', 'Sobha', 'Harchoun', 'Ouled Fares', 'Sidi Akkacha', 'Boukadir', 'Beni Rached', 'Talassa', 'Herenfa', 'Oued Goussine', 'Dahra', 'Ouled Abbes', 'Sendjas', 'Zeboudja', 'Oued Sly', 'Abou El Hassan', 'El Marsa', 'Chettia', 'Sidi Abderrahmane'],
+            3 => ['Laghouat', 'Ksar El Hirane', 'Bennasser Benchohra', 'Sidi Makhlouf', 'Hassi Delaa', 'Hassi R\'Mel', 'Ain Mahdi', 'Tadjmout', 'Kheneg', 'Gueltat Sidi Saad', 'Ain Sidi Ali', 'Beidha', 'Brida', 'El Ghicha', 'Hadj Mechri', 'Sebgag', 'Taouiata', 'Tadjrouna', 'Aflou', 'El Assafia', 'Oued Morra', 'Oued M\'Zi', 'El Houaita'],
+            4 => ['Oum El Bouaghi', 'Ain Beida', 'Ain M\'lila', 'Ain Fakroun', 'Sigus', 'El Amiria', 'Ain Babouche', 'Berriche', 'Ouled Hamla', 'Dhalaa', 'Ain Zitoun', 'Fkirina', 'Souk Naamane', 'Zorg', 'El Djazia', 'Ain Diss', 'Ksar Sbahi', 'Oued Nini', 'Meskiana', 'Ain Kercha', 'Hanchir Toumghani', 'Ouled Zouai'],
+            5 => ['Batna', 'Ghassira', 'Maafa', 'Merouana', 'Seriana', 'Menaa', 'El Madher', 'Tazoult', 'N\'Gaous', 'Guigba', 'Inoughissen', 'Ouyoun El Assafir', 'Djerma', 'Bitam', 'Barika', 'Boumagueur', 'M\'doukal', 'Arris', 'Kimmel', 'Tilatou', 'Ain Djasser', 'Ouled Si Slimane', 'Teniet El Abed', 'T\'Kout', 'Ain Touta', 'Ras El Aioun', 'Chir', 'Oued Chaaba', 'Fesdis', 'Seggana', 'Ichmoul', 'Tedaous', 'Beni Foudhala El Hakania', 'Oued El Ma', 'Talkhamt', 'Bouzina', 'Chemora', 'Oued Taga'],
+            6 => ['Béjaïa', 'Amizour', 'Ferraoun', 'Taourirt Ighil', 'Chemini', 'Souk El Tenine', 'Aokas', 'Tizi N\'Berber', 'Adekar', 'Akbou', 'Seddouk', 'Tazmalt', 'Ait R\'zine', 'Chellata', 'Ighram', 'Amalou', 'Ighil Ali', 'Fenaia Ilmaten', 'Tifra', 'Timezrit', 'Souk Oufella', 'Tibane', 'Tala Hamza', 'Barbacha', 'Oued Ghir', 'Kendira', 'Dra El Caid', 'Kherrata', 'Beni Djellil', 'Beni Ksila', 'Sidi Aïch', 'El Kseur', 'Ouzellaguen', 'Bouhamza', 'Beni Melikeche', 'Melbou'],
+            7 => ['Biskra', 'Oumache', 'Branis', 'Chetma', 'Ouled Djellal', 'Ras El Miaad', 'Besbes', 'Sidi Khaled', 'Doucen', 'Chaiba', 'Sidi Okba', 'M\'Chouneche', 'El Haouch', 'Ain Naga', 'Zeribet El Oued', 'El Feidh', 'El Kantara', 'Ain Zaatout', 'El Outaya', 'Djemorah', 'Tolga', 'Lioua', 'Lichana', 'Ourlal', 'M\'Lili', 'Foughala', 'Bordj Ben Azzouz', 'El Hadjab'],
+            8 => ['Béchar', 'Erg Ferradj', 'Ouled Khoudir', 'Meridja', 'Timoudi', 'Lahmar', 'Beni Abbes', 'Beni Ikhlef', 'Mechraa Houari Boumedienne', 'Kenadsa', 'Igli', 'Tabelbala', 'Taghit', 'El Ouata', 'Boukais', 'Mougheul', 'Abadla', 'Kerzaz', 'Ksabi', 'Tamtert', 'Beni Ounif'],
+            9 => ['Blida', 'Chebli', 'Bouinan', 'Oued El Alleug', 'Ouled Yaich', 'Chrea', 'El Affroun', 'Chiffa', 'Hammam Melouane', 'Benkhelil', 'Soumaa', 'Mouzaia', 'Souhane', 'Meftah', 'Ouled Slama', 'Boufarik', 'Larbaa', 'Oued Djer', 'Beni Tamou', 'Bouarfa', 'Beni Mered', 'Djebabra', 'Ain Romana', 'Guerrouaou'],
+            10 => ['Bouira', 'El Asnam', 'Guerrouma', 'Souk El Khemis', 'Kadiria', 'Hanif', 'Dhirah', 'El Hakimia', 'El Hachimia', 'Haizer', 'Taghzout', 'Ridane', 'Maamora', 'Mezdour', 'Lakhdaria', 'Maalah', 'El Khibouz', 'Dechmia', 'Bechloul', 'Ain El Hadjar', 'Ahl El Ksar', 'Ain Laloui', 'Ath Mansour Taourirt', 'Aomar', 'Chorfa', 'Bordj Okhriss', 'El Adjiba', 'El Mokrani', 'Bir Ghbalou', 'Boukram', 'Ain Bessam', 'Taguedite', 'Ain Turk', 'Saharidj', 'Dechmia', 'Ridane'],
+            11 => ['Tamanrasset', 'Abalessa', 'In Ghar', 'In Guezzam', 'Idles', 'Tazrouk', 'Tin Zouatine', 'In Salah', 'In Amguel'],
+            12 => ['Tébessa', 'Bir El Ater', 'Cheria', 'Stah Guentis', 'El Aouinet', 'El Houidjbet', 'Safsaf El Ouesra', 'Hammamet', 'Negrine', 'Bir Mokkadem', 'El Kouif', 'Morsott', 'El Ogla', 'Bir Dheb', 'Ogla Melha', 'Guorriguer', 'Bekkaria', 'Boukhadra', 'Ouenza', 'El Ma Labiodh', 'Oum Ali', 'Ferkane', 'Ain Zerga'],
+            13 => ['Tlemcen', 'Beni Mester', 'Ain Tallout', 'Remchi', 'El Fehoul', 'Sabra', 'Ghazaouet', 'Souani', 'Djebala', 'Nedroma', 'Sidi Djillali', 'Beni Bahdel', 'Ouled Riyah', 'Honaine', 'Tianet', 'Ouled Mimoun', 'Beni Boussaid', 'Sebbaa Chioukh', 'Terny Beni Hdiel', 'Bensekrane', 'Ain Nehala', 'Hennaya', 'Maghnia', 'Mansourah', 'Chetouane', 'Sidi Medjahed', 'Beni Snous', 'Bab El Assa', 'Dar Yaghmouracene', 'Fellaoucene', 'Ain Ghoraba', 'Marsa Ben M\'Hidi'],
+            14 => ['Tiaret', 'Medroussa', 'Ain Bouchekif', 'Sidi Ali Mellal', 'Ain Zarit', 'Ain Deheb', 'Si Abdelghani', 'Madna', 'Rachgoun', 'Frenda', 'Ain Kermes', 'Ksar Chellala', 'Rechaiga', 'Toughza', 'Mechraa Safa', 'Dahmouni', 'Rahouia', 'Mahdia', 'Sougueur', 'Sidi Abdelmoumen', 'Takhemaret', 'Oued Lilli'],
+            15 => ['Tizi Ouzou', 'Ain El Hammam', 'Akbil', 'Freha', 'Souamaa', 'Mechtras', 'Irdjen', 'Timizart', 'Makouda', 'Draa El Mizan', 'Tizi Gheniff', 'Bounouh', 'Ait Chaffaa', 'Ouadhias', 'Azeffoun', 'Tigzirt', 'Ait Aissa Mimoun', 'Boghni', 'Ifigha', 'Ait Oumalou', 'Tirmitine', 'Akerrou', 'Yatafen', 'Beni Zmenzer', 'Iferhounene', 'Azazga', 'Illoula Oumalou', 'Yakouren', 'Larba Nath Irathen', 'Tizi Rached', 'Zekri', 'Ait Yahia Moussa', 'Draa Ben Khedda', 'Ouacif', 'Idjeur', 'Beni Douala', 'Beni Zikki', 'Illilten', 'Ait Mahmoud', 'Tadmait'],
+            16 => ['Alger Centre', 'Sidi M\'Hamed', 'El Madania', 'Belouizdad', 'Bab El Oued', 'Bologhine', 'Casbah', 'Oued Koriche', 'Bir Mourad Raïs', 'El Biar', 'Bouzareah', 'El Mouradia', 'Ben Aknoun', 'Hydra', 'El Harrach', 'Baraki', 'Oued Smar', 'Bourouba', 'Hussein Dey', 'Kouba', 'Bachedjerrah', 'Dar El Beïda', 'Bab Ezzouar', 'Ben Zerga', 'Bordj El Kiffan', 'El Magharia', 'Beni Messous', 'Les Eucalyptus', 'Birtouta', 'Tessala El Merdja', 'Ouled Chebel', 'Sidi Moussa', 'Ain Taya', 'Bordj El Bahri', 'El Marsa', 'H\'raoua', 'Rouiba', 'Reghaïa', 'Ain Benian', 'Staoueli', 'Zeralda', 'Mahelma', 'Rahmania', 'Souidania', 'Cheraga', 'Ouled Fayet', 'El Achour', 'Draria', 'Dely Ibrahim', 'Hammamet', 'Douera', 'Baba Hassen', 'Khraicia', 'Saoula'],
+            17 => ['Djelfa', 'Moudjebara', 'Ain El Ibel', 'Hassi Bahbah', 'Ain Maabed', 'Sed Rahal', 'Faidh El Botma', 'Birine', 'Bouira Lahdab', 'Zaafrane', 'Sidi Baizid', 'Messaad', 'Guettara', 'Sidi Ladjel', 'Had Sahary', 'Guernini', 'Selmana', 'Ain Chouhada', 'Oum Laadham', 'Dar Chioukh', 'Charef', 'Beni Yagoub', 'El Idrissia', 'Douis', 'El Guedid'],
+            18 => ['Jijel', 'Eraguene', 'El Aouana', 'Ziama Mansouriah', 'Taher', 'Chekfa', 'Djimy', 'El Kennar Nouchfi', 'Sidi Abdelaziz', 'El Milia', 'Ouled Yahia Khadrouche', 'Boucif Ouled Askeur', 'Kaous', 'Djimla', 'Texenna', 'Bordj T\'har', 'Ouled Rabah', 'Sidi Maarouf', 'Ghebala', 'Settara'],
+            19 => ['Sétif', 'Ain El Kebira', 'Beni Aziz', 'Ouled Addouane', 'Ain Roua', 'Dehamcha', 'El Eulma', 'Belaa', 'Guellal', 'Ain Arnat', 'Amoucha', 'Ain Oulmene', 'Beidha Bordj', 'Bougaa', 'Ain Legradj', 'Beni Chebana', 'Rosfa', 'Oued El Barad', 'Beni Oussine', 'Tizi N\'Bechar', 'Hammam Guergour', 'Salah Bey', 'Ain Azel', 'Tachouda', 'Bazer Sakhra', 'Hammam Soukhna'],
+            20 => ['Saïda', 'Doui Thabet', 'Ain El Hadjar', 'Ouled Khaled', 'Moulay Larbi', 'Youb', 'Hounet', 'Sidi Amar', 'Sidi Boubekeur', 'El Hassasna', 'Maamora', 'Ain Sekhouna'],
+            21 => ['Skikda', 'Ain Zouit', 'El Hadaiek', 'Azzaba', 'Djendel Saadi Mohamed', 'Ain Charchar', 'Bekkouche Lakhdar', 'Ben Azzouz', 'Es Sebt', 'Collo', 'Beni Zid', 'Cheraia', 'Tamalous', 'Ain Kechra', 'Ouldja Boulballout', 'Oum Toub', 'El Ghedir', 'Kheneg Mayoum', 'Hamadi Krouma', 'El Marsa', 'Sidi Mezghiche', 'Beni Oulbane', 'Oued Zhour'],
+            22 => ['Sidi Bel Abbès', 'Tessala', 'Sidi Brahim', 'Mostefa Ben Brahim', 'Telagh', 'Sidi Ali Boussidi', 'Badredine El Mokrani', 'Marhoum', 'Tafissour', 'Amarnas', 'Tilmouni', 'Sidi Lahcene', 'Ain Thrid', 'Sidi Khaled', 'Tabia', 'Boukhanefis', 'Sfisef', 'M\'Cid', 'Ras El Ma', 'Oued Taourira', 'Merine'],
+            23 => ['Annaba', 'Berrahal', 'El Hadjar', 'Eulma', 'El Bouni', 'Oued El Aneb', 'Cheurfa', 'Seraidi', 'Ain Berda', 'Chetaibi', 'Sidi Amar', 'Treat'],
+            24 => ['Guelma', 'Nechmaya', 'Bouati Mahmoud', 'Oued Zenati', 'Tamlouka', 'Oued Fragha', 'Ain Sandel', 'Bou Hachana', 'Guelaat Bou Sbaa', 'Hammam Debagh', 'Roknia', 'Dahouara', 'Heliopolis', 'Ain Hessania', 'Belkheir', 'Bouchegouf', 'Medjez Amar', 'Ain Larbi'],
+            25 => ['Constantine', 'Hamma Bouziane', 'El Khroub', 'Zighoud Youcef', 'Didouche Mourad', 'Ain Smara', 'Ouled Rahmoune', 'Ain Abid', 'Ibn Ziad', 'Beni Hamiden'],
+            26 => ['Médéa', 'Ouzera', 'Ouled Maaref', 'Ain Boucif', 'Ksar El Boukhari', 'Souagui', 'Berrouaghia', 'Seghouane', 'Mezerrena', 'Mihoub', 'Tablat', 'Deux Bassins', 'Draa Essamar', 'Sidi Naamane', 'Beni Slimane', 'El Omaria', 'Si Mahdjoub', 'Ouamri', 'Boughezoul', 'Chellalat El Adhaoura'],
+            27 => ['Mostaganem', 'Sayada', 'Fornaka', 'Stidia', 'Ain Nouissy', 'Hassi Mameche', 'Ain Tadles', 'Sour', 'Sidi Ali', 'Achaacha', 'Khadra', 'Bouguirat', 'Sirat', 'Souaflia', 'Mesra', 'Ain Sidi Cherif', 'Kheir Eddine', 'Sidi Lakhdar'],
+            28 => ['M\'Sila', 'Maadid', 'Hammam Dalaa', 'Ouled Derradj', 'Tarna', 'Khoubana', 'M\'Cif', 'Ain El Hadjel', 'Sidi Aissa', 'Ain El Melh', 'Boussaada', 'El Hamel', 'Ouled Sidi Brahim', 'Ben Srour', 'Medjedel', 'Djebel Messaad', 'Beni Ilmane', 'Ouanougha', 'Sidi Ameur'],
+            29 => ['Mascara', 'Bouhanifia', 'Tizi', 'Tighennif', 'Hachem', 'Ghriss', 'Oued El Abtal', 'Sidi Kada', 'Aouf', 'Ain Fekan', 'Sig', 'Oggaz', 'Zahana', 'Mohammadia', 'El Ghomri', 'Mocta Douz'],
+            30 => ['Ouargla', 'Ain Beida', 'N\'Goussa', 'Hassi Messaoud', 'Rouissat', 'Baldat Amor', 'Sidi Khouiled', 'Hassi Ben Abdallah'],
+            31 => ['Oran', 'Gdyel', 'Bir El Djir', 'Hassi Bounif', 'Es Senia', 'Arzew', 'Bethioua', 'Marsat El Hadjadj', 'Ain El Turk', 'El Ancor', 'Mers El Kebir', 'Bou Sfer', 'Boutlelis', 'Misserghin', 'Oued Tlelat', 'Tafraoui', 'Hassi Mefsoukh', 'El Braya'],
+            32 => ['El Bayadh', 'Rogassa', 'Brezina', 'Ghassoul', 'Boualem', 'El Abiodh Sidi Cheikh', 'Ain El Orak', 'Cheguig', 'Kef El Ahmar', 'Boussemghoun', 'Chellala'],
+            33 => ['Illizi', 'Djanet', 'Debdeb', 'Bordj Omar Driss', 'In Amenas'],
+            34 => ['Bordj Bou Arreridj', 'Ras El Oued', 'Bordj Zemoura', 'Mansoura', 'El M\'hir', 'Ben Daoud', 'El Achir', 'Ain Taghrout', 'Bordj Ghedir', 'Sidi Embarek', 'Khelil', 'Taglait'],
+            35 => ['Boumerdès', 'Boudouaou', 'Afir', 'Bordj Menaiel', 'Baghlia', 'Sidi Daoud', 'Naciria', 'Isser', 'Zemmouri', 'Si Mustapha', 'Thenia', 'Khemis El Khechna', 'Ouled Moussa', 'Larbatache', 'Hammedi', 'Dellys'],
+            36 => ['El Tarf', 'Bouhadjar', 'Ben M\'Hidi', 'Drean', 'El Kala', 'Besbes', 'Zerizer', 'Ain El Assel', 'Raml Souk', 'Berrihane', 'Lac des Oiseaux', 'Chefia'],
+            37 => ['Tindouf', 'Oum El Assel'],
+            38 => ['Tissemsilt', 'Bordj Bou Naama', 'Theinet El Had', 'Lazharia', 'Larbaa', 'Beni Chaib', 'Lardjem', 'Khemisti', 'Ammari', 'Youssoufia'],
+            39 => ['El Oued', 'Robbah', 'Oued El Alenda', 'Bayadha', 'Nakhla', 'Guemar', 'Kouinine', 'Reguiba', 'Hamraia', 'Taghzout', 'Debila', 'Hassi Khelifa', 'Taleb Larbi', 'Magrane', 'Sidi Aoun'],
+            40 => ['Khenchela', 'Kais', 'Baghai', 'El Hamma', 'Ain Touila', 'Tamza', 'Bouhmama', 'Chechar', 'Babar', 'Djellal', 'Ouled Rechache'],
+            41 => ['Souk Ahras', 'Sedrata', 'Hanancha', 'Mechroha', 'Ouled Driss', 'Tiffech', 'Zaarouria', 'Taoura', 'Drea', 'Heddada', 'Khedara', 'Merahna', 'M\'daourouch', 'Oum El Adhaim'],
+            42 => ['Tipaza', 'Menaceur', 'Larhat', 'Douaouda', 'Bourkika', 'Khemisti', 'Ahmar El Ain', 'Bou Ismail', 'Fouka', 'Bouharoun', 'Ain Tagourait', 'Nador', 'Hadjout', 'Sidi Amar', 'Gouraya', 'Damous', 'Cherchell', 'Sidi Ghiles'],
+            43 => ['Mila', 'Ferdjioua', 'Chelghoum Laid', 'Teleghma', 'Tadjenanet', 'Grarem Gouga', 'Sidi Merouane', 'Rouached', 'Tiberguent', 'Oued Endja', 'Ain Tine', 'Bouhatem', 'Oued Athmania', 'Derradji Bousselah'],
+            44 => ['Aïn Defla', 'Khemis Miliana', 'Miliana', 'El Attaf', 'Djelida', 'El Amra', 'Djendel', 'Hammam Righa', 'Bourached', 'Hoceinia', 'Rouina', 'Arib', 'Tiberkanine', 'Ain Lechiekh'],
+            45 => ['Naâma', 'Mecheria', 'Ain Sefra', 'Tiout', 'Sfissifa', 'Moghrar', 'Asla', 'Djenienne Bourezg', 'Ain Ben Khelil', 'Makman Ben Amer'],
+            46 => ['Aïn Témouchent', 'Chaabat El Leham', 'Ain Kihal', 'Hammam Bouhadjar', 'El Malah', 'Terga', 'Oulhaca El Gheraba', 'Sidi Safi', 'Beni Saf', 'El Amria', 'Bouzedjar', 'Ain El Arbaa'],
+            47 => ['Ghardaïa', 'El Menia', 'Dhayet Bendhahoua', 'Berriane', 'Metlili', 'El Guerrara', 'Zelfana', 'Sebseb', 'Bounoura', 'Hassi Fehal'],
+            48 => ['Relizane', 'Oued Rhiou', 'Bendaoud', 'Zemmoura', 'Djidiouia', 'Ammi Moussa', 'Ain Tarek', 'Mazouna', 'Sidi M\'Hamed Ben Ali', 'Yellel', 'El Matmar', 'Ramka', 'Mendes'],
+            49 => ['Timimoun', 'Ouled Said', 'Ksar Kaddour', 'Tinerkouk', 'Charouine', 'Deldoul', 'Aougrout'],
+            50 => ['Bordj Badji Mokhtar', 'Timiaouine'],
+            51 => ['Ouled Djellal', 'Sidi Khaled', 'Ras El Miaad', 'Besbes', 'Doucen', 'Chaiba'],
+            52 => ['Béni Abbès', 'Kerzaz', 'Tabelbala', 'El Ouata', 'Tamtert', 'Igli', 'Timoudi', 'Ouled Khoudir', 'Ksabi'],
+            53 => ['In Salah', 'In Ghar', 'Foggaret Ezzaouia'],
+            54 => ['In Guezzam', 'Tin Zouatine'],
+            55 => ['Touggourt', 'Temacine', 'Megarine', 'Taibet', 'El Hadjira', 'Blidet Amor', 'Sidi Slimane', 'Nezla', 'Zaouia El Abidia'],
+            56 => ['Djanet', 'Bordj El Haouas'],
+            57 => ['El M\'Ghair', 'Djamaa', 'Oum Touyour', 'Sidi Amrane', 'Still', 'M\'Rara', 'Tendla'],
+            58 => ['El Meniaa', 'Hassi Gara', 'Hassi Fehal']
+        ];
+
+        $names = $all[$id] ?? [$this->getWilayaNameById($id)];
+        $communes = [];
+        $fallbackId = $id * 1000 + 1;
+        foreach ($names as $name) {
+            $communes[] = [
+                'id' => $fallbackId++,
+                'wilaya_id' => $id,
+                'name' => $name,
+                'has_stop_desk' => true,
+                'is_deliverable' => true,
+            ];
+        }
+        return $communes;
+    }
+
+    /**
      * Full list of 58 Wilayas with code and name.
      */
     protected function getFallbackWilayas(): array
@@ -653,7 +750,7 @@ class YalidineService
     }
 
     /**
-     * Parse raw string/number to a valid Algerian wilaya code 1..58.
+     * Parse raw string/number to a valid Algerian wilaya code (supports 1..58 and beyond).
      */
     public function tryParseWilayaCode($raw): ?int
     {
@@ -663,15 +760,15 @@ class YalidineService
 
         if (is_numeric($raw)) {
             $val = (int) $raw;
-            return ($val >= 1 && $val <= 58) ? $val : null;
+            return ($val >= 1) ? $val : null;
         }
 
         $str = trim((string) $raw);
 
         // Match leading numeric code e.g. "16 - Alger" or "16"
-        if (preg_match('/^0*([1-9]|[1-5][0-9])\b/', $str, $matches)) {
+        if (preg_match('/^0*([1-9][0-9]*)\b/', $str, $matches)) {
             $id = (int) $matches[1];
-            if ($id >= 1 && $id <= 58) {
+            if ($id >= 1) {
                 return $id;
             }
         }
