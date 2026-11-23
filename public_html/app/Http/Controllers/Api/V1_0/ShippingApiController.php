@@ -3,38 +3,49 @@
 namespace App\Http\Controllers\Api\V1_0;
 
 use App\Http\Controllers\Controller;
-use App\Services\DzshipYalidineService;
+use App\Services\YalidineService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ShippingApiController extends Controller
 {
-    protected DzshipYalidineService $shippingService;
+    protected YalidineService $shippingService;
 
-    public function __construct(DzshipYalidineService $shippingService)
+    public function __construct(YalidineService $shippingService)
     {
         $this->shippingService = $shippingService;
     }
 
     /**
      * GET /api/v1.0/shipping/wilayas
-     * Returns the 58 shippable Algerian wilayas (cached 7 days) as { code, name_fr, name_ar }.
+     * Returns the 58 shippable Algerian wilayas as { code, name_fr, name_ar }.
      */
     public function wilayas(): JsonResponse
     {
         $wilayas = $this->shippingService->getWilayas();
+        $formatted = [];
+
+        foreach ($wilayas as $w) {
+            $code = (int) ($w['id'] ?? $w['code'] ?? 0);
+            $formatted[] = [
+                'code' => $code,
+                'name_fr' => $this->shippingService->getWilayaNameFr($code),
+                'name_ar' => $this->shippingService->getWilayaNameAr($code),
+                'name' => $w['name'] ?? $this->shippingService->getWilayaNameFr($code),
+            ];
+        }
 
         return response()->json([
             'status' => 'success',
-            'courier' => DzshipYalidineService::COURIER_YALIDINE,
-            'count' => count($wilayas),
-            'wilayas' => $wilayas,
+            'courier' => 'yalidine',
+            'count' => count($formatted),
+            'wilayas' => $formatted,
         ]);
     }
 
     /**
      * GET /api/v1.0/shipping/communes?wilaya={code}
-     * Returns communes/regions for the requested wilaya (cached 7 days) as { id, name_fr, name_ar, wilaya_code }.
+     * Returns communes/regions for the requested wilaya as { id, name_fr, name_ar, wilaya_code }.
      */
     public function communes(Request $request): JsonResponse
     {
@@ -49,15 +60,26 @@ class ShippingApiController extends Controller
         }
 
         $communes = $this->shippingService->getCommunes($wilayaCode);
+        $formatted = [];
+
+        foreach ($communes as $c) {
+            $formatted[] = [
+                'id' => (int) ($c['id'] ?? 0),
+                'name_fr' => (string) ($c['name'] ?? ''),
+                'name_ar' => '',
+                'wilaya_code' => $wilayaCode,
+                'has_stop_desk' => (bool) ($c['has_stop_desk'] ?? false),
+            ];
+        }
 
         return response()->json([
             'status' => 'success',
-            'courier' => DzshipYalidineService::COURIER_YALIDINE,
+            'courier' => 'yalidine',
             'wilaya_code' => $wilayaCode,
             'wilaya_name_fr' => $this->shippingService->getWilayaNameFr($wilayaCode),
             'wilaya_name_ar' => $this->shippingService->getWilayaNameAr($wilayaCode),
-            'count' => count($communes),
-            'communes' => $communes,
+            'count' => count($formatted),
+            'communes' => $formatted,
         ]);
     }
 

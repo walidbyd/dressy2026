@@ -29,6 +29,15 @@ class AdminDeliverySettingController extends Controller
                 : '••••••••••••';
         }
 
+        // Mask webhook secret for display
+        $rawSecret = $setting->webhook_secret;
+        $maskedSecret = '';
+        if (!empty($rawSecret)) {
+            $maskedSecret = strlen($rawSecret) > 6
+                ? '••••••••••••' . substr($rawSecret, -4)
+                : '••••••••••••';
+        }
+
         $settingsData = [
             'id' => $setting->id,
             'is_enabled' => (bool) $setting->is_enabled,
@@ -40,8 +49,9 @@ class AdminDeliverySettingController extends Controller
             'auto_create_parcel' => (bool) $setting->auto_create_parcel,
             'auto_sync_trigger' => (string) $setting->auto_sync_trigger,
             'auto_sync_status' => (bool) $setting->auto_sync_status,
-            'webhook_secret' => (string) ($setting->webhook_secret ?? ''),
-            'webhook_url' => url('/api/v1.0/delivery/yalidine/webhook'),
+            'webhook_secret' => $maskedSecret,
+            'is_secret_set' => !empty($rawSecret),
+            'webhook_url' => url('/api/v1/yalidine/webhook'),
             'sender_name' => (string) $setting->sender_name,
             'sender_phone' => (string) $setting->sender_phone,
             'from_wilaya_id' => (int) $setting->from_wilaya_id,
@@ -106,12 +116,18 @@ class AdminDeliverySettingController extends Controller
 
         $setting = DeliverySetting::getSettings();
 
-        $data = $request->except(['api_token']);
+        $data = $request->except(['api_token', 'webhook_secret']);
 
         // Only update api_token if a new, unmasked token is provided
         $newToken = trim((string) $request->input('api_token', ''));
         if (!empty($newToken) && !str_starts_with($newToken, '••••')) {
             $setting->api_token = $newToken;
+        }
+
+        // Only update webhook_secret if a new, unmasked secret is provided
+        $newSecret = trim((string) $request->input('webhook_secret', ''));
+        if (!empty($newSecret) && !str_starts_with($newSecret, '••••')) {
+            $setting->webhook_secret = $newSecret;
         }
 
         $setting->fill($data);
@@ -174,6 +190,31 @@ class AdminDeliverySettingController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => "Impossible de contacter l'API Yalidine : " . $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function syncMissingWilayas(Request $request)
+    {
+        try {
+            $yalidine = app(YalidineService::class);
+            $result = $yalidine->syncMissingWilayasToDatabase();
+
+            $msg = $result['inserted_count'] > 0
+                ? "Synchronisation réussie ! {$result['inserted_count']} nouvelle(s) wilaya(s) insérée(s) dans le catalogue de sélection des produits (Total : {$result['total_wilayas']} wilayas disponibles)."
+                : "Toutes les {$result['total_wilayas']} wilayas Yalidine sont déjà synchronisées et actives dans le catalogue.";
+
+            return response()->json([
+                'success' => true,
+                'message' => $msg,
+                'inserted_count' => $result['inserted_count'],
+                'total_wilayas' => $result['total_wilayas'],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('syncMissingWilayas error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la synchronisation des wilayas : ' . $e->getMessage(),
             ], 422);
         }
     }

@@ -463,6 +463,7 @@ Route::prefix('shipping')->controller(\App\Http\Controllers\Api\V1_0\ShippingApi
 
 // Yalidine Automated Delivery Webhook (syncs parcel delivery / return / cancellation)
 Route::post('delivery/yalidine/webhook', [\App\Http\Controllers\Api\YalidineWebhookController::class, 'handle'])->name('delivery.yalidine.webhook');
+Route::post('yalidine/webhook', [\App\Http\Controllers\Api\YalidineWebhookController::class, 'handle'])->name('delivery.yalidine.webhook.alias');
 
 // Chabit AI Assistant & Order Quick-Reply Endpoints (strictly per-user authenticated)
 Route::prefix('chabit')->controller(\App\Http\Controllers\Api\V1_0\ChabitApiController::class)->group(function () {

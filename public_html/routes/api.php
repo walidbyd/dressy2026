@@ -262,3 +262,7 @@
 //         Route::post("/verify_blue_mark", 'verifyBlueMark');
 //         Route::get("/get_detail", 'userDetail');
 //     });
+
+// Yalidine Real-Time Webhook (parcel_status_updated)
+Route::post('v1/yalidine/webhook', [\App\Http\Controllers\Api\YalidineWebhookController::class, 'handle'])->name('yalidine.webhook.v1');
+

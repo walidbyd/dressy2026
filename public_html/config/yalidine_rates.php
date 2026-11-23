@@ -3,13 +3,12 @@
 /**
  * Fallback Yalidine tariff table (in DZD) and Stop-Desk directory for all 58 Algerian Wilayas.
  *
- * Used by App\Services\DzshipYalidineService when YALIDINE_STUB_MODE=true or if the
- * upstream DZBuild dzship API (https://freeship.dzbuild.com) is unreachable.
+ * Used by App\Services\YalidineService when YALIDINE_STUB_MODE=true or if upstream
+ * Yalidine API (https://api.yalidine.app/v1) is unreachable.
  *
  * Only Yalidine (courier: "yalidine") is supported.
  */
 return [
-    'base_url' => env('DZSHIP_BASE_URL', 'https://freeship.dzbuild.com'),
     'courier' => 'yalidine',
     'stub_mode' => filter_var(env('YALIDINE_STUB_MODE', true), FILTER_VALIDATE_BOOLEAN),
     'cache_ttl_seconds' => 60 * 60 * 24 * 7, // 7 days

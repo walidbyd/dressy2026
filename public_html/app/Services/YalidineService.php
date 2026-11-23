@@ -307,10 +307,9 @@ class YalidineService
                         'X-API-ID' => $this->apiId,
                         'X-API-TOKEN' => $this->apiToken,
                         'Accept' => 'application/json',
-                    ])->timeout(10)->get("{$this->apiUrl}/deliveryfees/", [
+                    ])->timeout(10)->get("{$this->apiUrl}/fees/", [
                         'from_wilaya_id' => $fromId,
                         'to_wilaya_id' => $toId,
-                        'weight' => $weight,
                     ]);
 
                     if ($response->successful()) {
@@ -318,9 +317,16 @@ class YalidineService
                         if (is_array($data)) {
                             if (isset($data['home_fee'])) {
                                 $liveHomeFee = (float) $data['home_fee'];
-                            }
-                            if (isset($data['desk_fee'])) {
-                                $liveDeskFee = (float) $data['desk_fee'];
+                                $liveDeskFee = (float) ($data['desk_fee'] ?? $data['stopdesk_fee'] ?? null);
+                            } elseif (isset($data[(string) $toId]['home_fee'])) {
+                                $liveHomeFee = (float) $data[(string) $toId]['home_fee'];
+                                $liveDeskFee = (float) ($data[(string) $toId]['desk_fee'] ?? $data[(string) $toId]['stopdesk_fee'] ?? null);
+                            } elseif (isset($data[0]['home_fee'])) {
+                                $liveHomeFee = (float) $data[0]['home_fee'];
+                                $liveDeskFee = (float) ($data[0]['desk_fee'] ?? $data[0]['stopdesk_fee'] ?? null);
+                            } elseif (isset($data['data']['home_fee'])) {
+                                $liveHomeFee = (float) $data['data']['home_fee'];
+                                $liveDeskFee = (float) ($data['data']['desk_fee'] ?? $data['data']['stopdesk_fee'] ?? null);
                             }
                         }
                     }
@@ -616,5 +622,342 @@ class YalidineService
             ];
         }
         return $wilayas;
+    }
+
+    /**
+     * Map of 58 Wilayas in Arabic.
+     */
+    public static array $wilayasAr = [
+        1 => 'أدرار', 2 => 'الشلف', 3 => 'الأغواط', 4 => 'أم البواقي', 5 => 'باتنة',
+        6 => 'بجاية', 7 => 'بسكرة', 8 => 'بشار', 9 => 'البليدة', 10 => 'البويرة',
+        11 => 'تمنراست', 12 => 'تبسة', 13 => 'تلمسان', 14 => 'تيارت', 15 => 'تيزي وزو',
+        16 => 'الجزائر', 17 => 'الجلفة', 18 => 'جيجل', 19 => 'سطيف', 20 => 'سعيدة',
+        21 => 'سكيكدة', 22 => 'سيدي بلعباس', 23 => 'عنابة', 24 => 'قالمة', 25 => 'قسنطينة',
+        26 => 'المدية', 27 => 'مستغانم', 28 => 'المسيلة', 29 => 'معسكر', 30 => 'ورقلة',
+        31 => 'وهران', 32 => 'البيض', 33 => 'إليزي', 34 => 'برج بوعريريج', 35 => 'بومرداس',
+        36 => 'الطارف', 37 => 'تندوف', 38 => 'تيسمسيلت', 39 => 'الوادي', 40 => 'خنشلة',
+        41 => 'سوق أهراس', 42 => 'تيبازة', 43 => 'ميلة', 44 => 'عين الدفلى', 45 => 'النعامة',
+        46 => 'عين تموشنت', 47 => 'غرداية', 48 => 'غليزان', 49 => 'تيميمون', 50 => 'برج باجي مختار',
+        51 => 'أولاد جلال', 52 => 'بني عباس', 53 => 'عين صالح', 54 => 'عين قزام', 55 => 'تقرت',
+        56 => 'جانت', 57 => 'المغير', 58 => 'المنيعة'
+    ];
+
+    public function getWilayaNameFr(int $code): string
+    {
+        return $this->getWilayaNameById($code);
+    }
+
+    public function getWilayaNameAr(int $code): string
+    {
+        return self::$wilayasAr[$code] ?? 'الجزائر';
+    }
+
+    /**
+     * Parse raw string/number to a valid Algerian wilaya code 1..58.
+     */
+    public function tryParseWilayaCode($raw): ?int
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        if (is_numeric($raw)) {
+            $val = (int) $raw;
+            return ($val >= 1 && $val <= 58) ? $val : null;
+        }
+
+        $str = trim((string) $raw);
+
+        // Match leading numeric code e.g. "16 - Alger" or "16"
+        if (preg_match('/^0*([1-9]|[1-5][0-9])\b/', $str, $matches)) {
+            $id = (int) $matches[1];
+            if ($id >= 1 && $id <= 58) {
+                return $id;
+            }
+        }
+
+        $needle = strtolower(preg_replace('/[^a-zA-Z\s\']/', '', $str));
+        $needle = trim($needle);
+        if ($needle === '') {
+            return null;
+        }
+
+        if (str_contains($needle, 'algiers')) {
+            return 16;
+        }
+
+        for ($i = 1; $i <= 58; $i++) {
+            $frName = strtolower(preg_replace('/[^a-zA-Z\s\']/', '', $this->getWilayaNameById($i)));
+            if ($needle === $frName || str_contains($needle, $frName) || str_contains($frName, $needle)) {
+                return $i;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve origin Wilaya code (1..58) from an item's location, vendor address, or explicit input.
+     */
+    public function resolveItemFromWilaya(?int $itemId = null, ?int $vendorId = null, $explicitFromWilaya = null): int
+    {
+        if ($explicitFromWilaya !== null && $explicitFromWilaya !== '') {
+            $parsed = $this->tryParseWilayaCode($explicitFromWilaya);
+            if ($parsed !== null) {
+                return $parsed;
+            }
+        }
+
+        if (!empty($itemId)) {
+            $item = DB::table('psx_items')
+                ->select('id', 'location_city_id', 'location_township_id', 'added_user_id', 'vendor_id')
+                ->where('id', $itemId)
+                ->first();
+
+            if ($item) {
+                // 1. Try item location_township_id
+                if (!empty($item->location_township_id)) {
+                    $township = DB::table('psx_location_townships')
+                        ->select('id', 'name', 'location_city_id')
+                        ->where('id', $item->location_township_id)
+                        ->first();
+
+                    if ($township) {
+                        if (!empty($township->location_city_id)) {
+                            $byTownshipCity = $this->tryParseWilayaCode($township->location_city_id);
+                            if ($byTownshipCity !== null) {
+                                return $byTownshipCity;
+                            }
+                        }
+                        if (!empty($township->name)) {
+                            $byTownshipName = $this->tryParseWilayaCode($township->name);
+                            if ($byTownshipName !== null) {
+                                return $byTownshipName;
+                            }
+                        }
+                    }
+                }
+
+                // 2. Try item location_city_id
+                if (!empty($item->location_city_id)) {
+                    $city = DB::table('psx_location_cities')
+                        ->select('id', 'name')
+                        ->where('id', $item->location_city_id)
+                        ->first();
+
+                    if ($city && !empty($city->name)) {
+                        $byName = $this->tryParseWilayaCode($city->name);
+                        if ($byName !== null) {
+                            return $byName;
+                        }
+                    }
+
+                    $byId = $this->tryParseWilayaCode($item->location_city_id);
+                    if ($byId !== null) {
+                        return $byId;
+                    }
+                }
+
+                // 3. Try seller's user profile (added_user_id)
+                if (!empty($item->added_user_id)) {
+                    $sellerUser = DB::table('users')->where('id', $item->added_user_id)->first();
+                    if ($sellerUser && !empty($sellerUser->user_address)) {
+                        $byUser = $this->tryParseWilayaCode($sellerUser->user_address);
+                        if ($byUser !== null) {
+                            return $byUser;
+                        }
+                    }
+                }
+
+                if (empty($vendorId) && !empty($item->vendor_id)) {
+                    $vendorId = (int) $item->vendor_id;
+                }
+            }
+        }
+
+        // 4. Try vendor address
+        if (!empty($vendorId)) {
+            $vendor = DB::table('psx_vendors')
+                ->select('id', 'address', 'name')
+                ->where('id', $vendorId)
+                ->first();
+
+            if ($vendor && !empty($vendor->address)) {
+                $byVendor = $this->tryParseWilayaCode($vendor->address);
+                if ($byVendor !== null) {
+                    return $byVendor;
+                }
+            }
+        }
+
+        // 5. Fallback to Admin DeliverySetting from_wilaya_id
+        try {
+            $adminSetting = \App\Models\DeliverySetting::first();
+            if ($adminSetting && !empty($adminSetting->from_wilaya_id)) {
+                $adminFrom = $this->tryParseWilayaCode($adminSetting->from_wilaya_id);
+                if ($adminFrom !== null) {
+                    return $adminFrom;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore DB errors during bootstrap
+        }
+
+        return 16; // Default to Alger
+    }
+
+    /**
+     * Fetch Stop-Desk agencies for a destination Wilaya.
+     *
+     * @return array<int, array{id:string, name:string, communeName:string, address:string, wilaya_code:int}>
+     */
+    public function getDesks(int $wilayaCode): array
+    {
+        $centers = $this->getCenters($wilayaCode);
+        $desks = [];
+
+        foreach ($centers as $center) {
+            $id = (string) ($center['center_id'] ?? $center['id'] ?? '');
+            $name = (string) ($center['name'] ?? 'Bureau Yalidine');
+            $commune = (string) ($center['commune_name'] ?? $this->getWilayaNameFr($wilayaCode));
+            $address = (string) ($center['address'] ?? ($commune . ', ' . $this->getWilayaNameFr($wilayaCode)));
+
+            $desks[] = [
+                'id' => $id,
+                'name' => $name,
+                'communeName' => $commune,
+                'address' => $address,
+                'wilaya_code' => $wilayaCode,
+            ];
+        }
+
+        return $desks;
+    }
+
+    /**
+     * Compute Stop-Desk and Home Delivery quote in DZD for checkout.
+     */
+    public function getYalidineQuote(
+        ?int $itemId,
+        $toWilayaInput,
+        ?string $toCommuneName = null,
+        $fromWilayaOverride = null,
+        ?int $vendorId = null
+    ): array {
+        $fromWilayaCode = $this->resolveItemFromWilaya($itemId, $vendorId, $fromWilayaOverride);
+        $toWilayaCode = $this->normalizeWilayaId($toWilayaInput);
+        $cleanCommune = $toCommuneName ? trim($toCommuneName) : null;
+
+        $fees = $this->calculateDeliveryFee($fromWilayaCode, $toWilayaCode, 'home');
+        $stopDeskPrice = (int) round($fees['desk_fee']);
+        $homePrice = (int) round($fees['home_fee']);
+        $desks = $this->getDesks($toWilayaCode);
+        $fromWilayaName = $this->getWilayaNameFr($fromWilayaCode);
+        $toWilayaName = $this->getWilayaNameFr($toWilayaCode);
+
+        return [
+            'status' => 'success',
+            'courier' => 'yalidine',
+            'is_stub' => $fees['is_stub'] ?? false,
+            'currency' => 'DZD',
+            'currency_symbol' => 'DA',
+            'from_wilaya_code' => $fromWilayaCode,
+            'from_wilaya_name' => $fromWilayaName,
+            'to_wilaya_code' => $toWilayaCode,
+            'to_wilaya_name' => $toWilayaName,
+            'to_wilaya_name_ar' => $this->getWilayaNameAr($toWilayaCode),
+            'to_commune_name' => $cleanCommune ?: $toWilayaName,
+            'stop_desk' => [
+                'delivery_type' => 'stopdesk',
+                'label' => 'Yalidine Stop-Desk (Bureau Yalidine)',
+                'price_dzd' => $stopDeskPrice,
+                'estimated_days' => 2,
+                'desks' => $desks,
+            ],
+            'home_delivery' => [
+                'delivery_type' => 'home',
+                'label' => 'Yalidine Livraison à Domicile',
+                'price_dzd' => $homePrice,
+                'estimated_days' => 2,
+            ],
+            'desk_fee' => $stopDeskPrice,
+            'home_fee' => $homePrice,
+        ];
+    }
+
+    /**
+     * Sync missing wilayas from Yalidine to psx_location_cities.
+     * Deactivates non-Algerian dummy cities and inserts missing wilayas.
+     */
+    public function syncMissingWilayasToDatabase(): array
+    {
+        $wilayas = $this->getWilayas();
+        $existingCities = DB::table('psx_location_cities')->get();
+        $existingNames = [];
+
+        foreach ($existingCities as $city) {
+            $existingNames[strtolower(trim($city->name))] = $city->id;
+        }
+
+        // Deactivate non-Algerian dummy cities (e.g. United States, London, India, Singapore, etc.)
+        $nonAlgerianDummy = ['united states', 'london', 'india', 'singapore', 'mandalay', 'yangon', 'bangalore'];
+        DB::table('psx_location_cities')
+            ->whereIn(DB::raw('LOWER(name)'), $nonAlgerianDummy)
+            ->update(['status' => 0]);
+
+        $insertedCount = 0;
+        $insertedNames = [];
+
+        foreach ($wilayas as $w) {
+            $id = (int) ($w['id'] ?? $w['code'] ?? 0);
+            $cleanName = (string) ($w['clean_name'] ?? ($w['name'] ?? ''));
+            if (empty($cleanName)) {
+                $cleanName = $this->getWilayaNameById($id);
+            }
+
+            // Check if clean name or prefixed name exists
+            $found = false;
+            foreach ($existingNames as $nameLower => $cityId) {
+                if ($nameLower === strtolower($cleanName)
+                    || str_contains($nameLower, strtolower($cleanName))
+                    || str_contains(strtolower($cleanName), $nameLower)) {
+                    $found = true;
+                    // Ensure active status
+                    DB::table('psx_location_cities')->where('id', $cityId)->update(['status' => 1]);
+                    break;
+                }
+            }
+
+            if (!$found) {
+                $formattedName = sprintf('%02d - %s', $id, $cleanName);
+                DB::table('psx_location_cities')->insert([
+                    'name' => $formattedName,
+                    'lat' => '0',
+                    'lng' => '0',
+                    'ordering' => $id,
+                    'status' => 1,
+                    'description' => "Wilaya de {$cleanName}",
+                    'touch_count' => 0,
+                    'is_featured' => 0,
+                    'added_date' => now(),
+                    'added_user_id' => 1,
+                ]);
+
+                $existingNames[strtolower($cleanName)] = true;
+                $existingNames[strtolower($formattedName)] = true;
+                $insertedCount++;
+                $insertedNames[] = $formattedName;
+            }
+        }
+
+        // Invalidate location cache
+        Cache::forget('psx_location_cities');
+
+        return [
+            'success' => true,
+            'inserted_count' => $insertedCount,
+            'inserted_wilayas' => $insertedNames,
+            'total_wilayas' => count($wilayas),
+        ];
     }
 }

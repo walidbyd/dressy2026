@@ -198,7 +198,26 @@
                         </p>
                     </div>
 
-                    <!-- Test Connection Button & Result Alert -->
+                    <!-- Webhook Secret -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-secondary-800 dark:text-white mb-1">
+                            Clé Secrète Webhook Yalidine (<span class="font-mono text-xs">yalidine_webhook_secret</span>)
+                        </label>
+                        <div class="relative max-w-xl">
+                            <input :type="showSecret ? 'text' : 'password'" v-model="form.webhook_secret"
+                                placeholder="Collez votre clé secrète configurée dans Yalidine Gérer les Webhooks"
+                                class="w-full px-3 py-2 pr-20 text-sm rounded-lg border border-gray-200 dark:border-secondary-700 bg-gray-50 dark:bg-secondary-900 text-secondary-800 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                            <button type="button" @click="showSecret = !showSecret"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-xs font-semibold text-secondary-500 hover:text-secondary-800">
+                                {{ showSecret ? 'Masquer' : 'Afficher' }}
+                            </button>
+                        </div>
+                        <p class="text-xs text-secondary-500 mt-1">
+                            Utilisée pour authentifier les notifications instantanées de Yalidine via la signature HMAC-SHA256 (<code>X-Yalidine-Signature</code>).
+                        </p>
+                    </div>
+
+                    <!-- Test Connection & Sync Wilayas Buttons & Result Alert -->
                     <div class="md:col-span-2 pt-2">
                         <div class="flex flex-wrap items-center gap-3">
                             <button type="button" @click="testConnection" :disabled="testingConnection"
@@ -209,6 +228,16 @@
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                                 </svg>
                                 <span>{{ testingConnection ? 'Test en cours...' : 'Tester la Connexion Yalidine' }}</span>
+                            </button>
+
+                            <button type="button" @click="syncMissingWilayas" :disabled="syncingWilayas"
+                                class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-bold shadow-sm transition-colors disabled:opacity-50 flex items-center gap-2">
+                                <ps-icon v-if="!syncingWilayas" name="refresh" w="18" h="18" />
+                                <svg v-else class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                </svg>
+                                <span>{{ syncingWilayas ? 'Synchronisation des wilayas...' : 'Synchroniser les Wilayas Manquantes' }}</span>
                             </button>
                         </div>
 
@@ -222,6 +251,20 @@
                                 <div>
                                     <div class="font-bold">{{ testResult.success ? 'Connexion Réussie !' : 'Erreur de Connexion' }}</div>
                                     <div class="mt-1">{{ testResult.message }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sync Wilayas Feedback -->
+                        <div v-if="syncWilayasResult" class="mt-4 p-4 rounded-xl border text-sm"
+                            :class="syncWilayasResult.success
+                                ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+                                : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'">
+                            <div class="flex items-start gap-3">
+                                <ps-icon :name="syncWilayasResult.success ? 'checkCircle' : 'close-circle'" w="20" h="20" class="shrink-0 mt-0.5" />
+                                <div>
+                                    <div class="font-bold">{{ syncWilayasResult.success ? 'Synchronisation des Wilayas Réussie !' : 'Erreur de Synchronisation' }}</div>
+                                    <div class="mt-1">{{ syncWilayasResult.message }}</div>
                                 </div>
                             </div>
                         </div>
@@ -295,7 +338,7 @@
                             </button>
                         </div>
                         <p class="text-xs text-secondary-500 mt-2">
-                            Copiez cette URL dans votre portail Yalidine Pro &gt; Webhooks pour recevoir les notifications de livraison en temps réel.
+                            Collez cette URL dans Yalidine &rarr; Développement &rarr; Gérer les Webhooks et activez <code>parcel_status_updated</code>.
                         </p>
                     </div>
 
@@ -472,8 +515,11 @@ export default defineComponent({
     setup(props) {
         const saving = ref(false);
         const showToken = ref(false);
+        const showSecret = ref(false);
         const testingConnection = ref(false);
         const testResult = ref(null);
+        const syncingWilayas = ref(false);
+        const syncWilayasResult = ref(null);
         const syncingFees = ref(false);
         const webhookCopied = ref(false);
 
@@ -535,6 +581,27 @@ export default defineComponent({
             }
         };
 
+        const syncMissingWilayas = async () => {
+            syncingWilayas.value = true;
+            syncWilayasResult.value = null;
+
+            try {
+                const response = await axios.post(route('admin.delivery.syncMissingWilayas'));
+                syncWilayasResult.value = {
+                    success: true,
+                    message: response.data.message || 'Wilayas synchronisées avec succès !',
+                };
+            } catch (err) {
+                const msg = err.response?.data?.message || err.message || 'Échec de synchronisation des wilayas';
+                syncWilayasResult.value = {
+                    success: false,
+                    message: msg,
+                };
+            } finally {
+                syncingWilayas.value = false;
+            }
+        };
+
         const syncFees = async () => {
             syncingFees.value = true;
             try {
@@ -581,12 +648,16 @@ export default defineComponent({
             form,
             saving,
             showToken,
+            showSecret,
             testingConnection,
             testResult,
-            syncingFees,
+            syncingWilayas,
+            syncWilayasResult,
+            syncFees,
             webhookCopied,
             copyWebhookUrl,
             testConnection,
+            syncMissingWilayas,
             syncFees,
             saveSettings,
         };

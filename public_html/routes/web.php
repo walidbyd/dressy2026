@@ -1117,6 +1117,7 @@ Route::middleware(['isInstall'])->group(function () {
             Route::post('/', 'update')->name('admin.delivery.update');
             Route::post('/test-connection', 'testConnection')->name('admin.delivery.testConnection');
             Route::post('/sync-fees', 'syncFees')->name('admin.delivery.syncFees');
+            Route::post('/sync-wilayas', 'syncMissingWilayas')->name('admin.delivery.syncMissingWilayas');
         });
     });
 

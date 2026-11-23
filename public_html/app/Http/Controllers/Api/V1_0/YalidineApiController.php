@@ -61,8 +61,7 @@ class YalidineApiController extends Controller
         $itemId = $request->input('item_id') ?? $request->input('product_id');
         $vendorId = $request->input('vendor_id');
 
-        $dzshipService = app(\App\Services\DzshipYalidineService::class);
-        $fromWilaya = $dzshipService->resolveItemFromWilaya(
+        $fromWilaya = $this->yalidineService->resolveItemFromWilaya(
             $itemId ? (int) $itemId : null,
             $vendorId ? (int) $vendorId : null,
             $explicitFrom
