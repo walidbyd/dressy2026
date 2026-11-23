@@ -1002,6 +1002,15 @@ class YalidineService
             ->whereIn(DB::raw('LOWER(name)'), $nonAlgerianDummy)
             ->update(['status' => 0]);
 
+        // Fix legacy "Algerie" seed entry to official "16 - Alger"
+        DB::table('psx_location_cities')
+            ->where('name', 'Algerie')
+            ->update([
+                'name' => '16 - Alger',
+                'ordering' => 16,
+                'status' => 1,
+            ]);
+
         $insertedCount = 0;
         $insertedNames = [];
 
