@@ -124,23 +124,29 @@ class ProfilePopUpWidgetState<T extends ProfilePopUpWidget>
     if (PsProgressDialog.isShowing()) {
       await PsProgressDialog.dismissDialog();
     }
-    try {
-      await FacebookAuth.instance.logOut();
-    } catch (_) {}
-    try {
-      await GoogleSignIn.instance.signOut();
-    } catch (_) {}
-    try {
-      await fb_auth.FirebaseAuth.instance.signOut();
-    } catch (_) {}
-    await deleteTaskProvider.deleteTask();
-    await userProvider.replaceLoginUserId('');
-    await userProvider.replaceLoginUserName('');
-    await userProvider.replaceIsUserNameAndPwdNeeded(false, false);
+    final NavigatorState rootNav = Navigator.of(context, rootNavigator: true);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
-          RoutePaths.login_container, (_) => false);
+    // Navigate FIRST so dependent widgets tear down cleanly without _dependents.isEmpty
+    rootNav.pushNamedAndRemoveUntil(
+        RoutePaths.login_container, (_) => false);
+
+    // Defer clearing auth/session/provider state after route transition settles
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await FacebookAuth.instance.logOut();
+      } catch (_) {}
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (_) {}
+      try {
+        await fb_auth.FirebaseAuth.instance.signOut();
+      } catch (_) {}
+      try {
+        await deleteTaskProvider.deleteTask();
+        await userProvider.replaceLoginUserId('');
+        await userProvider.replaceLoginUserName('');
+        await userProvider.replaceIsUserNameAndPwdNeeded(false, false);
+      } catch (_) {}
     });
   }
 

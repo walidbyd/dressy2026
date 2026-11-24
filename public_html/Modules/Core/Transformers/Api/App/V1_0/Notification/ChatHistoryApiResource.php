@@ -62,6 +62,10 @@ class ChatHistoryApiResource extends JsonResource
             'seller_user_id' => (string) checkAndGetValue($this, 'seller_user_id'),
             'order_id' => (string) (checkAndGetValue($this, 'order_id') ?? ''),
             'order_code' => (string) (checkAndGetValue($this, 'order_code') ?? ''),
+            'order_status_id' => (string) ($this->order?->order_status_id ?? ''),
+            'fulfillment_deadline_at' => !empty($this->order?->fulfillment_deadline_at)
+                ? (string) \Carbon\Carbon::parse($this->order->fulfillment_deadline_at)->toIso8601String()
+                : '',
             'action_status' => (string) (checkAndGetValue($this, 'action_status') ?? 'none'),
             'order_status_label' => (string) $orderStatusLabel,
             'role' => (string) $role,

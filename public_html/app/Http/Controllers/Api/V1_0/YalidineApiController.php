@@ -189,4 +189,28 @@ class YalidineApiController extends Controller
             'parcel_status' => $result['status'] ?? 'dispatched',
         ]);
     }
+
+    /**
+     * Get live Yalidine tracking & timeline history for an order (for Buyer Track Order popup).
+     * Never returns bordereau / shipping label URL.
+     *
+     * GET /api/v1.0/yalidine/tracking/{orderId}
+     */
+    public function tracking(Request $request, $orderId): JsonResponse
+    {
+        $order = Order::where('id', $orderId)->orWhere('order_code', $orderId)->first();
+
+        if (!$order) {
+            return response()->json([
+                'status' => 'error',
+                'message' => __('Order not found.'),
+            ], 404);
+        }
+
+        $trackingData = $this->yalidineService->getParcelTrackingDetails($order);
+
+        return response()->json(array_merge([
+            'status' => 'success',
+        ], $trackingData));
+    }
 }

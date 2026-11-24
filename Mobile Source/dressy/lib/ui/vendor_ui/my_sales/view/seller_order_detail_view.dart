@@ -24,7 +24,9 @@ import '../../../custom_ui/order_detail/component/order_detail_list/order_detail
 import '../../../custom_ui/order_detail/component/order_detail_summary.dart';
 import '../../common/dialog/error_dialog.dart';
 import '../../common/dialog/success_dialog.dart';
+import '../../common/order_countdown_widget.dart';
 import '../../common/ps_button_widget_with_round_corner.dart';
+import '../../order_detail/component/track_order_dialog.dart';
 import '../../order_detail/component/user_info/widgets/order_id_date_widget.dart';
 import '../../order_detail/component/user_info/widgets/user_info_widget.dart';
 
@@ -687,40 +689,88 @@ class _SellerOrderDetailViewState extends State<SellerOrderDetailView> {
               ),
             ),
           const SizedBox(height: PsDimens.space12),
-          // Prominent Print Shipping Label (PDF) Button
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: PsColors.burgundy,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(PsDimens.space8),
+          // Bordereau PDF is strictly for Seller only; Buyer sees Track Order popup
+          Builder(
+            builder: (BuildContext context) {
+              final PsValueHolder vh = Provider.of<PsValueHolder>(context, listen: false);
+              final String currentUid = Utils.checkUserLoginId(vh);
+              final bool isBuyerViewer = (_orderDetail?.buyerUserId ?? '').isNotEmpty &&
+                  _orderDetail?.buyerUserId == currentUid &&
+                  _orderDetail?.sellerUserId != currentUid;
+              final bool hasLabelOrSeller = !isBuyerViewer &&
+                  ((_orderDetail?.yalidineLabelUrl ?? '').isNotEmpty ||
+                      _orderDetail?.sellerUserId == currentUid);
+
+              if (hasLabelOrSeller) {
+                return SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: PsColors.burgundy,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(PsDimens.space8),
+                      ),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.print_outlined, size: 19),
+                    label: const Text(
+                      'Imprimer le bordereau Yalidine (PDF)',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    onPressed: () async {
+                      final String url = (_orderDetail?.yalidineLabelUrl?.isNotEmpty == true)
+                          ? _orderDetail!.yalidineLabelUrl!
+                          : 'https://api.yalidine.app/v1/parcels/print/?tracking=$tracking';
+                      final Uri uri = Uri.parse(url);
+                      try {
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        } else {
+                          Fluttertoast.showToast(msg: 'Impossible d\'ouvrir le lien d\'impression.');
+                        }
+                      } catch (e) {
+                        Fluttertoast.showToast(msg: 'Erreur: $e');
+                      }
+                    },
+                  ),
+                );
+              }
+
+              return SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PsColors.primary500,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(PsDimens.space8),
+                    ),
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.track_changes_rounded, size: 19),
+                  label: Text(
+                    'order__track_order'.tr.isNotEmpty &&
+                            'order__track_order'.tr != 'order__track_order'
+                        ? 'order__track_order'.tr
+                        : 'Suivre la commande',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  onPressed: () {
+                    TrackOrderDialog.show(
+                      context,
+                      orderId: _orderDetail?.id ?? widget.orderId,
+                      orderCode: _orderDetail?.orderCode ?? widget.orderId,
+                      initialTracking: tracking,
+                      initialStatusId: int.tryParse(_orderDetail?.orderStatusId ?? '1') ?? 1,
+                      initialYalidineStatus: _orderDetail?.yalidineStatus ?? '',
+                    );
+                  },
                 ),
-                elevation: 0,
-              ),
-              icon: const Icon(Icons.print_outlined, size: 19),
-              label: const Text(
-                'Imprimer le bordereau Yalidine (PDF)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              onPressed: () async {
-                final String url = (_orderDetail?.yalidineLabelUrl?.isNotEmpty == true)
-                    ? _orderDetail!.yalidineLabelUrl!
-                    : 'https://api.yalidine.app/v1/parcels/print/?tracking=$tracking';
-                final Uri uri = Uri.parse(url);
-                try {
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  } else {
-                    Fluttertoast.showToast(msg: 'Impossible d\'ouvrir le lien d\'impression.');
-                  }
-                } catch (e) {
-                  Fluttertoast.showToast(msg: 'Erreur: $e');
-                }
-              },
-            ),
+              );
+            },
           ),
         ],
       ),
@@ -775,6 +825,12 @@ class _SellerOrderDetailViewState extends State<SellerOrderDetailView> {
                       date: _orderDetail?.paymentDate,
                       id: _orderDetail?.orderCode,
                     ),
+
+                    if ((_orderDetail?.fulfillmentDeadlineAt ?? '').isNotEmpty &&
+                        !['4', '5', '6'].contains(_orderDetail?.orderStatusId ?? ''))
+                      OrderCountdownWidget(
+                        deadlineIso: _orderDetail?.fulfillmentDeadlineAt,
+                      ),
 
                     // Order Status Badge
                     Builder(

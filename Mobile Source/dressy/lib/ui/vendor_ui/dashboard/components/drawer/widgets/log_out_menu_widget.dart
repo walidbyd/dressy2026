@@ -106,23 +106,29 @@ class LogoutMenuWidget extends StatelessWidget {
     if (PsProgressDialog.isShowing()) {
       await PsProgressDialog.dismissDialog();
     }
-    try {
-      await FacebookAuth.instance.logOut();
-    } catch (_) {}
-    try {
-      await GoogleSignIn.instance.signOut();
-    } catch (_) {}
-    try {
-      await fb_auth.FirebaseAuth.instance.signOut();
-    } catch (_) {}
-    await deleteTaskProvider.deleteTask();
-    await provider.replaceLoginUserId('');
-    await provider.replaceLoginUserName('');
-    await provider.replaceIsUserNameAndPwdNeeded(false, false);
+    final NavigatorState rootNav = Navigator.of(context, rootNavigator: true);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
-          RoutePaths.login_container, (_) => false);
+    // Navigate to login screen FIRST so old Dashboard/Drawer dependents unmount cleanly
+    rootNav.pushNamedAndRemoveUntil(
+        RoutePaths.login_container, (_) => false);
+
+    // Defer clearing auth/session/provider state until after route transition settles
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await FacebookAuth.instance.logOut();
+      } catch (_) {}
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (_) {}
+      try {
+        await fb_auth.FirebaseAuth.instance.signOut();
+      } catch (_) {}
+      try {
+        await deleteTaskProvider.deleteTask();
+        await provider.replaceLoginUserId('');
+        await provider.replaceLoginUserName('');
+        await provider.replaceIsUserNameAndPwdNeeded(false, false);
+      } catch (_) {}
     });
   }
 }

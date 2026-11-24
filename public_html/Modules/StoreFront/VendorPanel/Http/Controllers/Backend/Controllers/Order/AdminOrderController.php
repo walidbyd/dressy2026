@@ -98,6 +98,12 @@ class AdminOrderController extends PsController
             $order->delivery_type = $order->delivery_type ?? 'home';
             $order->yalidine_label_url = $order->yalidine_label_url ?? '';
             $order->yalidine_status = $order->yalidine_parcel_status ?? $order->yalidine_status ?? '';
+            $order->fulfillment_deadline_formatted = !empty($order->fulfillment_deadline_at)
+                ? Carbon::parse($order->fulfillment_deadline_at)->format('M d, Y H:i')
+                : '';
+            $order->remaining_hours = !empty($order->fulfillment_deadline_at)
+                ? max(0, round(Carbon::now()->diffInMinutes(Carbon::parse($order->fulfillment_deadline_at), false) / 60, 1))
+                : null;
 
             return $order;
         });
@@ -244,5 +250,43 @@ class AdminOrderController extends PsController
             return redirect()->away("https://api.yalidine.app/v1/parcels/print/?tracking={$order->yalidine_tracking}");
         }
         return redirect()->back()->withErrors(['msg' => __('No shipping label available for this order.')]);
+    }
+
+    public function extendDeadline(Request $request, $id)
+    {
+        $request->validate([
+            'hours' => 'required|integer|min:1|max:720',
+        ]);
+
+        $order = Order::findOrFail($id);
+        $hours = (int) $request->hours;
+
+        $base = (!empty($order->fulfillment_deadline_at) && Carbon::parse($order->fulfillment_deadline_at)->isFuture())
+            ? Carbon::parse($order->fulfillment_deadline_at)
+            : Carbon::now();
+
+        $newDeadline = $base->copy()->addHours($hours);
+        $order->fulfillment_deadline_at = $newDeadline;
+        $order->updated_user_id = Auth::id() ?? 1;
+        $order->save();
+
+        $msg = __("Délai prolongé de +:hours h pour la commande #:code (nouvelle échéance : :date)", [
+            'hours' => $hours,
+            'code' => $order->order_code,
+            'date' => $newDeadline->format('d/m/Y H:i'),
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'msg' => $msg,
+                'fulfillment_deadline_at' => $newDeadline->toIso8601String(),
+            ]);
+        }
+
+        return redirect()->back()->with('status', [
+            'flag' => Constants::success,
+            'msg' => $msg,
+        ]);
     }
 }

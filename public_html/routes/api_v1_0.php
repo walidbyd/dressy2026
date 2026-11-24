@@ -453,6 +453,7 @@ Route::prefix('yalidine')->controller(\App\Http\Controllers\Api\V1_0\YalidineApi
     Route::get('/centers/{wilayaId?}', 'centers')->name('yalidine.centers');
     Route::match(['get', 'post'], '/calculate-fee', 'calculateFee')->name('yalidine.calculateFee');
     Route::post('/create-parcel/{orderId}', 'createParcel')->name('yalidine.createParcel');
+    Route::get('/tracking/{orderId}', 'tracking')->name('yalidine.tracking');
 });
 
 // DZBuild dzship Yalidine Shipping Endpoints (Wilayas, Communes & Address-Free Quote)

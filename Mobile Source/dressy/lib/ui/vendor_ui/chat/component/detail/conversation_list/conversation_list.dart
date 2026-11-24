@@ -47,12 +47,14 @@ class ConversationList extends StatelessWidget {
     final Product itemDetail = itemDetailProvider.product;
     int _totalCount = 0;
 
+    final bool isOrderScopedSession =
+        sessionId != null && sessionId!.contains('_order_');
+
     Future<void> _getTotalChildrenCount(String itemid) async {
-      final DatabaseEvent event = await messagesRef
-          .child(sessionId!)
-          .orderByChild('itemId')
-          .equalTo(itemid)
-          .once();
+      final Query q = isOrderScopedSession
+          ? messagesRef.child(sessionId!)
+          : messagesRef.child(sessionId!).orderByChild('itemId').equalTo(itemid);
+      final DatabaseEvent event = await q.once();
 
       final DataSnapshot snapshot = event.snapshot;
       final Map<dynamic, dynamic>? data =
@@ -66,18 +68,20 @@ class ConversationList extends StatelessWidget {
 
     // ignore: always_specify_types
     Future.delayed(const Duration(milliseconds: 2000)).then((_) {
-      _getTotalChildrenCount(itemDetail.id!);
+      _getTotalChildrenCount(itemDetail.id ?? '');
     });
 
     return Flexible(
       child: Container(
         margin: const EdgeInsets.only(top: PsDimens.space16),
         child: FirebaseAnimatedList(
-          key: const ValueKey<bool>(_anchorToBottom),
-          query: messagesRef
-              .child(sessionId!)
-              .orderByChild('itemId')
-              .equalTo(itemDetail.id),
+          key: ValueKey<String>(sessionId ?? 'chat_list'),
+          query: isOrderScopedSession
+              ? messagesRef.child(sessionId!)
+              : messagesRef
+                  .child(sessionId!)
+                  .orderByChild('itemId')
+                  .equalTo(itemDetail.id),
           reverse: _anchorToBottom,
           sort: (DataSnapshot a, DataSnapshot b) {
             final dynamic valB = b.value;

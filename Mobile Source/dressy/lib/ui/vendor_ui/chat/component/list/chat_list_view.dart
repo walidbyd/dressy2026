@@ -18,6 +18,7 @@ import '../../../../../core/vendor/viewobject/holder/intent_holder/chat_history_
 import '../../../../../core/vendor/viewobject/holder/request_path_holder.dart';
 import '../../../../../core/vendor/viewobject/holder/user_unread_message_parameter_holder.dart';
 import '../../../../../core/vendor/viewobject/user.dart';
+import '../../../common/order_countdown_widget.dart';
 import '../../../common/ps_ui_widget.dart';
 
 class ChatListView extends StatefulWidget {
@@ -480,6 +481,13 @@ class _ChatListViewState extends State<ChatListView> {
                               : const Color(0xFF9E9E9E),
                         ),
                       ),
+                      if (!isBuyer &&
+                          (chatHistory.fulfillmentDeadlineAt ?? '').isNotEmpty &&
+                          !['delivered', 'cancelled', 'returned'].contains((chatHistory.actionStatus ?? '').toLowerCase()))
+                        OrderCountdownWidget(
+                          deadlineIso: chatHistory.fulfillmentDeadlineAt,
+                          compact: true,
+                        ),
                     ],
                   ),
                 ),

@@ -196,6 +196,12 @@
                                     <span class="px-2.5 py-1 rounded-full text-xs font-semibold" :class="order.status_badge_color">
                                         {{ order.status_label }}
                                     </span>
+                                    <!-- 72h Countdown / Remaining Hours -->
+                                    <div v-if="order.remaining_hours !== null && [1, 2, 3].includes(Number(order.order_status_id))"
+                                        class="text-[11px] font-medium px-2 py-0.5 rounded border"
+                                        :class="order.remaining_hours <= 12 ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300' : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300'">
+                                        ⏱️ {{ order.remaining_hours }}h left ({{ order.fulfillment_deadline_formatted }})
+                                    </div>
                                     <!-- Reason pill if Cancelled or Returned -->
                                     <div v-if="order.status_reason" class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 px-2 py-1 rounded max-w-xs break-words">
                                         <span class="font-semibold">Reason:</span> {{ order.status_reason }}
@@ -205,7 +211,13 @@
 
                             <!-- Actions -->
                             <td class="px-5 py-4 text-right">
-                                <div class="flex items-center justify-end gap-1.5">
+                                <div class="flex items-center justify-end gap-1.5 flex-wrap">
+                                    <button v-if="[1, 2, 3].includes(Number(order.order_status_id))"
+                                        @click="extendOrderDeadline(order)"
+                                        title="Add / Extend Hours on 72h Deadline"
+                                        class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 rounded-lg text-xs font-semibold transition-colors">
+                                        ⏱️ +Hours
+                                    </button>
                                     <a v-if="order.yalidine_label_url" :href="order.yalidine_label_url" target="_blank"
                                         class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1">
                                         <span>🖨️ Label</span>
@@ -390,6 +402,30 @@ export default defineComponent({
             });
         };
 
+        const extendOrderDeadline = (order) => {
+            if (!order) return;
+            const code = order.order_code || order.id;
+            const input = prompt(`Nombre d'heures à ajouter au délai de la commande #${code} (ex: 24, 48, 72) :`, '24');
+            if (input === null) return;
+            const hours = parseInt(input, 10);
+            if (!hours || hours < 1 || hours > 720) {
+                alert('❌ Veuillez saisir un nombre d\'heures valide entre 1 et 720.');
+                return;
+            }
+            router.post(route('admin.orders.extendDeadline', order.id), { hours }, {
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    const status = page.props.status;
+                    const msg = (typeof status === 'object' && status !== null) ? status.msg : status;
+                    alert(`✅ ${msg || `Délai prolongé de +${hours}h !`}`);
+                },
+                onError: (errors) => {
+                    const err = errors.msg || Object.values(errors).join('\n') || 'Échec de prolongation du délai.';
+                    alert(`❌ Erreur : ${err}`);
+                }
+            });
+        };
+
         const applyStatusFilter = (status) => {
             router.get(route('admin.orders.index'), {
                 status: status,
@@ -439,6 +475,7 @@ export default defineComponent({
             submitting,
             generatingOrder,
             generateYalidineParcel,
+            extendOrderDeadline,
             form,
             reasonPresets,
             applyStatusFilter,

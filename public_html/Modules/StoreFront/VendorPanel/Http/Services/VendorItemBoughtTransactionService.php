@@ -469,8 +469,17 @@ class VendorItemBoughtTransactionService extends PsService
                 }
             }
 
-            // Automated Dressy Order Confirmation Request sent ONLY to the Seller first
+            // Set 72-hour fulfillment/acceptance deadline and send confirmation request to Seller & Buyer
             if (! empty($order)) {
+                try {
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'fulfillment_deadline_at')) {
+                        $order->fulfillment_deadline_at = \Carbon\Carbon::now()->addHours(72);
+                        $order->save();
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Set fulfillment_deadline_at on order creation failed: ' . $e->getMessage());
+                }
+
                 try {
                     app(\App\Services\OrderChatNotificationService::class)->sendSellerConfirmationRequest($order);
                 } catch (\Throwable $e) {

@@ -122,6 +122,9 @@ class OrderSummaryApiResource extends JsonResource
         $orderSummaryObj->to_commune_name = (string) ($this->to_commune_name ?? '');
         $orderSummaryObj->yalidine_stop_desk_id = (string) ($this->yalidine_stop_desk_id ?? '');
         $orderSummaryObj->status_reason = (string) ($this->status_reason ?? '');
+        $orderSummaryObj->fulfillment_deadline_at = !empty($this->fulfillment_deadline_at)
+            ? (string) \Carbon\Carbon::parse($this->fulfillment_deadline_at)->toIso8601String()
+            : '';
         $orderSummaryObj->is_wallet_credited = (string) ($this->is_wallet_credited ?? '0');
         $orderSummaryObj->wallet_credited_at = isset($this->wallet_credited_at) ? (string) \Carbon\Carbon::parse($this->wallet_credited_at)->format('M d, Y H:i') : '';
         $orderSummaryObj->user_id = (string) $this->user_id;

@@ -2,6 +2,7 @@
 
 namespace App\Console;
 
+use App\Console\Commands\CancelExpiredOrdersCommand;
 use App\Console\Commands\GenerateSitemap;
 use App\Console\Commands\DressyCleanProduction;
 use Illuminate\Console\Scheduling\Schedule;
@@ -12,6 +13,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         GenerateSitemap::class,
         DressyCleanProduction::class,
+        CancelExpiredOrdersCommand::class,
     ];
 
     /**
@@ -22,6 +24,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('sitemap:generate')->daily();
+        $schedule->command('orders:cancel-expired')->everyFifteenMinutes();
         // $schedule->command('sitemap:generate')->everyMinute();
 
     }

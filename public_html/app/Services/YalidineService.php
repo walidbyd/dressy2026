@@ -635,8 +635,22 @@ class YalidineService
         $toWilayaName = $this->getWilayaNameById($toWilayaId);
         $toCommuneName = $order->to_commune_name ?: ($shipping?->shipping_city ?: $toWilayaName);
 
+        // Resolve sender wilaya from product/vendor first, fallback to order->from_wilaya_id or Admin default
+        $firstOrderItem = $orderItems?->first();
+        $firstItemId = $firstOrderItem?->item_id ? (int) $firstOrderItem->item_id : null;
+        $resolvedItemFromWilaya = $this->resolveItemFromWilaya($firstItemId, $order->vendor_id ? (int) $order->vendor_id : null);
+        $fromWilayaId = ($resolvedItemFromWilaya && $resolvedItemFromWilaya !== 16)
+            ? $resolvedItemFromWilaya
+            : ($order->from_wilaya_id ?: $resolvedItemFromWilaya);
+        $fromWilayaName = $this->cleanWilayaNameForYalidine($this->getWilayaNameById((int) $fromWilayaId));
+
+        if ($order->from_wilaya_id != $fromWilayaId) {
+            $order->from_wilaya_id = $fromWilayaId;
+        }
+
         $parcelPayload = [
             'order_id' => (string) $order->order_code,
+            'from_wilaya_name' => (string) $fromWilayaName,
             'firstname' => (string) $firstName,
             'familyname' => (string) $lastName,
             'contact_phone' => (string) $phone,
@@ -1041,17 +1055,21 @@ class YalidineService
     }
 
     /**
-     * Resolve origin Wilaya code (1..58) from an item's location, vendor address, or explicit input.
+     * Strip leading numeric code (e.g. "31 - Oran" -> "Oran") for Yalidine API exact matching.
+     */
+    public function cleanWilayaNameForYalidine(string $name): string
+    {
+        $clean = trim($name);
+        $clean = preg_replace('/^\d{1,2}\s*[-–—:\.]\s*/u', '', $clean);
+        return trim((string) $clean);
+    }
+
+    /**
+     * Resolve origin Wilaya code (1..58+) from product's / vendor's selected wilaya first,
+     * falling back to explicit input or Admin DeliverySetting default only if unset.
      */
     public function resolveItemFromWilaya(?int $itemId = null, ?int $vendorId = null, $explicitFromWilaya = null): int
     {
-        if ($explicitFromWilaya !== null && $explicitFromWilaya !== '') {
-            $parsed = $this->tryParseWilayaCode($explicitFromWilaya);
-            if ($parsed !== null) {
-                return $parsed;
-            }
-        }
-
         if (!empty($itemId)) {
             $item = DB::table('psx_items')
                 ->select('id', 'location_city_id', 'location_township_id', 'added_user_id', 'vendor_id')
@@ -1059,30 +1077,7 @@ class YalidineService
                 ->first();
 
             if ($item) {
-                // 1. Try item location_township_id
-                if (!empty($item->location_township_id)) {
-                    $township = DB::table('psx_location_townships')
-                        ->select('id', 'name', 'location_city_id')
-                        ->where('id', $item->location_township_id)
-                        ->first();
-
-                    if ($township) {
-                        if (!empty($township->location_city_id)) {
-                            $byTownshipCity = $this->tryParseWilayaCode($township->location_city_id);
-                            if ($byTownshipCity !== null) {
-                                return $byTownshipCity;
-                            }
-                        }
-                        if (!empty($township->name)) {
-                            $byTownshipName = $this->tryParseWilayaCode($township->name);
-                            if ($byTownshipName !== null) {
-                                return $byTownshipName;
-                            }
-                        }
-                    }
-                }
-
-                // 2. Try item location_city_id
+                // 1. Try item location_city_id -> psx_location_cities.name first (most accurate)
                 if (!empty($item->location_city_id)) {
                     $city = DB::table('psx_location_cities')
                         ->select('id', 'name')
@@ -1095,14 +1090,46 @@ class YalidineService
                             return $byName;
                         }
                     }
+                }
 
+                // 2. Try item location_township_id -> look up its city name first, then township name
+                if (!empty($item->location_township_id)) {
+                    $township = DB::table('psx_location_townships')
+                        ->select('id', 'name', 'location_city_id')
+                        ->where('id', $item->location_township_id)
+                        ->first();
+
+                    if ($township) {
+                        if (!empty($township->location_city_id)) {
+                            $tCity = DB::table('psx_location_cities')
+                                ->select('id', 'name')
+                                ->where('id', $township->location_city_id)
+                                ->first();
+                            if ($tCity && !empty($tCity->name)) {
+                                $byTCityName = $this->tryParseWilayaCode($tCity->name);
+                                if ($byTCityName !== null) {
+                                    return $byTCityName;
+                                }
+                            }
+                        }
+                        if (!empty($township->name)) {
+                            $byTownshipName = $this->tryParseWilayaCode($township->name);
+                            if ($byTownshipName !== null) {
+                                return $byTownshipName;
+                            }
+                        }
+                    }
+                }
+
+                // 3. Numeric fallback on item location_city_id if 1..58
+                if (!empty($item->location_city_id)) {
                     $byId = $this->tryParseWilayaCode($item->location_city_id);
-                    if ($byId !== null) {
+                    if ($byId !== null && $byId >= 1 && $byId <= 69) {
                         return $byId;
                     }
                 }
 
-                // 3. Try seller's user profile (added_user_id)
+                // 4. Try seller's user profile (added_user_id)
                 if (!empty($item->added_user_id)) {
                     $sellerUser = DB::table('users')->where('id', $item->added_user_id)->first();
                     if ($sellerUser && !empty($sellerUser->user_address)) {
@@ -1119,10 +1146,10 @@ class YalidineService
             }
         }
 
-        // 4. Try vendor address
+        // 5. Try vendor address / owner address
         if (!empty($vendorId)) {
             $vendor = DB::table('psx_vendors')
-                ->select('id', 'address', 'name')
+                ->select('id', 'address', 'name', 'owner_user_id')
                 ->where('id', $vendorId)
                 ->first();
 
@@ -1132,9 +1159,26 @@ class YalidineService
                     return $byVendor;
                 }
             }
+            if ($vendor && !empty($vendor->owner_user_id)) {
+                $ownerUser = DB::table('users')->where('id', $vendor->owner_user_id)->first();
+                if ($ownerUser && !empty($ownerUser->user_address)) {
+                    $byOwner = $this->tryParseWilayaCode($ownerUser->user_address);
+                    if ($byOwner !== null) {
+                        return $byOwner;
+                    }
+                }
+            }
         }
 
-        // 5. Fallback to Admin DeliverySetting from_wilaya_id
+        // 6. Explicit from_wilaya passed by caller
+        if ($explicitFromWilaya !== null && $explicitFromWilaya !== '') {
+            $parsed = $this->tryParseWilayaCode($explicitFromWilaya);
+            if ($parsed !== null) {
+                return $parsed;
+            }
+        }
+
+        // 7. Fallback to Admin DeliverySetting from_wilaya_id
         try {
             $adminSetting = \App\Models\DeliverySetting::first();
             if ($adminSetting && !empty($adminSetting->from_wilaya_id)) {
@@ -1148,6 +1192,106 @@ class YalidineService
         }
 
         return 16; // Default to Alger
+    }
+
+    /**
+     * Fetch live tracking details and history timeline for an order from Yalidine API v1.
+     * Note: Never exposes shipping label / bordereau URL.
+     */
+    public function getParcelTrackingDetails(Order $order): array
+    {
+        $tracking = trim((string) ($order->yalidine_tracking ?? ''));
+        $statusId = (int) ($order->order_status_id ?? 1);
+        $yalidineStatus = (string) ($order->yalidine_parcel_status ?? $order->yalidine_status ?? '');
+        $histories = [];
+        $parcelData = null;
+
+        if (!empty($tracking) && !empty($this->apiId) && !empty($this->apiToken)) {
+            try {
+                $parcelRes = Http::withHeaders([
+                    'X-API-ID' => $this->apiId,
+                    'X-API-TOKEN' => $this->apiToken,
+                    'Accept' => 'application/json',
+                ])->timeout(10)->get("{$this->apiUrl}/parcels/{$tracking}");
+
+                if ($parcelRes->successful()) {
+                    $pJson = $parcelRes->json();
+                    $parcelData = $pJson['data'][0] ?? $pJson[0] ?? (isset($pJson['tracking']) ? $pJson : null);
+                    if (is_array($parcelData) && !empty($parcelData['last_status'])) {
+                        $yalidineStatus = (string) $parcelData['last_status'];
+                        $order->yalidine_parcel_status = $yalidineStatus;
+                        $order->yalidine_status = $yalidineStatus;
+                        $order->save();
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Yalidine getParcelTrackingDetails /parcels error for {$tracking}: " . $e->getMessage());
+            }
+
+            try {
+                $histRes = Http::withHeaders([
+                    'X-API-ID' => $this->apiId,
+                    'X-API-TOKEN' => $this->apiToken,
+                    'Accept' => 'application/json',
+                ])->timeout(10)->get("{$this->apiUrl}/histories/{$tracking}");
+
+                if ($histRes->successful()) {
+                    $hJson = $histRes->json();
+                    $rawHist = $hJson['data'] ?? (is_array($hJson) ? $hJson : []);
+                    if (is_array($rawHist)) {
+                        foreach ($rawHist as $h) {
+                            if (!is_array($h)) {
+                                continue;
+                            }
+                            $histories[] = [
+                                'date_status' => (string) ($h['date_status'] ?? $h['created_at'] ?? ''),
+                                'status' => (string) ($h['status'] ?? ''),
+                                'reason' => (string) ($h['reason'] ?? ''),
+                                'center_name' => (string) ($h['center_name'] ?? ''),
+                                'wilaya_name' => (string) ($h['wilaya_name'] ?? ''),
+                                'commune_name' => (string) ($h['commune_name'] ?? ''),
+                            ];
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Yalidine getParcelTrackingDetails /histories error for {$tracking}: " . $e->getMessage());
+            }
+        }
+
+        // Determine current timeline step index (0=Pending, 1=Accepted, 2=Preparing, 3=In Transit, 4=Out for Delivery, 5=Delivered/Returned)
+        $lowerYal = mb_strtolower($yalidineStatus, 'UTF-8');
+        $currentStep = 0;
+        if ($statusId === 4 || str_contains($lowerYal, 'livré') || str_contains($lowerYal, 'delivered')) {
+            $currentStep = 5;
+        } elseif ($statusId === 5 || $statusId === 6 || str_contains($lowerYal, 'retourn') || str_contains($lowerYal, 'annul') || str_contains($lowerYal, 'échou')) {
+            $currentStep = 5;
+        } elseif (str_contains($lowerYal, 'sorti') || str_contains($lowerYal, 'livraison') || str_contains($lowerYal, 'out')) {
+            $currentStep = 4;
+        } elseif (str_contains($lowerYal, 'expédi') || str_contains($lowerYal, 'transit') || str_contains($lowerYal, 'reçu à wilaya') || str_contains($lowerYal, 'vers wilaya') || str_contains($lowerYal, 'centre')) {
+            $currentStep = 3;
+        } elseif ($statusId === 3 || str_contains($lowerYal, 'préparation') || str_contains($lowerYal, 'dispatch') || !empty($tracking)) {
+            $currentStep = 2;
+        } elseif ($statusId === 2) {
+            $currentStep = 1;
+        } else {
+            $currentStep = 0;
+        }
+
+        return [
+            'order_id' => (string) $order->id,
+            'order_code' => (string) $order->order_code,
+            'tracking' => $tracking,
+            'order_status_id' => $statusId,
+            'yalidine_status' => $yalidineStatus,
+            'delivery_type' => (string) ($order->delivery_type ?? 'home'),
+            'to_wilaya_name' => $this->getWilayaNameById((int) ($order->to_wilaya_id ?: 16)),
+            'to_commune_name' => (string) ($order->to_commune_name ?? ''),
+            'current_step' => $currentStep,
+            'is_cancelled_or_returned' => in_array($statusId, [5, 6], true) || str_contains($lowerYal, 'retourn') || str_contains($lowerYal, 'annul'),
+            'status_reason' => (string) ($order->status_reason ?? ($histories[0]['reason'] ?? '')),
+            'histories' => $histories,
+        ];
     }
 
     /**

@@ -386,15 +386,19 @@ class _HomeViewState extends State<DashboardView>
       } catch (_) {}
       buyerListProvider = null;
       sellerListProvider = null;
-      await deleteTaskProvider.deleteTask();
-      await provider.replaceLoginUserId('');
-      await provider.replaceLoginUserName('');
-      await provider.replaceIsUserNameAndPwdNeeded(false, false);
       appBarTitle = 'app_name'.tr;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (mounted) {
           updateSelectedIndex(index);
         }
+        Future<void>.microtask(() async {
+          try {
+            await deleteTaskProvider.deleteTask();
+            await provider.replaceLoginUserId('');
+            await provider.replaceLoginUserName('');
+            await provider.replaceIsUserNameAndPwdNeeded(false, false);
+          } catch (_) {}
+        });
       });
     }
 

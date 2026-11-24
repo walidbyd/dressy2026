@@ -308,6 +308,10 @@ class _ChatViewState extends State<ChatView>
             : widget.sellerUserId;
       }
 
+      if (widget.orderId != null && widget.orderId!.trim().isNotEmpty) {
+        sessionId = '${sessionId}_order_${widget.orderId!.trim()}';
+      }
+
       _insertSenderAndReceiverToFireBase(sessionId, widget.itemId, otherUserId,
           psValueHolder.loginUserId!, psValueHolder.loginUserName);
     }

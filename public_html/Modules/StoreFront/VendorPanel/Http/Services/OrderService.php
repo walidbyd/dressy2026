@@ -376,6 +376,12 @@ class OrderService extends PsService
             $perPage = null;
             $noPagination = $request->noPagination;
         }
+        try {
+            \Illuminate\Support\Facades\Cache::remember('orders_due_check_lock', 60, function () {
+                return \App\Console\Commands\CancelExpiredOrdersCommand::processExpiredOrders();
+            });
+        } catch (\Throwable $e) {}
+
         $conds = [];
         $relations = [
             'vendor',
@@ -504,6 +510,12 @@ class OrderService extends PsService
             $perPage = null;
             $noPagination = $request->noPagination;
         }
+
+        try {
+            \Illuminate\Support\Facades\Cache::remember('orders_due_check_lock', 60, function () {
+                return \App\Console\Commands\CancelExpiredOrdersCommand::processExpiredOrders();
+            });
+        } catch (\Throwable $e) {}
 
         $conds = [];
         $relations = [
@@ -683,6 +695,11 @@ class OrderService extends PsService
         $yalResult = $dzshipService->createShipment($order);
 
         $order->order_status_id = Constants::orderDeliveringStatus;
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'fulfillment_deadline_at')) {
+                $order->fulfillment_deadline_at = \Carbon\Carbon::now()->addHours(72);
+            }
+        } catch (\Throwable $e) {}
         if (!empty($yalResult['success'])) {
             $order->yalidine_tracking = $yalResult['tracking'] ?? null;
             $order->yalidine_parcel_id = $yalResult['parcel_id'] ?? null;
@@ -696,7 +713,7 @@ class OrderService extends PsService
             $chatNotiService = app(\App\Services\OrderChatNotificationService::class);
             $chatNotiService->updateOrderActionStatus($order, 'in_delivery');
             $trackingText = !empty($order->yalidine_tracking) ? " (Numéro de suivi Yalidine: {$order->yalidine_tracking})" : "";
-            $chatNotiService->sendOrderStatusUpdate($order, "Votre commande #{$order->order_code} a été acceptée par le vendeur et est en cours d'acheminement.{$trackingText}", 'buyer');
+            $chatNotiService->sendOrderStatusUpdate($order, "Votre commande #{$order->order_code} a été acceptée par le vendeur et est en cours d'acheminement.{$trackingText}", 'both');
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('acceptOrder chat noti error: ' . $e->getMessage());
         }
@@ -787,7 +804,7 @@ class OrderService extends PsService
         try {
             $chatNotiService = app(\App\Services\OrderChatNotificationService::class);
             $trackingText = !empty($order->yalidine_tracking) ? " (Suivi Yalidine: {$order->yalidine_tracking})" : "";
-            $chatNotiService->sendOrderStatusUpdate($order, "Votre commande est en cours de livraison avec Yalidine.{$trackingText}", 'buyer');
+            $chatNotiService->sendOrderStatusUpdate($order, "Votre commande est en cours de livraison avec Yalidine.{$trackingText}", 'both');
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('dispatchOrder chat noti error: ' . $e->getMessage());
         }
@@ -859,7 +876,7 @@ class OrderService extends PsService
         try {
             $chatNotiService = app(\App\Services\OrderChatNotificationService::class);
             $chatNotiService->updateOrderActionStatus($order, 'cancelled');
-            $chatNotiService->sendOrderStatusUpdate($order, "La commande a été annulée par le vendeur. Motif: {$reason}", 'buyer');
+            $chatNotiService->sendOrderStatusUpdate($order, "La commande a été annulée par le vendeur. Motif: {$reason}", 'both');
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('cancelOrder chat noti error: ' . $e->getMessage());
         }

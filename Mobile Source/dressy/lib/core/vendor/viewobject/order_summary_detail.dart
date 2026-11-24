@@ -23,6 +23,7 @@ class OrderSummaryDetail extends PsObject<OrderSummaryDetail> {
       this.walletCreditedAt,
       this.billingAddress,
       this.orderCode,
+      this.fulfillmentDeadlineAt,
       this.paymentMethod,
       this.paymentStatus,
       this.shippingAddress,
@@ -76,6 +77,7 @@ class OrderSummaryDetail extends PsObject<OrderSummaryDetail> {
   String? isWalletCredited;
   String? walletCreditedAt;
   String? orderCode;
+  String? fulfillmentDeadlineAt;
   String? isReviewed;
   String? reviewRating;
   String? isDeliveredAndPaid;
@@ -150,6 +152,7 @@ class OrderSummaryDetail extends PsObject<OrderSummaryDetail> {
         isWalletCredited: dynamicData['is_wallet_credited']?.toString(),
         walletCreditedAt: dynamicData['wallet_credited_at']?.toString(),
         orderCode: dynamicData['order_code']?.toString(),
+        fulfillmentDeadlineAt: dynamicData['fulfillment_deadline_at']?.toString(),
         shippingFirstName: dynamicData['shipping_first_name']?.toString(),
         shippingLastName: dynamicData['shipping_last_name']?.toString(),
         shippingEmail: dynamicData['shipping_email']?.toString(),
@@ -214,6 +217,7 @@ class OrderSummaryDetail extends PsObject<OrderSummaryDetail> {
       data['is_wallet_credited'] = object.isWalletCredited;
       data['wallet_credited_at'] = object.walletCreditedAt;
       data['order_code'] = object.orderCode;
+      data['fulfillment_deadline_at'] = object.fulfillmentDeadlineAt;
       data['is_reviewed'] = object.isReviewed;
       data['review_rating'] = object.reviewRating;
       data['shipping_first_name'] = object.shippingFirstName;

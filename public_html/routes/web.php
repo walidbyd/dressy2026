@@ -1087,6 +1087,7 @@ Route::middleware(['isInstall'])->group(function () {
             Route::get('/', 'index')->name('admin.orders.index');
             Route::post('/{id}/status', 'updateStatus')->name('admin.orders.updateStatus');
             Route::post('/{id}/generate-parcel', 'generateParcel')->name('admin.orders.generateParcel');
+            Route::post('/{id}/extend-deadline', 'extendDeadline')->name('admin.orders.extendDeadline');
             Route::get('/{id}/print-label', 'printLabel')->name('admin.orders.printLabel');
         });
 

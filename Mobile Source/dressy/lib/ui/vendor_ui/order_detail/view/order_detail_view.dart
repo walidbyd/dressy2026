@@ -27,6 +27,7 @@ import '../../../custom_ui/order_detail/component/order_detail_list/order_detail
 import '../../../custom_ui/order_detail/component/order_detail_summary.dart';
 import '../../common/ps_button_widget_with_round_corner.dart';
 import '../../common/ps_ui_widget.dart';
+import '../component/track_order_dialog.dart';
 import '../component/user_info/widgets/order_id_date_widget.dart';
 import '../component/user_info/widgets/user_info_widget.dart';
 
@@ -380,6 +381,44 @@ class _OrderDetailViewState extends State<OrderDetailView> {
                                   ),
                                 ),
                             ],
+                          ),
+                        ),
+                      // Buyer Track Order Button (replaces Bordereau for buyers)
+                      if (orderSummaryDetail != null)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: PsDimens.space16),
+                          width: double.infinity,
+                          height: 46,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: PsColors.primary500,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(PsDimens.space8),
+                              ),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.track_changes_rounded, size: 20),
+                            label: Text(
+                              'order__track_order'.tr.isNotEmpty &&
+                                      'order__track_order'.tr != 'order__track_order'
+                                  ? 'order__track_order'.tr
+                                  : 'Suivre la commande',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            onPressed: () {
+                              TrackOrderDialog.show(
+                                context,
+                                orderId: orderSummaryDetail.id ?? widget.orderId,
+                                orderCode: orderSummaryDetail.orderCode ?? widget.orderId,
+                                initialTracking: orderSummaryDetail.yalidineTracking ?? '',
+                                initialStatusId: int.tryParse(orderSummaryDetail.orderStatusId ?? '1') ?? 1,
+                                initialYalidineStatus: orderSummaryDetail.yalidineStatus ?? '',
+                              );
+                            },
                           ),
                         ),
                       UserInfoWidget(

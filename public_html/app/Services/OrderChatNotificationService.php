@@ -149,17 +149,21 @@ class OrderChatNotificationService
     }
 
     /**
-     * Compute sorted session ID as used by Flutter chat: min(id1, id2)_max(id1, id2).
+     * Compute sorted session ID as used by Flutter chat:
+     * min(id1, id2)_max(id1, id2)_order_{orderId} when orderId is provided so each order has its own dedicated thread.
      */
-    public function getSessionId(int $userId1, int $userId2): string
+    public function getSessionId(int $userId1, int $userId2, ?int $orderId = null): string
     {
         $min = min($userId1, $userId2);
         $max = max($userId1, $userId2);
+        if (!empty($orderId)) {
+            return "{$min}_{$max}_order_{$orderId}";
+        }
         return "{$min}_{$max}";
     }
 
     /**
-     * Send initial automated order confirmation request ONLY to the Seller.
+     * Send initial automated order confirmation request to Seller AND order placed notice to Buyer.
      */
     public function sendSellerConfirmationRequest(Order $order): void
     {
@@ -179,15 +183,12 @@ class OrderChatNotificationService
             $totalAmount = number_format($rawTotal, 0, '.', ' ');
             $itemTitle = $order->orderItems?->first()?->item?->title ?? 'Article';
             $messageText = "Nouvelle commande #{$order->order_code}\nArticle : {$itemTitle}\nMontant total : {$totalAmount} DZD\n\nVeuillez confirmer la disponibilité de l'article pour expédition.";
-            $sessionId = $this->getSessionId($buyerId, $sellerId);
+            $sessionId = $this->getSessionId($buyerId, $sellerId, $order->id);
             $nowMs = (int) round(microtime(true) * 1000);
             $messageKey = "order_{$order->id}_{$nowMs}";
 
-            // 1. Update or create record in psx_chat_histories
-            $chatHistory = ChatHistory::where('buyer_user_id', $buyerId)
-                ->where('seller_user_id', $sellerId)
-                ->where('item_id', $itemId)
-                ->first();
+            // 1. Dedicated psx_chat_histories row per order_id (never mix orders)
+            $chatHistory = ChatHistory::where('order_id', $order->id)->first();
 
             if (!$chatHistory) {
                 $chatHistory = new ChatHistory();
@@ -195,13 +196,14 @@ class OrderChatNotificationService
                 $chatHistory->seller_user_id = $sellerId;
                 $chatHistory->item_id = $itemId;
                 $chatHistory->nego_price = $order->total_price ?? 0;
-                $chatHistory->buyer_unread_count = 0;
+                $chatHistory->buyer_unread_count = 1;
                 $chatHistory->seller_unread_count = 1;
                 $chatHistory->is_accept = 0;
                 $chatHistory->offer_status = 0;
                 $chatHistory->added_user_id = $buyerId;
             } else {
                 $chatHistory->seller_unread_count = (int)($chatHistory->seller_unread_count ?? 0) + 1;
+                $chatHistory->buyer_unread_count = (int)($chatHistory->buyer_unread_count ?? 0) + 1;
             }
 
             $chatHistory->order_id = $order->id;
@@ -283,15 +285,12 @@ class OrderChatNotificationService
             }
 
             $messageText = "Commande #{$order->order_code} : {$statusLabel}";
-            $sessionId = $this->getSessionId($buyerId, $sellerId);
+            $sessionId = $this->getSessionId($buyerId, $sellerId, $order->id);
             $nowMs = (int) round(microtime(true) * 1000);
             $messageKey = "status_{$order->id}_{$nowMs}";
 
-            // 1. Update psx_chat_histories
-            $chatHistory = ChatHistory::where('buyer_user_id', $buyerId)
-                ->where('seller_user_id', $sellerId)
-                ->where('item_id', $itemId)
-                ->first();
+            // 1. Dedicated psx_chat_histories row per order_id
+            $chatHistory = ChatHistory::where('order_id', $order->id)->first();
 
             if (!$chatHistory) {
                 $chatHistory = new ChatHistory();
@@ -411,7 +410,7 @@ class OrderChatNotificationService
                     ->update(['action_status' => $actionStatus]);
 
                 // Find & patch matching messages in Firebase RTDB
-                $sessionId = $this->getSessionId($buyerId, $sellerId);
+                $sessionId = $this->getSessionId($buyerId, $sellerId, $order->id);
                 $this->patchFirebaseOrderMessages($sessionId, (string)$order->id, $actionStatus);
             }
         } catch (\Throwable $e) {
