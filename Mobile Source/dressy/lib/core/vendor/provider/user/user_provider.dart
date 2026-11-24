@@ -76,8 +76,12 @@ class UserProvider extends PsProvider<User> {
   
   static Future<void>? _googleInitFuture;
   static Future<void> ensureGoogleSignInInitialized() {
-    return _googleInitFuture ??=
-        GoogleSignIn.instance.initialize().catchError((Object e) {
+    return _googleInitFuture ??= GoogleSignIn.instance
+        .initialize(
+          serverClientId:
+              '828256414245-8lk9i6kh8ietlngrjlahmramskk42otm.apps.googleusercontent.com',
+        )
+        .catchError((Object e) {
       _googleInitFuture = null;
       throw e;
     });
@@ -908,27 +912,58 @@ class UserProvider extends PsProvider<User> {
     }
 
     try {
-      final fb_auth.User? firebaseUser = await _getFirebaseUserWithGoogleId();
-      if (firebaseUser == null) {
-        if (context.mounted) {
-          showDialog<dynamic>(
-              context: context,
-              builder: (BuildContext context) {
-                return ErrorDialog(
-                  message: 'login__error_signin'.tr,
-                );
-              });
+      await ensureGoogleSignInInitialized();
+      final GoogleSignInAccount account =
+          await GoogleSignIn.instance.authenticate();
+
+      final String? idToken = account.authentication.idToken;
+      String? accessToken;
+      try {
+        final GoogleSignInClientAuthorization? authz =
+            await account.authorizationClient.authorizationForScopes(
+          <String>['email', 'profile'],
+        );
+        accessToken = authz?.accessToken;
+      } catch (_) {}
+
+      String googleUid = account.id;
+      String? googleEmail = account.email;
+      String? googleName = account.displayName;
+      String? googlePhoto = account.photoUrl;
+
+      if (idToken != null && idToken.isNotEmpty) {
+        try {
+          final AuthCredential credential = GoogleAuthProvider.credential(
+            accessToken: accessToken ?? idToken,
+            idToken: idToken,
+          );
+          final fb_auth.UserCredential userCredential =
+              await _firebaseAuth.signInWithCredential(credential);
+          final fb_auth.User? fbUser = userCredential.user;
+          if (fbUser != null) {
+            googleUid = fbUser.uid;
+            googleEmail = fbUser.email ?? googleEmail;
+            googleName = fbUser.displayName ?? googleName;
+            googlePhoto = fbUser.photoURL ?? googlePhoto;
+          }
+        } catch (e) {
+          // Best-effort Firebase Auth (e.g. App Check on USB debug builds should not block Google Sign-In)
+          Utils.psPrint('Firebase signInWithCredential warning: $e');
         }
-        return;
       }
 
-      Utils.psPrint('User id : ${firebaseUser.uid}');
+      Utils.psPrint('Google User id : $googleUid');
       if (context.mounted) {
         await PsProgressDialog.showDialog(context);
       }
 
-      final PsResource<User>? resourceUser =
-          await _submitLoginWithGoogleId(firebaseUser, languageCode);
+      final PsResource<User>? resourceUser = await _submitLoginWithGoogleData(
+        googleId: googleUid,
+        email: googleEmail,
+        displayName: googleName,
+        photoUrl: googlePhoto,
+        languageCode: languageCode,
+      );
 
       await PsProgressDialog.dismissDialog();
 
@@ -995,96 +1030,56 @@ class UserProvider extends PsProvider<User> {
     }
   }
 
-  Future<fb_auth.User?> _getFirebaseUserWithGoogleId() async {
-    await ensureGoogleSignInInitialized();
-
-    final GoogleSignInAccount account = await GoogleSignIn.instance.authenticate();
-    final GoogleSignInAuthentication auth = account.authentication;
-    final String? idToken = auth.idToken;
-    if (idToken == null || idToken.isEmpty) {
-      throw Exception('Google authentication did not return an ID token.');
-    }
-
-    final AuthCredential credential = GoogleAuthProvider.credential(
-      idToken: idToken,
+  Future<PsResource<User>?> _submitLoginWithGoogleData({
+    required String googleId,
+    required String? email,
+    required String? displayName,
+    required String? photoUrl,
+    required String languageCode,
+  }) async {
+    final GoogleLoginParameterHolder googleLoginParameterHolder =
+        GoogleLoginParameterHolder(
+      googleId: googleId,
+      userName: displayName ?? '',
+      userEmail: email ?? '',
+      profilePhotoUrl: photoUrl ?? '',
+      deviceToken: psValueHolder?.deviceToken ?? '',
+      platformName: PsConst.PLATFORM,
+      deviceInfo: (psValueHolder?.deviceModelName?.isNotEmpty == true)
+          ? psValueHolder!.deviceModelName!
+          : (Platform.isIOS ? 'iOS Device' : 'Android Device'),
+      deviceId: (psValueHolder?.deviceUniqueId?.isNotEmpty == true)
+          ? psValueHolder!.deviceUniqueId!
+          : 'device_${DateTime.now().millisecondsSinceEpoch}',
     );
 
-    final fb_auth.UserCredential userCredential =
-        await _firebaseAuth.signInWithCredential(credential);
-    final fb_auth.User? user = userCredential.user;
-    if (user != null) {
-      print('signed in ${user.displayName ?? user.email ?? user.uid}');
-    }
-    return user;
-  }
+    final PsResource<User> _apiStatus = await postGoogleLogin(
+        googleLoginParameterHolder.toMap(), languageCode);
 
-  Future<PsResource<User>?> _submitLoginWithGoogleId(
-      fb_auth.User user, String languageCode) async {
-    // ignore: unnecessary_null_comparison
-    if (user != null) {
-      String? email = user.email;
-      if (email == null || email == '') {
-        // if (user.providerData.isNotEmpty) {
-        //   email = user.providerData[0].email;
-        // }
-        if (user.providerData.isNotEmpty) {
-          for (int i = 0; i < user.providerData.length; i++) {
-            if (user.providerData[i].email != null &&
-                user.providerData[i].email!.trim() != '') {
-              email = user.providerData[i].email;
-              break;
-            }
-          }
-        } else {
-          return null;
-        }
+    if (_apiStatus.data != null) {
+      final User user = _apiStatus.data!;
+      await checkForUserNameNeeded(
+          PsConst.GOOGLE_LOGIN, user.userEmail ?? '', '');
+      await replaceVerifyUserData('', '', '', '');
+      await replaceLoginUserId(user.userId ?? '');
+      if (user.userName != null && user.userName!.isNotEmpty) {
+        await replaceLoginUserName(user.userName!);
       }
-      final GoogleLoginParameterHolder googleLoginParameterHolder =
-          GoogleLoginParameterHolder(
-        googleId: user.uid,
-        userName: user.displayName,
-        userEmail: email,
-        profilePhotoUrl: user.photoURL,
-        deviceToken: psValueHolder?.deviceToken ?? '',
-        platformName: PsConst.PLATFORM,
-        deviceInfo: (psValueHolder?.deviceModelName?.isNotEmpty == true)
-            ? psValueHolder!.deviceModelName!
-            : (Platform.isIOS ? 'iOS Device' : 'Android Device'),
-        deviceId: (psValueHolder?.deviceUniqueId?.isNotEmpty == true)
-            ? psValueHolder!.deviceUniqueId!
-            : 'device_${DateTime.now().millisecondsSinceEpoch}',
-      );
+      await replaceIsToShowIntroSlider(false);
+      await replaceShowOnboardLanguage(false);
+      await replaceCurrentLoginMethod(PsConst.GOOGLE_LOGIN);
 
-      final PsResource<User> _apiStatus = await postGoogleLogin(
-          googleLoginParameterHolder.toMap(), languageCode);
-
-      if (_apiStatus.data != null) {
-        final User user = _apiStatus.data!;
-        await checkForUserNameNeeded(
-            PsConst.GOOGLE_LOGIN, user.userEmail ?? '', '');
-        await replaceVerifyUserData('', '', '', '');
-        await replaceLoginUserId(user.userId ?? '');
+      if (psValueHolder != null) {
+        psValueHolder!.loginUserId = user.userId;
         if (user.userName != null && user.userName!.isNotEmpty) {
-          await replaceLoginUserName(user.userName!);
+          psValueHolder!.loginUserName = user.userName;
         }
-        await replaceIsToShowIntroSlider(false);
-        await replaceShowOnboardLanguage(false);
-        await replaceCurrentLoginMethod(PsConst.GOOGLE_LOGIN);
-
-        if (psValueHolder != null) {
-          psValueHolder!.loginUserId = user.userId;
-          if (user.userName != null && user.userName!.isNotEmpty) {
-            psValueHolder!.loginUserName = user.userName;
-          }
-          psValueHolder!.isToShowIntroSlider = false;
-          psValueHolder!.showOnboardLanguage = false;
-        }
+        psValueHolder!.isToShowIntroSlider = false;
+        psValueHolder!.showOnboardLanguage = false;
       }
-
-      return _apiStatus;
-    } else {
-      return null;
     }
+
+    return _apiStatus;
   }
 
   ///

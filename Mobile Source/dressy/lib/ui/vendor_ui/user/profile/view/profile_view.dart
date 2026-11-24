@@ -148,74 +148,79 @@ class _ProfilePageState extends State<ProfileView>
             productParameterHolder:
                 ProductParameterHolder().getPopularParameterHolder(),
             userId: widget.userId),
-        child: Scaffold(
-          appBar: AppBar(
-            systemOverlayStyle: SystemUiOverlayStyle(
-              statusBarIconBrightness: Utils.getBrightnessForAppBar(context),
-            ),
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            elevation: 0,
-            toolbarHeight: kToolbarHeight,
-            leading: Center(
-              child: IconButton(
+        child: SafeArea(
+          bottom: false,
+          child: Scaffold(
+            appBar: AppBar(
+              primary: false,
+              systemOverlayStyle: SystemUiOverlayStyle(
+                statusBarIconBrightness: Utils.getBrightnessForAppBar(context),
+              ),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              elevation: 0,
+              toolbarHeight: 60,
+              leading: IconButton(
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                 icon: const Icon(Icons.menu),
                 color: Utils.isLightMode(context)
                     ? PsColors.achromatic900
                     : PsColors.achromatic50,
                 onPressed: () => widget.scaffoldKey.currentState?.openDrawer(),
               ),
-            ),
-            title: Text(
-              'profile__title'.tr,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Utils.isLightMode(context)
-                        ? PsColors.achromatic900
-                        : PsColors.achromatic50,
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            centerTitle: false,
-            actions: <Widget>[
-              IconButton(
-                icon: const Icon(Icons.share_outlined, size: 22),
-                tooltip: 'share_profile'.tr,
-                onPressed: () {
-                  final String shareUserId =
-                      psValueHolder?.loginUserId ?? widget.userId ?? '';
-                  final String profileUrl =
-                      'https://dressy-dz.com/profile/$shareUserId';
-                  SharePlus.instance.share(
-                    ShareParams(
-                      text: 'Découvrez mon dressing sur Dressy !\n$profileUrl',
+              title: Text(
+                'profile__title'.tr,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Utils.isLightMode(context)
+                          ? PsColors.achromatic900
+                          : PsColors.achromatic50,
+                      fontWeight: FontWeight.bold,
                     ),
-                  );
-                },
               ),
-              IconButton(
-                icon: const Icon(Icons.edit_outlined, size: 22),
-                tooltip: 'edit_profile__title'.tr,
-                onPressed: () async {
-                  final dynamic result = await Navigator.pushNamed(
-                      context, RoutePaths.editProfile);
-                  if (result == true) {
-                    widget.loadUserData(psValueHolder?.loginUserId);
-                  }
-                },
-              ),
-              ProfilePopUpWidget(
-                callLogout: widget.callLogoutCallBack,
-                onDeactivate: widget.onDeactivate,
-                scaffoldKey: widget.scaffoldKey,
-              ),
-              const SizedBox(width: 4),
-            ],
+              centerTitle: false,
+              actions: <Widget>[
+                IconButton(
+                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                  icon: const Icon(Icons.share_outlined, size: 22),
+                  tooltip: 'share_profile'.tr,
+                  onPressed: () {
+                    final String shareUserId =
+                        psValueHolder?.loginUserId ?? widget.userId ?? '';
+                    final String profileUrl =
+                        'https://dressy-dz.com/profile/$shareUserId';
+                    SharePlus.instance.share(
+                      ShareParams(
+                        text: 'Découvrez mon dressing sur Dressy !\n$profileUrl',
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                  icon: const Icon(Icons.edit_outlined, size: 22),
+                  tooltip: 'edit_profile__title'.tr,
+                  onPressed: () async {
+                    final dynamic result = await Navigator.pushNamed(
+                        context, RoutePaths.editProfile);
+                    if (result == true) {
+                      widget.loadUserData(psValueHolder?.loginUserId);
+                    }
+                  },
+                ),
+                ProfilePopUpWidget(
+                  callLogout: widget.callLogoutCallBack,
+                  onDeactivate: widget.onDeactivate,
+                  scaffoldKey: widget.scaffoldKey,
+                ),
+                const SizedBox(width: 4),
+              ],
+            ),
+            body: PsDynamicWidget(
+                isGrid: true,
+                animationController: widget.animationController,
+                scrollController: scrollController,
+                widgetList: widgetProviderDynamic!.widgetList,
+                callLogoutCallBack: widget.callLogoutCallBack),
           ),
-          body: PsDynamicWidget(
-              isGrid: true,
-              animationController: widget.animationController,
-              scrollController: scrollController,
-              widgetList: widgetProviderDynamic!.widgetList,
-              callLogoutCallBack: widget.callLogoutCallBack),
         ));
   }
 }

@@ -191,7 +191,6 @@ class _ChatViewState extends State<ChatView>
     Utils.activeChatSellerId = widget.sellerUserId;
     Utils.activeChatItemId = widget.itemId;
 
-    Firebase.initializeApp();
     final FirebaseDatabase database =
         FirebaseDatabase.instance; // (app: Utils.firebaseApp!);
     _messagesRef = database.ref().child('Message');
@@ -575,16 +574,13 @@ class _ChatViewState extends State<ChatView>
                 return Consumer<ItemDetailProvider>(builder:
                     (BuildContext context,
                         ItemDetailProvider itemDetailProvider, Widget? child) {
-                  if (itemDetailProvider.hasData) {
-                    /**
-                 * UI SECTION
-                 */
-                    return Container(
-                      color: Utils.isLightMode(context)
-                          ? PsColors.achromatic100
-                          : PsColors.achromatic800,
-                      child: Column(
-                        children: <Widget>[
+                  return Container(
+                    color: Utils.isLightMode(context)
+                        ? PsColors.achromatic100
+                        : PsColors.achromatic800,
+                    child: Column(
+                      children: <Widget>[
+                        if (itemDetailProvider.hasData)
                           CustomHeaderItemInfoWidget(
                             tagKey: getChatHistoryProvider.hashCode.toString(),
                             insertDataToFireBase: _insertDataToFireBase,
@@ -595,40 +591,83 @@ class _ChatViewState extends State<ChatView>
                                 : PsConst.ZERO,
                             buyerUserId: widget.buyerUserId,
                             sellerUserId: widget.sellerUserId,
+                          )
+                        else if ((widget.orderCode ?? '').isNotEmpty ||
+                            (widget.itemDetail?.title ?? '').isNotEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: PsDimens.space16,
+                              vertical: PsDimens.space12,
+                            ),
+                            color: Utils.isLightMode(context)
+                                ? PsColors.primary50
+                                : PsColors.achromatic900,
+                            child: Row(
+                              children: <Widget>[
+                                const Icon(Icons.receipt_long_outlined,
+                                    size: 20, color: Color(0xFFED7768)),
+                                const SizedBox(width: PsDimens.space10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      if ((widget.orderCode ?? '').isNotEmpty)
+                                        Text(
+                                          'Commande #${widget.orderCode}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall
+                                              ?.copyWith(
+                                                  fontWeight: FontWeight.bold),
+                                        ),
+                                      if ((widget.itemDetail?.title ?? '')
+                                          .isNotEmpty)
+                                        Text(
+                                          widget.itemDetail!.title!,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          CustomConversationList(
-                            messagesRef: _messagesRef,
+                        CustomConversationList(
+                          messagesRef: _messagesRef,
+                          insertDataToFireBase: _insertDataToFireBase,
+                          deleteDataToFireBase: _deleteDataToFireBase,
+                          updateDataToFireBase: _updateDataToFireBase,
+                          sessionId: sessionId,
+                          isUserOnline: isActive == ChatUserStatus.active
+                              ? PsConst.ONE
+                              : PsConst.ZERO,
+                          otherUserId: otherUserId,
+                          buyerUserId: widget.buyerUserId,
+                          sellerUserId: widget.sellerUserId,
+                          chatFlag: widget.chatFlag,
+                        ),
+                        if (userProvider.user.data != null &&
+                            userProvider.user.data!.isBlocked == PsConst.ONE)
+                          const SizedBox()
+                        else if (psValueHolder.selectChatType !=
+                            PsConst.NO_CHAT)
+                          CustomChatBoxWidget(
                             insertDataToFireBase: _insertDataToFireBase,
-                            deleteDataToFireBase: _deleteDataToFireBase,
-                            updateDataToFireBase: _updateDataToFireBase,
                             sessionId: sessionId,
+                            chatFlag: widget.chatFlag,
                             isUserOnline: isActive == ChatUserStatus.active
                                 ? PsConst.ONE
                                 : PsConst.ZERO,
-                            otherUserId: otherUserId,
-                            buyerUserId: widget.buyerUserId,
-                            sellerUserId: widget.sellerUserId,
-                            chatFlag: widget.chatFlag,
-                          ),
-                          if (userProvider.user.data != null &&
-                              userProvider.user.data!.isBlocked == PsConst.ONE)
-                            const SizedBox()
-                          else if (psValueHolder.selectChatType !=
-                              PsConst.NO_CHAT)
-                            CustomChatBoxWidget(
-                              insertDataToFireBase: _insertDataToFireBase,
-                              sessionId: sessionId,
-                              chatFlag: widget.chatFlag,
-                              isUserOnline: isActive == ChatUserStatus.active
-                                  ? PsConst.ONE
-                                  : PsConst.ZERO,
-                            )
-                        ],
-                      ),
-                    );
-                  } else {
-                    return const SizedBox();
-                  }
+                          )
+                      ],
+                    ),
+                  );
                 });
               }))),
     );
