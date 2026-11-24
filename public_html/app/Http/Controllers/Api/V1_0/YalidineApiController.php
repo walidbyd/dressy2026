@@ -20,12 +20,12 @@ class YalidineApiController extends Controller
     }
 
     /**
-     * Get Yalidine Stop-Desk centers for a wilaya.
+     * Get Yalidine Stop-Desk centers for a wilaya and optional commune.
      *
      * GET /api/v1/yalidine/centers/{wilayaId?}
      * GET /api/v1.0/yalidine/centers/{wilayaId?}
      *
-     * Supports ?refresh=1 to bypass cache and query live Yalidine API.
+     * Supports ?commune_id={id}&commune_name={name}&refresh=1
      */
     public function centers(Request $request, $wilayaId = null): JsonResponse
     {
@@ -36,21 +36,27 @@ class YalidineApiController extends Controller
             ?? 16;
 
         $id = $this->yalidineService->normalizeWilayaId($rawId);
+        $communeId = $request->query('commune_id');
+        if ($communeId !== null && is_numeric($communeId)) {
+            $communeId = (int) $communeId;
+        } else {
+            $communeId = null;
+        }
+        $communeName = $request->query('commune_name') ?? $request->query('commune');
         $refresh = $request->boolean('refresh') || $request->query('refresh') === '1' || $request->query('refresh') === 'true';
 
-        $centers = $this->yalidineService->getCenters($id, $refresh);
+        $result = $this->yalidineService->getCentersDetailed($id, $communeId, $communeName, $refresh);
 
-        return response()->json([
-            'status' => 'success',
+        $httpStatus = ($result['success'] ?? false) ? 200 : 400;
+
+        return response()->json(array_merge([
+            'status' => ($result['success'] ?? false) ? 'success' : 'error',
             'courier' => 'yalidine',
             'wilaya_id' => $id,
             'wilaya_code' => $id,
             'wilaya_name' => $this->yalidineService->getWilayaNameFr($id),
             'wilaya_name_fr' => $this->yalidineService->getWilayaNameFr($id),
-            'count' => count($centers),
-            'centers' => $centers,
-            'desks' => $centers,
-        ]);
+        ], $result), $httpStatus);
     }
 
     /**

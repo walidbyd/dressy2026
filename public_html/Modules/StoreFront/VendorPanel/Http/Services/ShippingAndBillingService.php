@@ -145,7 +145,7 @@ class ShippingAndBillingService extends PsService
             $toWilayaId = $dzshipService->normalizeWilayaCode($toWilayaRaw);
             $toWilayaName = $dzshipService->getWilayaNameFr($toWilayaId);
 
-            $rawStopDeskId = $request->yalidine_stop_desk_id ?? $request->stop_desk_id ?? null;
+            $rawStopDeskId = $request->yalidine_stop_desk_id ?? $request->stop_desk_id ?? $request->stopdesk_id ?? null;
             $stopDeskId = null;
             $stopDeskName = trim((string) ($request->stop_desk_name ?? ''));
             $toCommuneName = trim((string) ($request->to_commune_name ?? $request->commune_name ?? $request->shipping_city ?? ''));

@@ -43,9 +43,6 @@ class YalidineService
                 if (!empty($deliverySetting->api_base_url)) {
                     $this->apiUrl = rtrim(trim((string) $deliverySetting->api_base_url), '/');
                 }
-                if (!$deliverySetting->is_enabled || $deliverySetting->environment === 'sandbox') {
-                    $this->stubMode = true;
-                }
             }
         } catch (\Throwable $e) {
             // Ignore DB errors during early bootstrapping
@@ -223,73 +220,103 @@ class YalidineService
     }
 
     /**
-     * Get Yalidine Stop Desk Centers for a specific Wilaya.
-     * Fetches live from Yalidine API GET https://api.yalidine.app/v1/centers/?wilaya_id={id}.
+     * Get Yalidine Stop Desk Centers for a specific Wilaya with optional Commune filtering.
+     * Fetches live from official Yalidine API GET https://api.yalidine.app/v1/centers/.
+     * Loops over paginated responses (page_size=200) so no agencies are truncated.
      *
      * @param int|string $wilayaId
+     * @param int|string|null $communeId
+     * @param string|null $communeName
      * @param bool $refresh Force cache refresh / bust
      * @return array
      */
-    public function getCenters($wilayaId, bool $refresh = false): array
+    public function getCentersDetailed($wilayaId, $communeId = null, ?string $communeName = null, bool $refresh = false): array
     {
         $id = $this->normalizeWilayaId($wilayaId);
-        $cacheKey = "yalidine_centers_v3_w_{$id}";
+        $cacheKey = "yalidine_centers_live_w_{$id}";
 
         if ($refresh) {
             Cache::forget($cacheKey);
+            Cache::forget("yalidine_centers_v3_w_{$id}");
             Cache::forget("yalidine_centers_v2_w_{$id}");
-        } else {
+        }
+
+        if (empty($this->apiId) || empty($this->apiToken)) {
+            return [
+                'success' => false,
+                'status' => 'error',
+                'message' => 'Yalidine API credentials are not configured in Admin Panel.',
+                'centers' => [],
+                'desks' => [],
+                'all_wilaya_centers' => [],
+                'count' => 0,
+                'fallback_to_wilaya' => false,
+            ];
+        }
+
+        $allCenters = null;
+        if (!$refresh) {
             $cached = Cache::get($cacheKey);
-            if (is_array($cached) && count($cached) > 0) {
-                return $cached;
+            if (is_array($cached) && !empty($cached)) {
+                $allCenters = $cached;
             }
         }
 
-        if (!$this->stubMode) {
-            try {
-                $response = Http::withHeaders([
-                    'X-API-ID' => $this->apiId,
-                    'X-API-TOKEN' => $this->apiToken,
-                    'Accept' => 'application/json',
-                ])->timeout(12)->get(rtrim($this->apiUrl, '/') . '/centers/', [
-                    'wilaya_id' => $id,
-                    'page_size' => 200,
-                ]);
+        if ($allCenters === null) {
+            $allCentersMap = [];
+            $page = 1;
+            $maxPages = 10;
+            $hasMore = true;
+            $apiError = null;
 
-                if ($response->successful()) {
-                    $json = $response->json();
-                    $data = $json['data'] ?? $json['results'] ?? $json['centers'] ?? $json;
-                    if (is_array($data) && !empty($data)) {
-                        $parsed = [];
+            while ($hasMore && $page <= $maxPages) {
+                try {
+                    $queryParams = [
+                        'wilaya_id' => $id,
+                        'page_size' => 200,
+                        'page' => $page,
+                    ];
+                    $response = Http::withHeaders([
+                        'X-API-ID' => $this->apiId,
+                        'X-API-TOKEN' => $this->apiToken,
+                        'Accept' => 'application/json',
+                    ])->timeout(12)->get(rtrim($this->apiUrl, '/') . '/centers/', $queryParams);
+
+                    if ($response->successful()) {
+                        $json = $response->json();
+                        if (!is_array($json)) {
+                            break;
+                        }
+                        $data = $json['data'] ?? $json['results'] ?? $json['centers'] ?? (isset($json[0]) ? $json : []);
+                        if (!is_array($data) || empty($data)) {
+                            break;
+                        }
+
                         foreach ($data as $key => $center) {
                             if (!is_array($center)) {
                                 continue;
                             }
                             $cWilayaId = (int) ($center['wilaya_id'] ?? $id);
-                            // Include center if it belongs to this wilaya or if wilaya_id omitted
                             if ($cWilayaId !== $id && !empty($center['wilaya_id'])) {
                                 continue;
                             }
 
                             $rawCenterId = $center['center_id'] ?? $center['id'] ?? (is_numeric($key) ? $key : null);
-                            $numericCenterId = is_numeric($rawCenterId) ? (int) $rawCenterId : ($id * 1000 + count($parsed) + 1);
-
-                            $rawName = trim((string) ($center['name'] ?? $center['center_name'] ?? ''));
-                            $communeName = trim((string) ($center['commune_name'] ?? $center['commune'] ?? $this->getWilayaNameFr($id)));
-                            $communeId = isset($center['commune_id']) && is_numeric($center['commune_id']) ? (int) $center['commune_id'] : null;
-
-                            // Format user-friendly name
-                            if (empty($rawName)) {
-                                $name = "Bureau Yalidine {$communeName}";
-                            } elseif (!str_starts_with(strtolower($rawName), 'bureau') && !str_starts_with(strtolower($rawName), 'agence')) {
-                                $name = "Bureau Yalidine {$rawName}";
-                            } else {
-                                $name = $rawName;
+                            $numericCenterId = is_numeric($rawCenterId) ? (int) $rawCenterId : null;
+                            if ($numericCenterId === null) {
+                                continue;
                             }
 
+                            $name = trim((string) ($center['name'] ?? $center['center_name'] ?? ''));
+                            if (empty($name)) {
+                                continue;
+                            }
+
+                            $communeIdVal = isset($center['commune_id']) && is_numeric($center['commune_id']) ? (int) $center['commune_id'] : null;
+                            $communeNameVal = trim((string) ($center['commune_name'] ?? $center['commune'] ?? ''));
                             $address = trim((string) ($center['address'] ?? ''));
                             if (empty($address)) {
-                                $address = $communeName . ', ' . $this->getWilayaNameFr($id);
+                                $address = $communeNameVal ?: $this->getWilayaNameFr($id);
                             }
 
                             $isStopdesk = true;
@@ -299,140 +326,151 @@ class YalidineService
                                 $isStopdesk = filter_var($center['has_stopdesk'], FILTER_VALIDATE_BOOLEAN);
                             }
 
-                            $parsed[] = [
+                            $allCentersMap[$numericCenterId] = [
                                 'center_id' => $numericCenterId,
                                 'id' => (string) $numericCenterId,
                                 'name' => $name,
                                 'address' => $address,
-                                'commune_id' => $communeId,
-                                'commune_name' => $communeName,
+                                'commune_id' => $communeIdVal,
+                                'commune_name' => $communeNameVal,
                                 'wilaya_id' => $id,
                                 'wilaya_name' => (string) ($center['wilaya_name'] ?? $this->getWilayaNameFr($id)),
                                 'is_stopdesk' => $isStopdesk,
                             ];
                         }
 
-                        if (!empty($parsed)) {
-                            Cache::put($cacheKey, $parsed, 86400);
-                            return $parsed;
-                        }
+                        $hasMore = !empty($json['has_more'])
+                            || (!empty($json['links']['next']))
+                            || (count($data) >= 200 && isset($json['total_data']) && count($allCentersMap) < (int) $json['total_data']);
+                        $page++;
+                    } else {
+                        $apiError = "Yalidine API returned HTTP {$response->status()}: " . $response->body();
+                        Log::warning("Yalidine getCenters HTTP error {$response->status()} for wilaya {$id} page {$page}: " . $response->body());
+                        break;
                     }
-                } else {
-                    Log::warning("Yalidine getCenters HTTP error {$response->status()} for wilaya {$id}: " . $response->body());
+                } catch (\Throwable $e) {
+                    $apiError = "Yalidine API connection failed: " . $e->getMessage();
+                    Log::warning("Yalidine getCenters live API call failed for wilaya {$id}: " . $e->getMessage());
+                    break;
                 }
-            } catch (\Throwable $e) {
-                Log::warning("Yalidine getCenters live API call failed for wilaya {$id}: " . $e->getMessage());
+            }
+
+            $allCenters = array_values($allCentersMap);
+
+            if (!empty($allCenters)) {
+                Cache::put($cacheKey, $allCenters, 21600); // 6 hours
+            } elseif ($apiError !== null) {
+                return [
+                    'success' => false,
+                    'status' => 'error',
+                    'message' => $apiError,
+                    'centers' => [],
+                    'desks' => [],
+                    'all_wilaya_centers' => [],
+                    'count' => 0,
+                    'fallback_to_wilaya' => false,
+                ];
             }
         }
 
-        // Return comprehensive fallback centers for this Wilaya
-        $fallback = $this->getFallbackCentersForWilaya($id);
-        if (count($fallback) > 1) {
-            Cache::put($cacheKey, $fallback, 3600);
+        $allCenters = $allCenters ?: [];
+        $cleanCommuneName = $communeName !== null ? trim((string) $communeName) : '';
+        $normCommuneName = $cleanCommuneName !== '' ? $this->normalizeStringForMatching($cleanCommuneName) : '';
+        $normCommuneId = ($communeId !== null && is_numeric($communeId) && (int) $communeId > 0) ? (int) $communeId : null;
+
+        $filtered = [];
+        if ($normCommuneId !== null || $normCommuneName !== '') {
+            foreach ($allCenters as $center) {
+                $isMatch = false;
+                if ($normCommuneId !== null && !empty($center['commune_id']) && (int) $center['commune_id'] === $normCommuneId) {
+                    $isMatch = true;
+                } elseif ($normCommuneName !== '' && !empty($center['commune_name'])) {
+                    $normCenterCommune = $this->normalizeStringForMatching($center['commune_name']);
+                    if ($normCenterCommune === $normCommuneName
+                        || str_contains($normCenterCommune, $normCommuneName)
+                        || str_contains($normCommuneName, $normCenterCommune)) {
+                        $isMatch = true;
+                    }
+                }
+
+                if ($isMatch) {
+                    $filtered[] = $center;
+                }
+            }
         }
-        return $fallback;
-    }
 
-    /**
-     * Authentic dataset of Yalidine Stop Desk Centers for Algerian wilayas.
-     * Ensures every wilaya (especially Alger with Cheraga) has all key bureaus available.
-     *
-     * @param int $id Wilaya code (1..58)
-     * @return array
-     */
-    public function getFallbackCentersForWilaya(int $id): array
-    {
-        $wilayaName = $this->getWilayaNameById($id);
-
-        $presets = [
-            16 => [
-                ['name' => 'Bureau Yalidine Chéraga', 'commune' => 'Chéraga', 'address' => 'Route de Bouchaoui, Chéraga', 'id' => 1601],
-                ['name' => 'Bureau Yalidine Didouche Mourad', 'commune' => 'Alger Centre', 'address' => 'Rue Didouche Mourad, Alger Centre', 'id' => 1602],
-                ['name' => 'Bureau Yalidine Bab Ezzouar', 'commune' => 'Bab Ezzouar', 'address' => 'Cité 8 Mai 1945, Bab Ezzouar', 'id' => 1603],
-                ['name' => 'Bureau Yalidine Kouba', 'commune' => 'Kouba', 'address' => 'Avenue des Frères Abdeslami, Kouba', 'id' => 1604],
-                ['name' => 'Bureau Yalidine Bir Mourad Raïs', 'commune' => 'Bir Mourad Raïs', 'address' => 'Les Sources, Bir Mourad Raïs', 'id' => 1605],
-                ['name' => 'Bureau Yalidine Hussein Dey', 'commune' => 'Hussein Dey', 'address' => 'Rue Tripoli, Hussein Dey', 'id' => 1606],
-                ['name' => 'Bureau Yalidine Draria', 'commune' => 'Draria', 'address' => 'Boulevard Principal, Draria', 'id' => 1607],
-                ['name' => 'Bureau Yalidine Rouiba', 'commune' => 'Rouiba', 'address' => 'Zone Industrielle, Rouiba', 'id' => 1608],
-                ['name' => 'Bureau Yalidine Zéralda', 'commune' => 'Zéralda', 'address' => 'Rue Principale, Zéralda', 'id' => 1609],
-                ['name' => 'Bureau Yalidine Dely Ibrahim', 'commune' => 'Dely Ibrahim', 'address' => 'Bois des Cars, Dely Ibrahim', 'id' => 1610],
-                ['name' => 'Bureau Yalidine El Biar', 'commune' => 'El Biar', 'address' => 'Place Kennedy, El Biar', 'id' => 1611],
-                ['name' => 'Bureau Yalidine Baraki', 'commune' => 'Baraki', 'address' => 'Boulevard Central, Baraki', 'id' => 1612],
-                ['name' => 'Bureau Yalidine Bordj El Kiffan', 'commune' => 'Bordj El Kiffan', 'address' => 'Faubourg, Bordj El Kiffan', 'id' => 1613],
-                ['name' => 'Bureau Yalidine Ain Benian', 'commune' => 'Ain Benian', 'address' => 'Belle Vue, Ain Benian', 'id' => 1614],
-                ['name' => 'Bureau Yalidine Hydra', 'commune' => 'Hydra', 'address' => 'Val d\'Hydra, Hydra', 'id' => 1615],
-                ['name' => 'Bureau Yalidine El Harrach', 'commune' => 'El Harrach', 'address' => 'Rue Hassan Benaamane, El Harrach', 'id' => 1616],
-                ['name' => 'Bureau Yalidine Birtouta', 'commune' => 'Birtouta', 'address' => 'Centre Ville, Birtouta', 'id' => 1617],
-            ],
-            31 => [
-                ['name' => 'Bureau Yalidine Oran Centre', 'commune' => 'Oran', 'address' => 'Boulevard Front de Mer, Oran', 'id' => 3101],
-                ['name' => 'Bureau Yalidine Es Senia', 'commune' => 'Es Senia', 'address' => 'Zone Industrielle, Es Senia', 'id' => 3102],
-                ['name' => 'Bureau Yalidine Bir El Djir', 'commune' => 'Bir El Djir', 'address' => 'Cité USTO, Bir El Djir', 'id' => 3103],
-                ['name' => 'Bureau Yalidine Akid Lotfi', 'commune' => 'Oran', 'address' => 'Boulevard Akid Lotfi, Oran', 'id' => 3104],
-                ['name' => 'Bureau Yalidine Arzew', 'commune' => 'Arzew', 'address' => 'Centre Ville, Arzew', 'id' => 3105],
-            ],
-            9 => [
-                ['name' => 'Bureau Yalidine Blida Centre', 'commune' => 'Blida', 'address' => 'Bab Sebt, Blida', 'id' => 901],
-                ['name' => 'Bureau Yalidine Boufarik', 'commune' => 'Boufarik', 'address' => 'Boulevard Central, Boufarik', 'id' => 902],
-                ['name' => 'Bureau Yalidine Ouled Yaich', 'commune' => 'Ouled Yaich', 'address' => 'Avenue Principale, Ouled Yaich', 'id' => 903],
-            ],
-            25 => [
-                ['name' => 'Bureau Yalidine Constantine Centre', 'commune' => 'Constantine', 'address' => 'Place des Martyrs, Constantine', 'id' => 2501],
-                ['name' => 'Bureau Yalidine Ali Mendjeli', 'commune' => 'El Khroub', 'address' => 'Nouvelle Ville Ali Mendjeli, El Khroub', 'id' => 2502],
-                ['name' => 'Bureau Yalidine El Khroub', 'commune' => 'El Khroub', 'address' => 'Centre Ville, El Khroub', 'id' => 2503],
-            ],
-            19 => [
-                ['name' => 'Bureau Yalidine Sétif Centre', 'commune' => 'Sétif', 'address' => 'Avenue 8 Mai 1945, Sétif', 'id' => 1901],
-                ['name' => 'Bureau Yalidine El Eulma', 'commune' => 'El Eulma', 'address' => 'Boulevard Dubai, El Eulma', 'id' => 1902],
-            ],
-            23 => [
-                ['name' => 'Bureau Yalidine Annaba Centre', 'commune' => 'Annaba', 'address' => 'Cours de la Révolution, Annaba', 'id' => 2301],
-                ['name' => 'Bureau Yalidine El Bouni', 'commune' => 'El Bouni', 'address' => 'Route Nationale, El Bouni', 'id' => 2302],
-            ],
-            15 => [
-                ['name' => 'Bureau Yalidine Tizi Ouzou Centre', 'commune' => 'Tizi Ouzou', 'address' => 'Boulevard Colonel Amirouche, Tizi Ouzou', 'id' => 1501],
-                ['name' => 'Bureau Yalidine Azazga', 'commune' => 'Azazga', 'address' => 'Centre Ville, Azazga', 'id' => 1502],
-                ['name' => 'Bureau Yalidine Draa Ben Khedda', 'commune' => 'Draa Ben Khedda', 'address' => 'Avenue de la Gare, Draa Ben Khedda', 'id' => 1503],
-            ],
-            35 => [
-                ['name' => 'Bureau Yalidine Boumerdès Centre', 'commune' => 'Boumerdès', 'address' => 'Boulevard du Front de Mer, Boumerdès', 'id' => 3501],
-                ['name' => 'Bureau Yalidine Boudouaou', 'commune' => 'Boudouaou', 'address' => 'Route Nationale 5, Boudouaou', 'id' => 3502],
-                ['name' => 'Bureau Yalidine Bordj Menaiel', 'commune' => 'Bordj Menaiel', 'address' => 'Centre Ville, Bordj Menaiel', 'id' => 3503],
-            ],
-            42 => [
-                ['name' => 'Bureau Yalidine Tipaza Centre', 'commune' => 'Tipaza', 'address' => 'Port de Tipaza, Tipaza', 'id' => 4201],
-                ['name' => 'Bureau Yalidine Koléa', 'commune' => 'Koléa', 'address' => 'Centre Ville, Koléa', 'id' => 4202],
-                ['name' => 'Bureau Yalidine Hadjout', 'commune' => 'Hadjout', 'address' => 'Avenue Principale, Hadjout', 'id' => 4203],
-            ],
-            13 => [
-                ['name' => 'Bureau Yalidine Tlemcen Centre', 'commune' => 'Tlemcen', 'address' => 'Boulevard Pasteur, Tlemcen', 'id' => 1301],
-                ['name' => 'Bureau Yalidine Mansourah', 'commune' => 'Mansourah', 'address' => 'Route de Sidi Boumedienne, Mansourah', 'id' => 1302],
-            ],
-        ];
-
-        $rawList = $presets[$id] ?? [
-            ['name' => "Bureau Yalidine {$wilayaName} Centre", 'commune' => $wilayaName, 'address' => "Centre Ville, {$wilayaName}", 'id' => ($id * 1000 + 1)],
-            ['name' => "Bureau Yalidine {$wilayaName} Express", 'commune' => $wilayaName, 'address' => "Zone d'Activité, {$wilayaName}", 'id' => ($id * 1000 + 2)],
-        ];
-
-        $centers = [];
-        foreach ($rawList as $bureau) {
-            $numId = (int) $bureau['id'];
-            $commune = (string) $bureau['commune'];
-            $centers[] = [
-                'center_id' => $numId,
-                'id' => (string) $numId,
-                'name' => (string) $bureau['name'],
-                'address' => (string) $bureau['address'],
-                'commune_id' => null,
-                'commune_name' => $commune,
+        if (!empty($filtered)) {
+            return [
+                'success' => true,
+                'status' => 'success',
+                'fallback_to_wilaya' => false,
                 'wilaya_id' => $id,
-                'wilaya_name' => $wilayaName,
-                'is_stopdesk' => true,
+                'wilaya_name' => $this->getWilayaNameFr($id),
+                'commune_id' => $normCommuneId,
+                'commune_name' => $cleanCommuneName,
+                'count' => count($filtered),
+                'centers' => $filtered,
+                'desks' => $filtered,
+                'all_wilaya_centers' => $allCenters,
             ];
         }
 
-        return $centers;
+        if ($normCommuneId !== null || $normCommuneName !== '') {
+            return [
+                'success' => true,
+                'status' => 'success',
+                'fallback_to_wilaya' => true,
+                'message' => 'Aucun bureau Stop-Desk trouvé directement dans cette commune. Voici tous les bureaux disponibles dans la wilaya.',
+                'wilaya_id' => $id,
+                'wilaya_name' => $this->getWilayaNameFr($id),
+                'commune_id' => $normCommuneId,
+                'commune_name' => $cleanCommuneName,
+                'count' => count($allCenters),
+                'centers' => $allCenters,
+                'desks' => $allCenters,
+                'all_wilaya_centers' => $allCenters,
+            ];
+        }
+
+        return [
+            'success' => true,
+            'status' => 'success',
+            'fallback_to_wilaya' => false,
+            'wilaya_id' => $id,
+            'wilaya_name' => $this->getWilayaNameFr($id),
+            'commune_id' => null,
+            'commune_name' => null,
+            'count' => count($allCenters),
+            'centers' => $allCenters,
+            'desks' => $allCenters,
+            'all_wilaya_centers' => $allCenters,
+        ];
+    }
+
+    /**
+     * Normalize string for reliable commune matching (accents, lowercase, alphanumeric).
+     */
+    protected function normalizeStringForMatching(string $str): string
+    {
+        $str = mb_strtolower(trim($str), 'UTF-8');
+        $trans = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $str);
+        if ($trans !== false) {
+            $str = $trans;
+        }
+        return (string) preg_replace('/[^a-z0-9]/', '', $str);
+    }
+
+    /**
+     * Get Yalidine Stop Desk Centers for a specific Wilaya.
+     *
+     * @param int|string $wilayaId
+     * @param bool $refresh Force cache refresh / bust
+     * @return array
+     */
+    public function getCenters($wilayaId, bool $refresh = false): array
+    {
+        $detailed = $this->getCentersDetailed($wilayaId, null, null, $refresh);
+        return $detailed['centers'] ?? [];
     }
 
     /**

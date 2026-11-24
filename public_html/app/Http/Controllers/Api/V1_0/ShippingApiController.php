@@ -92,28 +92,34 @@ class ShippingApiController extends Controller
 
     /**
      * GET /api/v1.0/shipping/centers/{wilayaId?}
-     * Returns all Yalidine Stop-Desk centers for the requested wilaya.
-     * Supports ?refresh=1 to bypass cache and query live Yalidine API.
+     * Returns all Yalidine Stop-Desk centers for the requested wilaya and optional commune.
+     * Supports ?commune_id={id}&commune_name={name}&refresh=1
      */
     public function centers(Request $request, $wilayaId = null): JsonResponse
     {
         $wilayaRaw = $wilayaId
             ?? $request->query('wilaya', $request->query('wilaya_code', $request->query('wilaya_id')));
         $wilayaCode = $this->shippingService->tryParseWilayaCode($wilayaRaw) ?? 16;
+        $communeId = $request->query('commune_id');
+        if ($communeId !== null && is_numeric($communeId)) {
+            $communeId = (int) $communeId;
+        } else {
+            $communeId = null;
+        }
+        $communeName = $request->query('commune_name') ?? $request->query('commune');
         $refresh = $request->boolean('refresh') || $request->query('refresh') === '1' || $request->query('refresh') === 'true';
 
-        $centers = $this->shippingService->getCenters($wilayaCode, $refresh);
+        $result = $this->shippingService->getCentersDetailed($wilayaCode, $communeId, $communeName, $refresh);
 
-        return response()->json([
-            'status' => 'success',
+        $httpStatus = ($result['success'] ?? false) ? 200 : 400;
+
+        return response()->json(array_merge([
+            'status' => ($result['success'] ?? false) ? 'success' : 'error',
             'courier' => 'yalidine',
             'wilaya_code' => $wilayaCode,
             'wilaya_id' => $wilayaCode,
             'wilaya_name_fr' => $this->shippingService->getWilayaNameFr($wilayaCode),
-            'count' => count($centers),
-            'centers' => $centers,
-            'desks' => $centers,
-        ]);
+        ], $result), $httpStatus);
     }
 
     /**

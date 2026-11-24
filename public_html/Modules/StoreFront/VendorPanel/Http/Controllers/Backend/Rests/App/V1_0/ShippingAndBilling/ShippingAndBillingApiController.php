@@ -45,6 +45,8 @@ class ShippingAndBillingApiController extends Controller
             'to_commune_name' => 'nullable|string|max:120',
             'delivery_type' => 'nullable|string|max:20',
             'yalidine_stop_desk_id' => 'nullable',
+            'stopdesk_id' => 'nullable',
+            'stop_desk_id' => 'nullable',
             'stop_desk_name' => 'nullable|string|max:160',
             'billing_first_name' => 'nullable|string|max:120',
             'billing_last_name' => 'nullable|string|max:120',

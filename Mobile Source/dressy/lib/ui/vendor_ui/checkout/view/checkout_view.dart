@@ -42,6 +42,11 @@ import '../../../custom_ui/checkout/item_vertical_list/checkout_sold_out_vertica
 import '../../../custom_ui/checkout/item_vertical_list/widgets/empty_avaliable_shopping_cart.dart';
 import '../component/order_summary/order_summary_widget.dart';
 
+String _cleanWilayaName(String name) {
+  final RegExp prefixRegex = RegExp(r'^\d+\s*[-–—:]*\s*');
+  return name.replaceFirst(prefixRegex, '').trim();
+}
+
 class _WilayaOption {
   const _WilayaOption({
     required this.code,
@@ -53,9 +58,12 @@ class _WilayaOption {
   final String nameFr;
   final String nameAr;
 
+  String get cleanNameFr => _cleanWilayaName(nameFr);
+
   String get displayLabel {
     final String padded = code.toString().padLeft(2, '0');
-    return nameAr.isNotEmpty ? '$padded - $nameFr ($nameAr)' : '$padded - $nameFr';
+    final String clean = cleanNameFr;
+    return nameAr.isNotEmpty ? '$padded - $clean ($nameAr)' : '$padded - $clean';
   }
 }
 
@@ -142,6 +150,9 @@ class _CheckoutViewState extends State<CheckoutView>
   List<_WilayaOption> _wilayas = _fallbackWilayas;
   List<_CommuneOption> _communes = <_CommuneOption>[];
   List<_StopDeskOption> _stopDesks = <_StopDeskOption>[];
+  List<_StopDeskOption> _communeStopDesks = <_StopDeskOption>[];
+  bool _fallbackToWilaya = false;
+  List<_StopDeskOption> get _allWilayaStopDesks => _stopDesks;
 
   int _selectedWilayaCode = 16;
   String _selectedWilayaNameFr = 'Alger';
@@ -346,7 +357,7 @@ class _CheckoutViewState extends State<CheckoutView>
           if (item is Map<String, dynamic>) {
             final int? code = int.tryParse(item['code']?.toString() ?? item['id']?.toString() ?? '');
             final String nameFr =
-                (item['name_fr'] ?? item['name'] ?? item['nameFr'] ?? '').toString().trim();
+                _cleanWilayaName((item['name_fr'] ?? item['name'] ?? item['nameFr'] ?? '').toString());
             final String nameAr =
                 (item['name_ar'] ?? item['nameAr'] ?? '').toString().trim();
             if (code != null && code >= 1 && nameFr.isNotEmpty) {
@@ -364,7 +375,7 @@ class _CheckoutViewState extends State<CheckoutView>
               (_WilayaOption w) => w.code == _selectedWilayaCode,
               orElse: () => _wilayas.first,
             );
-            _selectedWilayaNameFr = current.nameFr;
+            _selectedWilayaNameFr = _cleanWilayaName(current.nameFr);
             _selectedWilayaNameAr = current.nameAr;
           });
         }
@@ -393,12 +404,14 @@ class _CheckoutViewState extends State<CheckoutView>
 
     setState(() {
       _selectedWilayaCode = chosen.code;
-      _selectedWilayaNameFr = chosen.nameFr;
+      _selectedWilayaNameFr = _cleanWilayaName(chosen.nameFr);
       _selectedWilayaNameAr = chosen.nameAr;
       _communes = <_CommuneOption>[];
       _selectedCommuneName = '';
       _selectedCommuneNameAr = '';
       _stopDesks = <_StopDeskOption>[];
+      _communeStopDesks = <_StopDeskOption>[];
+      _fallbackToWilaya = false;
       _selectedStopDeskId = null;
       _selectedStopDeskName = '';
       _selectedStopDeskCommune = '';
@@ -412,6 +425,40 @@ class _CheckoutViewState extends State<CheckoutView>
       _fetchStopDesks(chosen.code),
     ]);
     await _fetchYalidineQuote();
+  }
+
+  List<_StopDeskOption> _parseStopDeskList(List<dynamic> rawList) {
+    final List<_StopDeskOption> parsed = <_StopDeskOption>[];
+    for (final dynamic item in rawList) {
+      if (item is Map<String, dynamic>) {
+        final String id =
+            (item['center_id'] ?? item['id'] ?? '').toString().trim();
+        final String name =
+            (item['name'] ?? item['center_name'] ?? '').toString().trim();
+        final String cName = (item['commune_name'] ??
+                item['communeName'] ??
+                item['commune'] ??
+                _selectedWilayaNameFr)
+            .toString()
+            .trim();
+        final String addr = (item['address'] ?? cName).toString().trim();
+        final bool isStopdesk = item['is_stopdesk'] == null ||
+            item['is_stopdesk'] == true ||
+            item['is_stopdesk'].toString() == '1' ||
+            item['is_stopdesk'].toString().toLowerCase() == 'true';
+
+        if (id.isNotEmpty && name.isNotEmpty) {
+          parsed.add(_StopDeskOption(
+            id: id,
+            name: name,
+            communeName: cName,
+            address: addr,
+            isStopdesk: isStopdesk,
+          ));
+        }
+      }
+    }
+    return parsed;
   }
 
   void _applyStopDesks(List<_StopDeskOption> parsed) {
@@ -447,7 +494,6 @@ class _CheckoutViewState extends State<CheckoutView>
     candidate ??= parsed.first;
 
     setState(() {
-      _stopDesks = parsed;
       _selectedStopDeskId = candidate!.id;
       _selectedStopDeskName = candidate.name;
       _selectedStopDeskCommune = candidate.communeName;
@@ -455,11 +501,30 @@ class _CheckoutViewState extends State<CheckoutView>
     });
   }
 
-  Future<void> _fetchStopDesks(int wilayaCode, {bool refresh = false}) async {
+  Future<void> _fetchStopDesks(int wilayaCode,
+      {int? communeId, String? communeName, bool refresh = false}) async {
+    setState(() {
+      _isLoadingStopDesks = true;
+    });
+
     try {
-      final String refreshParam = refresh ? '?refresh=1' : '';
+      final List<String> queryParts = <String>[];
+      if (refresh) {
+        queryParts.add('refresh=1');
+      }
+      if (communeId != null && communeId > 0) {
+        queryParts.add('commune_id=$communeId');
+      }
+      final String effectiveCommune =
+          (communeName ?? _selectedCommuneName).trim();
+      if (effectiveCommune.isNotEmpty) {
+        queryParts.add('commune_name=${Uri.encodeComponent(effectiveCommune)}');
+      }
+
+      final String queryString =
+          queryParts.isNotEmpty ? '?${queryParts.join('&')}' : '';
       final Uri uri = Uri.parse(
-          '${PsConfig.ps_app_url}yalidine/centers/$wilayaCode$refreshParam');
+          '${PsConfig.ps_app_url}yalidine/centers/$wilayaCode$queryString');
       final http.Response response = await http.get(
         uri,
         headers: <String, String>{
@@ -474,47 +539,35 @@ class _CheckoutViewState extends State<CheckoutView>
 
       if (response.statusCode == 200) {
         final dynamic decoded = json.decode(response.body);
-        final List<dynamic> rawList = decoded is Map<String, dynamic>
-            ? (decoded['centers'] as List<dynamic>? ??
-                decoded['desks'] as List<dynamic>? ??
-                decoded['data'] as List<dynamic>? ??
-                <dynamic>[])
-            : (decoded is List<dynamic> ? decoded : <dynamic>[]);
+        if (decoded is Map<String, dynamic>) {
+          final bool isFallback = decoded['fallback_to_wilaya'] == true;
+          final List<dynamic> rawMatching =
+              decoded['centers'] as List<dynamic>? ??
+                  decoded['desks'] as List<dynamic>? ??
+                  <dynamic>[];
+          final List<dynamic> rawAll =
+              decoded['all_wilaya_centers'] as List<dynamic>? ?? rawMatching;
 
-        final List<_StopDeskOption> parsed = <_StopDeskOption>[];
-        for (final dynamic item in rawList) {
-          if (item is Map<String, dynamic>) {
-            final String id =
-                (item['center_id'] ?? item['id'] ?? '').toString().trim();
-            final String name =
-                (item['name'] ?? item['center_name'] ?? '').toString().trim();
-            final String cName = (item['commune_name'] ??
-                    item['communeName'] ??
-                    item['commune'] ??
-                    _selectedWilayaNameFr)
-                .toString()
-                .trim();
-            final String addr = (item['address'] ?? cName).toString().trim();
-            final bool isStopdesk = item['is_stopdesk'] == null ||
-                item['is_stopdesk'] == true ||
-                item['is_stopdesk'].toString() == '1' ||
-                item['is_stopdesk'].toString().toLowerCase() == 'true';
+          final List<_StopDeskOption> parsedMatching =
+              _parseStopDeskList(rawMatching);
+          final List<_StopDeskOption> parsedAll =
+              _parseStopDeskList(rawAll);
 
-            if (id.isNotEmpty && name.isNotEmpty) {
-              parsed.add(_StopDeskOption(
-                id: id,
-                name: name,
-                communeName: cName,
-                address: addr,
-                isStopdesk: isStopdesk,
-              ));
-            }
+          if (parsedAll.isNotEmpty || parsedMatching.isNotEmpty) {
+            final List<_StopDeskOption> allList =
+                parsedAll.isNotEmpty ? parsedAll : parsedMatching;
+            final List<_StopDeskOption> commList =
+                isFallback ? <_StopDeskOption>[] : parsedMatching;
+
+            setState(() {
+              _stopDesks = allList;
+              _communeStopDesks = commList;
+              _fallbackToWilaya = isFallback;
+            });
+
+            _applyStopDesks(commList.isNotEmpty ? commList : allList);
+            return;
           }
-        }
-
-        if (parsed.isNotEmpty) {
-          _applyStopDesks(parsed);
-          return;
         }
       }
     } catch (_) {
@@ -528,9 +581,14 @@ class _CheckoutViewState extends State<CheckoutView>
     }
 
     if (mounted && _selectedWilayaCode == wilayaCode && _stopDesks.isEmpty) {
-      _applyStopDesks(<_StopDeskOption>[
-        _defaultDeskForWilaya(wilayaCode, _selectedWilayaNameFr)
-      ]);
+      final _StopDeskOption defaultDesk =
+          _defaultDeskForWilaya(wilayaCode, _selectedWilayaNameFr);
+      setState(() {
+        _stopDesks = <_StopDeskOption>[defaultDesk];
+        _communeStopDesks = <_StopDeskOption>[defaultDesk];
+        _fallbackToWilaya = false;
+      });
+      _applyStopDesks(<_StopDeskOption>[defaultDesk]);
     }
   }
 
@@ -605,8 +663,9 @@ class _CheckoutViewState extends State<CheckoutView>
             _selectedCommuneName = parsed.first.nameFr;
             _selectedCommuneNameAr = parsed.first.nameAr;
           });
-          if (parsedDesks.isNotEmpty &&
-              (_stopDesks.isEmpty || parsedDesks.length > _stopDesks.length)) {
+          _fetchStopDesks(wilayaCode,
+              communeId: parsed.first.id, communeName: parsed.first.nameFr);
+          if (parsedDesks.isNotEmpty && _stopDesks.isEmpty) {
             _applyStopDesks(parsedDesks);
           }
           return;
@@ -1074,30 +1133,13 @@ class _CheckoutViewState extends State<CheckoutView>
       setState(() {
         _selectedCommuneName = selected.nameFr;
         _selectedCommuneNameAr = selected.nameAr;
-
-        // When user picks a commune (e.g. Chéraga), auto-select matching bureau if one exists in _stopDesks,
-        // while keeping ALL bureaus in the wilaya available and selectable
-        final String target = selected.nameFr.toLowerCase().trim();
-        _StopDeskOption? matched;
-        for (final _StopDeskOption d in _stopDesks) {
-          final String dComm = d.communeName.toLowerCase().trim();
-          final String dName = d.name.toLowerCase().trim();
-          if (dComm == target ||
-              dComm.contains(target) ||
-              target.contains(dComm) ||
-              dName.contains(target)) {
-            matched = d;
-            break;
-          }
-        }
-        if (matched != null) {
-          _selectedStopDeskId = matched.id;
-          _selectedStopDeskName = matched.name;
-          _selectedStopDeskCommune = matched.communeName;
-          _selectedStopDeskAddress = matched.address;
-        }
       });
-      await _fetchYalidineQuote();
+
+      await Future.wait(<Future<void>>[
+        _fetchStopDesks(_selectedWilayaCode,
+            communeId: selected.id, communeName: selected.nameFr),
+        _fetchYalidineQuote(),
+      ]);
     }
   }
 
@@ -1185,7 +1227,7 @@ class _CheckoutViewState extends State<CheckoutView>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               Text(
-                                'Bureaux Yalidine — $_selectedWilayaNameFr',
+                                'Bureaux Yalidine — ${_cleanWilayaName(_selectedWilayaNameFr)}',
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleMedium
@@ -1556,8 +1598,9 @@ class _CheckoutViewState extends State<CheckoutView>
     final Color fieldFill =
         isLight ? const Color(0xFFFAF7F2) : PsColors.achromatic700;
 
+    final String cleanWilayaFr = _cleanWilayaName(_selectedWilayaNameFr);
     final String wilayaDisplay =
-        '${_selectedWilayaCode.toString().padLeft(2, '0')} - $_selectedWilayaNameFr'
+        '${_selectedWilayaCode.toString().padLeft(2, '0')} - $cleanWilayaFr'
         '${_selectedWilayaNameAr.isNotEmpty ? ' ($_selectedWilayaNameAr)' : ''}';
 
     final String communeDisplay = _selectedCommuneName.isNotEmpty
@@ -1831,140 +1874,342 @@ class _CheckoutViewState extends State<CheckoutView>
                               ),
                             ),
                             SizedBox(width: 10),
-                            Text(
-                              'Chargement des bureaux Yalidine...',
-                              style: TextStyle(fontSize: 13),
+                            Expanded(
+                              child: Text(
+                                'Recherche des bureaux Yalidine en direct...',
+                                style: TextStyle(fontSize: 12.5),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
                       )
-                    else
-                      InkWell(
-                        onTap: _showStopDeskPickerSheet,
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color:
-                                isLight ? Colors.white : PsColors.achromatic800,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: PsColors.burgundy.withValues(alpha: 0.45),
-                              width: 1.2,
-                            ),
-                          ),
+                    else ...<Widget>[
+                      if (_communeStopDesks.isNotEmpty) ...<Widget>[
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2, bottom: 6),
                           child: Row(
                             children: <Widget>[
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color:
-                                      PsColors.burgundy.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.storefront_rounded,
-                                    color: PsColors.burgundy, size: 20),
-                              ),
-                              const SizedBox(width: 10),
+                              const Icon(Icons.storefront_rounded,
+                                  size: 15, color: PsColors.burgundy),
+                              const SizedBox(width: 5),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Row(
-                                      children: <Widget>[
-                                        Text(
-                                          'Bureau de retrait',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                        if (_stopDesks.isNotEmpty) ...<Widget>[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 1),
-                                            decoration: BoxDecoration(
-                                              color: PsColors.burgundy
-                                                  .withValues(alpha: 0.08),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              '${_stopDesks.length} disponibles',
-                                              style: const TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w600,
-                                                color: PsColors.burgundy,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      _selectedStopDeskName.isNotEmpty
-                                          ? _selectedStopDeskName
-                                          : 'Choisir votre bureau Yalidine',
-                                      style: const TextStyle(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    if (_selectedStopDeskAddress.isNotEmpty ||
-                                        _selectedStopDeskCommune
-                                            .isNotEmpty) ...<Widget>[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        _selectedStopDeskAddress.isNotEmpty
-                                            ? '$_selectedStopDeskCommune — $_selectedStopDeskAddress'
-                                            : _selectedStopDeskCommune,
-                                        style: TextStyle(
-                                          fontSize: 11.5,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 9, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color:
-                                      PsColors.burgundy.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    Text(
-                                      'Changer',
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: PsColors.burgundy,
-                                      ),
-                                    ),
-                                    SizedBox(width: 2),
-                                    Icon(Icons.keyboard_arrow_down_rounded,
-                                        size: 16, color: PsColors.burgundy),
-                                  ],
+                                child: Text(
+                                  _selectedCommuneName.isNotEmpty
+                                      ? 'Bureaux à $_selectedCommuneName (${_communeStopDesks.length}) :'
+                                      : 'Bureaux disponibles :',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: isLight
+                                        ? PsColors.achromatic800
+                                        : Colors.white,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
                         ),
+                        ..._communeStopDesks.map((_StopDeskOption desk) {
+                          final bool isSelected =
+                              desk.id == _selectedStopDeskId;
+                          return InkWell(
+                            onTap: () {
+                              setState(() {
+                                _selectedStopDeskId = desk.id;
+                                _selectedStopDeskName = desk.name;
+                                _selectedStopDeskCommune = desk.communeName;
+                                _selectedStopDeskAddress = desk.address;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 7),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 9),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? PsColors.burgundy.withValues(alpha: 0.08)
+                                    : (isLight
+                                        ? Colors.white
+                                        : PsColors.achromatic800),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? PsColors.burgundy
+                                      : Colors.grey.withValues(alpha: 0.35),
+                                  width: isSelected ? 1.6 : 1.0,
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Icon(
+                                      isSelected
+                                          ? Icons.radio_button_checked
+                                          : Icons.radio_button_off,
+                                      size: 18,
+                                      color: isSelected
+                                          ? PsColors.burgundy
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Text(
+                                          desk.name,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w700
+                                                : FontWeight.w600,
+                                            color: isSelected
+                                                ? PsColors.burgundy
+                                                : null,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (desk.address.isNotEmpty) ...<Widget>[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            desk.address,
+                                            style: TextStyle(
+                                              fontSize: 11.5,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                        if (_selectedStopDeskId != null &&
+                            _selectedStopDeskId!.isNotEmpty &&
+                            !_communeStopDesks.any((_StopDeskOption d) =>
+                                d.id == _selectedStopDeskId)) ...<Widget>[
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 7),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 9),
+                            decoration: BoxDecoration(
+                              color: PsColors.burgundy.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: PsColors.burgundy,
+                                width: 1.6,
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 2),
+                                  child: Icon(
+                                    Icons.radio_button_checked,
+                                    size: 18,
+                                    color: PsColors.burgundy,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        _selectedStopDeskName,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: PsColors.burgundy,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (_selectedStopDeskAddress.isNotEmpty ||
+                                          _selectedStopDeskCommune
+                                              .isNotEmpty) ...<Widget>[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          _selectedStopDeskAddress.isNotEmpty
+                                              ? '$_selectedStopDeskCommune — $_selectedStopDeskAddress'
+                                              : _selectedStopDeskCommune,
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ] else ...<Widget>[
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.amber.shade700
+                                  .withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Icon(Icons.info_outline,
+                                  size: 16, color: Colors.amber.shade800),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _fallbackToWilaya && _selectedCommuneName.isNotEmpty
+                                      ? 'Aucun bureau direct à $_selectedCommuneName. Choisissez un bureau dans la wilaya :'
+                                      : (_selectedCommuneName.isNotEmpty
+                                          ? 'Bureaux disponibles dans la wilaya pour $_selectedCommuneName :'
+                                          : 'Sélectionnez votre bureau de retrait :'),
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: Colors.amber.shade900,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_selectedStopDeskName.isNotEmpty) ...<Widget>[
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 9),
+                            decoration: BoxDecoration(
+                              color:
+                                  PsColors.burgundy.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: PsColors.burgundy,
+                                width: 1.6,
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 2),
+                                  child: Icon(
+                                    Icons.radio_button_checked,
+                                    size: 18,
+                                    color: PsColors.burgundy,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        _selectedStopDeskName,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: PsColors.burgundy,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (_selectedStopDeskAddress.isNotEmpty ||
+                                          _selectedStopDeskCommune
+                                              .isNotEmpty) ...<Widget>[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          _selectedStopDeskAddress.isNotEmpty
+                                              ? '$_selectedStopDeskCommune — $_selectedStopDeskAddress'
+                                              : _selectedStopDeskCommune,
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                      InkWell(
+                        onTap: _showStopDeskPickerSheet,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: PsColors.burgundy.withValues(alpha: 0.07),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: PsColors.burgundy.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              const Icon(Icons.storefront_outlined,
+                                  size: 16, color: PsColors.burgundy),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  _allWilayaStopDesks.isNotEmpty
+                                      ? 'Voir tous les bureaux de la wilaya (${_allWilayaStopDesks.length})'
+                                      : 'Voir tous les bureaux de la wilaya',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: PsColors.burgundy,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.chevron_right_rounded,
+                                  size: 16, color: PsColors.burgundy),
+                            ],
+                          ),
+                        ),
                       ),
+                    ],
                   ],
                 ],
               ),
