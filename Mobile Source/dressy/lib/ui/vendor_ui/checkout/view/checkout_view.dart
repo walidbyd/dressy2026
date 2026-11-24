@@ -579,17 +579,6 @@ class _CheckoutViewState extends State<CheckoutView>
         });
       }
     }
-
-    if (mounted && _selectedWilayaCode == wilayaCode && _stopDesks.isEmpty) {
-      final _StopDeskOption defaultDesk =
-          _defaultDeskForWilaya(wilayaCode, _selectedWilayaNameFr);
-      setState(() {
-        _stopDesks = <_StopDeskOption>[defaultDesk];
-        _communeStopDesks = <_StopDeskOption>[defaultDesk];
-        _fallbackToWilaya = false;
-      });
-      _applyStopDesks(<_StopDeskOption>[defaultDesk]);
-    }
   }
 
   Future<void> _fetchCommunes(int wilayaCode) async {
@@ -784,11 +773,6 @@ class _CheckoutViewState extends State<CheckoutView>
             }
           }
 
-          if (parsedDesks.isEmpty) {
-            parsedDesks.add(_defaultDeskForWilaya(
-                _selectedWilayaCode, _selectedWilayaNameFr));
-          }
-
           setState(() {
             _fromWilayaCode = fromW;
             _fromWilayaName = fromWName;
@@ -814,10 +798,8 @@ class _CheckoutViewState extends State<CheckoutView>
       }
     }
 
-    // Offline fallback quote so UI is never empty
-    if (mounted && reqSeq == _quoteRequestSeq && _stopDesks.isEmpty) {
-      final _StopDeskOption desk =
-          _defaultDeskForWilaya(_selectedWilayaCode, _selectedWilayaNameFr);
+    // Offline fallback quote for fees
+    if (mounted && reqSeq == _quoteRequestSeq) {
       const List<int> southWilayas = <int>[
         1, 8, 11, 30, 33, 37, 39, 47, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58
       ];
@@ -828,17 +810,7 @@ class _CheckoutViewState extends State<CheckoutView>
         _homeFeeDzd =
             _selectedWilayaCode == 16 ? 400.0 : (isSouth ? 1000.0 : 650.0);
       });
-      _applyStopDesks(<_StopDeskOption>[desk]);
     }
-  }
-
-  _StopDeskOption _defaultDeskForWilaya(int code, String wilayaName) {
-    return _StopDeskOption(
-      id: (code * 1000 + 1).toString(),
-      name: 'Bureau Yalidine $wilayaName Centre',
-      communeName: wilayaName,
-      address: 'Centre-ville, $wilayaName',
-    );
   }
 
   void _tryPrefillRecipientFromProfile(
@@ -1885,7 +1857,79 @@ class _CheckoutViewState extends State<CheckoutView>
                           ],
                         ),
                       )
-                    else ...<Widget>[
+                    else if (_stopDesks.isEmpty) ...<Widget>[
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.amber.shade700.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Icon(Icons.info_outline,
+                                    size: 18, color: Colors.amber.shade800),
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Text(
+                                    'Aucun bureau Yalidine disponible actuellement pour cette wilaya.',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      color: PsColors.burgundy,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            InkWell(
+                              onTap: () {
+                                _fetchStopDesks(_selectedWilayaCode,
+                                    communeName: _selectedCommuneName,
+                                    refresh: true);
+                              },
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: PsColors.burgundy.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: PsColors.burgundy.withValues(alpha: 0.4),
+                                  ),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Icon(Icons.refresh,
+                                        size: 14, color: PsColors.burgundy),
+                                    SizedBox(width: 5),
+                                    Text(
+                                      'Actualiser',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: PsColors.burgundy,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...<Widget>[
                       if (_communeStopDesks.isNotEmpty) ...<Widget>[
                         Padding(
                           padding: const EdgeInsets.only(top: 2, bottom: 6),

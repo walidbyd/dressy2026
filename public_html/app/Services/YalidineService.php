@@ -597,7 +597,7 @@ class YalidineService
         $phone = $shipping?->shipping_phone_no ?: ($order->user?->user_phone ?: '');
         $address = $shipping?->shipping_address ?: 'Livraison';
 
-        $isStopDesk = ($order->delivery_type === 'stop_desk');
+        $isStopDesk = in_array(strtolower(trim((string) ($order->delivery_type ?? ''))), ['stop_desk', 'stopdesk', 'desk', 'bureau'], true);
         $toWilayaId = $order->to_wilaya_id ?: $this->normalizeWilayaId($shipping?->shipping_state ?: $shipping?->shipping_city);
         $toWilayaName = $this->getWilayaNameById($toWilayaId);
         $toCommuneName = $order->to_commune_name ?: ($shipping?->shipping_city ?: $toWilayaName);
@@ -721,6 +721,54 @@ class YalidineService
                 'error' => 'Connection to Yalidine API failed: ' . $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Backward-compatibility alias for createParcelForOrder.
+     *
+     * @param Order $order
+     * @return array
+     */
+    public function createShipment(Order $order): array
+    {
+        return $this->createParcelForOrder($order);
+    }
+
+    /**
+     * Normalize delivery type to standard values: "stopdesk" or "home".
+     *
+     * @param string|null $deliveryType
+     * @param mixed $isStopDesk
+     * @return string
+     */
+    public function normalizeDeliveryType(?string $deliveryType, $isStopDesk = null): string
+    {
+        if (!empty($deliveryType)) {
+            $clean = strtolower(trim((string) $deliveryType));
+            if (in_array($clean, ['stopdesk', 'stop_desk', 'stop-desk', 'desk', 'bureau'], true)) {
+                return 'stopdesk';
+            }
+            if (in_array($clean, ['home', 'domicile', 'home_delivery'], true)) {
+                return 'home';
+            }
+        }
+
+        if ($isStopDesk !== null && filter_var($isStopDesk, FILTER_VALIDATE_BOOLEAN)) {
+            return 'stopdesk';
+        }
+
+        return 'home';
+    }
+
+    /**
+     * Backward-compatibility alias for normalizeWilayaId.
+     *
+     * @param mixed $wilaya
+     * @return int
+     */
+    public function normalizeWilayaCode($wilaya): int
+    {
+        return $this->normalizeWilayaId($wilaya);
     }
 
     /**
@@ -1096,9 +1144,18 @@ class YalidineService
 
         foreach ($centers as $center) {
             $id = (string) ($center['center_id'] ?? $center['id'] ?? '');
-            $name = (string) ($center['name'] ?? 'Bureau Yalidine');
-            $commune = (string) ($center['commune_name'] ?? $this->getWilayaNameFr($wilayaCode));
-            $address = (string) ($center['address'] ?? ($commune . ', ' . $this->getWilayaNameFr($wilayaCode)));
+            $name = trim((string) ($center['name'] ?? $center['center_name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $commune = trim((string) ($center['commune_name'] ?? ''));
+            $address = trim((string) ($center['address'] ?? ''));
+            if ($address === '') {
+                $address = $commune !== '' ? "{$commune}, " . $this->getWilayaNameFr($wilayaCode) : $this->getWilayaNameFr($wilayaCode);
+            }
+            if ($commune === '') {
+                $commune = $this->getWilayaNameFr($wilayaCode);
+            }
 
             $desks[] = [
                 'id' => $id,

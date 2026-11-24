@@ -123,7 +123,7 @@ class ShippingAndBillingService extends PsService
             // Resolve Yalidine delivery type, origin wilaya (from item), destination wilaya & commune/stop-desk
             $dzshipService = app(\App\Services\DzshipYalidineService::class);
             $deliveryType = $dzshipService->normalizeDeliveryType($request->delivery_type, $request->is_stop_desk ?? null);
-            $isStopDesk = ($deliveryType === 'stopdesk');
+            $isStopDesk = ($deliveryType === 'stopdesk' || $deliveryType === 'stop_desk');
 
             $firstItemId = null;
             if (is_array($request->order_summary) && !empty($request->order_summary)) {
@@ -272,7 +272,7 @@ class ShippingAndBillingService extends PsService
             $order->order_code = rand(100000, 999999);
             $order->delivery_fee = $deliveryFee;
             $order->wallet_amount_used = max(0, (float) ($request->wallet_amount_used ?? 0));
-            $order->delivery_type = $deliveryType;
+            $order->delivery_type = $isStopDesk ? 'stop_desk' : 'home';
             $order->from_wilaya_id = $fromWilayaId;
             $order->to_wilaya_id = $toWilayaId;
             $order->to_commune_name = $toCommuneName;
