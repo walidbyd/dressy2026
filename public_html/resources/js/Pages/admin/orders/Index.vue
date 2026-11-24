@@ -26,7 +26,7 @@
 
         <ps-banner-icon v-if="$page.props.status"
             theme="bg-green-500" iconName="rightalert" class="text-white mb-5">
-            {{ $page.props.status }}
+            {{ typeof $page.props.status === 'object' && $page.props.status !== null ? $page.props.status.msg : $page.props.status }}
         </ps-banner-icon>
 
         <!-- Stats Overview Cards -->
@@ -364,8 +364,26 @@ export default defineComponent({
 
         const generateYalidineParcel = (order) => {
             if (!order || generatingOrder.value) return;
+            const code = order.order_code || order.id;
+            if (!confirm(`Générer l'expédition officielle Yalidine pour la commande #${code} ?`)) {
+                return;
+            }
             generatingOrder.value = order.id;
             router.post(route('admin.orders.generateParcel', order.id), {}, {
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    const status = page.props.status;
+                    const msg = (typeof status === 'object' && status !== null) ? status.msg : status;
+                    if (msg) {
+                        alert(`✅ ${msg}`);
+                    } else {
+                        alert('✅ Bordereau et colis Yalidine générés avec succès !');
+                    }
+                },
+                onError: (errors) => {
+                    const err = errors.msg || Object.values(errors).join('\n') || 'Échec de la génération du colis Yalidine.';
+                    alert(`❌ Erreur Yalidine : ${err}`);
+                },
                 onFinish: () => {
                     generatingOrder.value = null;
                 }

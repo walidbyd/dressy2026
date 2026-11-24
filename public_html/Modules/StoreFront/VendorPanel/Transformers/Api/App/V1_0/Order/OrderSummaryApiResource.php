@@ -10,28 +10,31 @@ class OrderSummaryApiResource extends JsonResource
 {
     public function toArray($request)
     {
-
         $itemInfoArr = [];
-        $currencySymbol = $this->vendorTransaction?->currency?->currency_symbol;
-        $totalAmount = $currencySymbol.$this->vendorTransaction?->payment_amount;
-        $deliveryFee = $currencySymbol.$this->delivery_fee;
+        $currencySymbol = $this->vendorTransaction?->currency?->currency_symbol ?? 'DA ';
+        $paymentAmount = $this->vendorTransaction?->payment_amount ?? $this->total_price ?? 0;
+        $totalAmount = $currencySymbol.$paymentAmount;
+        $deliveryFee = $currencySymbol.($this->delivery_fee ?? 0);
 
         $discountPriceArr = [];
         $subTotalPriceArr = [];
 
-        foreach ($this->orderItems as $orderItem) {
-            $itemInfoObj = new stdClass;
-            $itemInfoObj->item_id = (string) $orderItem->item_id;
-            $itemInfoObj->item_name = (string) $orderItem->item_name;
-            $itemInfoObj->original_price = (string) $currencySymbol.$orderItem->original_price;
-            $itemInfoObj->sale_price = (string) $currencySymbol.$orderItem->sale_price;
-            $itemInfoObj->discount_price = (string) $this->vendorTransaction?->currency?->currency_symbol.$orderItem->discount_price;
-            $itemInfoObj->quantity = (string) $orderItem->quantity;
-            $itemInfoObj->sub_total = (string) $this->vendorTransaction?->currency?->currency_symbol.$orderItem->sub_total;
-            $itemInfoObj->default_photo = new CoreImageApiResource(isset($orderItem->item->cover[0]) && $orderItem->item->cover[0] ? $orderItem->item->cover[0] : []);
-            array_push($itemInfoArr, $itemInfoObj);
-            array_push($discountPriceArr, $orderItem->discount_price);
-            array_push($subTotalPriceArr, $orderItem->sub_total);
+        if (!empty($this->orderItems)) {
+            foreach ($this->orderItems as $orderItem) {
+                $itemInfoObj = new stdClass;
+                $itemInfoObj->item_id = (string) $orderItem->item_id;
+                $itemInfoObj->item_name = (string) $orderItem->item_name;
+                $itemInfoObj->original_price = (string) $currencySymbol.$orderItem->original_price;
+                $itemInfoObj->sale_price = (string) $currencySymbol.$orderItem->sale_price;
+                $itemInfoObj->discount_price = (string) $currencySymbol.$orderItem->discount_price;
+                $itemInfoObj->quantity = (string) $orderItem->quantity;
+                $itemInfoObj->sub_total = (string) $currencySymbol.$orderItem->sub_total;
+                $defaultPhoto = (isset($orderItem->item?->cover[0]) && $orderItem->item?->cover[0]) ? $orderItem->item->cover[0] : [];
+                $itemInfoObj->default_photo = new CoreImageApiResource($defaultPhoto);
+                array_push($itemInfoArr, $itemInfoObj);
+                array_push($discountPriceArr, (float) ($orderItem->discount_price ?? 0));
+                array_push($subTotalPriceArr, (float) ($orderItem->sub_total ?? 0));
+            }
         }
 
         $allItemSubTotalFromCart = $currencySymbol.round(array_sum($subTotalPriceArr), 2);
@@ -41,26 +44,26 @@ class OrderSummaryApiResource extends JsonResource
         $orderSummaryObj->id = (string) $this->id;
         $orderSummaryObj->order_status_id = (string) $this->order_status_id;
         $orderSummaryObj->order_code = (string) $this->order_code;
-        $orderSummaryObj->shipping_first_name = (string) $this->shippingAndBilling->shipping_first_name;
-        $orderSummaryObj->shipping_last_name = (string) $this->shippingAndBilling->shipping_last_name;
-        $orderSummaryObj->shipping_email = (string) $this->shippingAndBilling->shipping_email;
-        $orderSummaryObj->shipping_phone_no = (string) $this->shippingAndBilling->shipping_phone_no;
-        $orderSummaryObj->shipping_address = (string) $this->shippingAndBilling->shipping_address;
-        $orderSummaryObj->shipping_country = (string) $this->shippingAndBilling->shipping_country;
-        $orderSummaryObj->shipping_state = (string) $this->shippingAndBilling->shipping_state;
-        $orderSummaryObj->shipping_city = (string) $this->shippingAndBilling->shipping_city;
-        $orderSummaryObj->shipping_postal_code = (string) $this->shippingAndBilling->shipping_postal_code;
-        $orderSummaryObj->is_save_shipping_info_for_next_time = (string) $this->shippingAndBilling->is_save_shipping_info_for_next_time;
-        $orderSummaryObj->billing_first_name = (string) $this->shippingAndBilling->billing_first_name;
-        $orderSummaryObj->billing_last_name = (string) $this->shippingAndBilling->billing_last_name;
-        $orderSummaryObj->billing_email = (string) $this->shippingAndBilling->billing_email;
-        $orderSummaryObj->billing_phone_no = (string) $this->shippingAndBilling->billing_phone_no;
-        $orderSummaryObj->billing_address = (string) $this->shippingAndBilling->billing_address;
-        $orderSummaryObj->billing_country = (string) $this->shippingAndBilling->billing_country;
-        $orderSummaryObj->billing_state = (string) $this->shippingAndBilling->billing_state;
-        $orderSummaryObj->billing_city = (string) $this->shippingAndBilling->billing_city;
-        $orderSummaryObj->billing_postal_code = (string) $this->shippingAndBilling->billing_postal_code;
-        $orderSummaryObj->is_save_billing_info_for_next_time = (string) $this->shippingAndBilling->is_save_billing_info_for_next_time;
+        $orderSummaryObj->shipping_first_name = (string) ($this->shippingAndBilling?->shipping_first_name ?? '');
+        $orderSummaryObj->shipping_last_name = (string) ($this->shippingAndBilling?->shipping_last_name ?? '');
+        $orderSummaryObj->shipping_email = (string) ($this->shippingAndBilling?->shipping_email ?? '');
+        $orderSummaryObj->shipping_phone_no = (string) ($this->shippingAndBilling?->shipping_phone_no ?? '');
+        $orderSummaryObj->shipping_address = (string) ($this->shippingAndBilling?->shipping_address ?? '');
+        $orderSummaryObj->shipping_country = (string) ($this->shippingAndBilling?->shipping_country ?? '');
+        $orderSummaryObj->shipping_state = (string) ($this->shippingAndBilling?->shipping_state ?? '');
+        $orderSummaryObj->shipping_city = (string) ($this->shippingAndBilling?->shipping_city ?? '');
+        $orderSummaryObj->shipping_postal_code = (string) ($this->shippingAndBilling?->shipping_postal_code ?? '');
+        $orderSummaryObj->is_save_shipping_info_for_next_time = (string) ($this->shippingAndBilling?->is_save_shipping_info_for_next_time ?? '');
+        $orderSummaryObj->billing_first_name = (string) ($this->shippingAndBilling?->billing_first_name ?? '');
+        $orderSummaryObj->billing_last_name = (string) ($this->shippingAndBilling?->billing_last_name ?? '');
+        $orderSummaryObj->billing_email = (string) ($this->shippingAndBilling?->billing_email ?? '');
+        $orderSummaryObj->billing_phone_no = (string) ($this->shippingAndBilling?->billing_phone_no ?? '');
+        $orderSummaryObj->billing_address = (string) ($this->shippingAndBilling?->billing_address ?? '');
+        $orderSummaryObj->billing_country = (string) ($this->shippingAndBilling?->billing_country ?? '');
+        $orderSummaryObj->billing_state = (string) ($this->shippingAndBilling?->billing_state ?? '');
+        $orderSummaryObj->billing_city = (string) ($this->shippingAndBilling?->billing_city ?? '');
+        $orderSummaryObj->billing_postal_code = (string) ($this->shippingAndBilling?->billing_postal_code ?? '');
+        $orderSummaryObj->is_save_billing_info_for_next_time = (string) ($this->shippingAndBilling?->is_save_billing_info_for_next_time ?? '');
         $isDelivered = ((int) $this->order_status_id === 4);
         $isPaid = ($this->vendorTransaction?->vendorPaymentStatus?->id == 2)
             || (($this->payment_status ?? '') === 'paid')
@@ -74,15 +77,15 @@ class OrderSummaryApiResource extends JsonResource
             default => 'Livré et payé',
         };
 
-        $orderSummaryObj->payment_method = (string) $this->vendorTransaction?->payment_method;
-        $orderSummaryObj->payment_status = (string) $this->vendorTransaction?->vendorPaymentStatus->name;
-        $orderSummaryObj->payment_status_color = (string) $this->vendorTransaction?->vendorPaymentStatus->colour;
-        $orderSummaryObj->order_status = $isDeliveredAndPaid ? $deliveredAndPaidLabel : (string) $this->orderStatus?->name;
-        $orderSummaryObj->order_status_color = $isDeliveredAndPaid ? '#10B981' : (string) $this->orderStatus?->colour;
+        $orderSummaryObj->payment_method = (string) ($this->vendorTransaction?->payment_method ?? 'COD');
+        $orderSummaryObj->payment_status = (string) ($this->vendorTransaction?->vendorPaymentStatus?->name ?? 'En attente');
+        $orderSummaryObj->payment_status_color = (string) ($this->vendorTransaction?->vendorPaymentStatus?->colour ?? '#F59E0B');
+        $orderSummaryObj->order_status = $isDeliveredAndPaid ? $deliveredAndPaidLabel : (string) ($this->orderStatus?->name ?? 'En attente');
+        $orderSummaryObj->order_status_color = $isDeliveredAndPaid ? '#10B981' : (string) ($this->orderStatus?->colour ?? '#F59E0B');
         $orderSummaryObj->is_delivered_and_paid = $isDeliveredAndPaid ? '1' : '0';
-        $orderSummaryObj->delivered_and_paid_label = $isDeliveredAndPaid ? $deliveredAndPaidLabel : (string) $this->orderStatus?->name;
-        $orderSummaryObj->payment_date = isset($this->vendorTransaction->payment_date) ? (string) \Carbon\Carbon::parse($this->vendorTransaction->payment_date)->format('M d, Y') : '';
-        $orderSummaryObj->vendor_name = (string) $this->vendorTransaction?->vendor->name;
+        $orderSummaryObj->delivered_and_paid_label = $isDeliveredAndPaid ? $deliveredAndPaidLabel : (string) ($this->orderStatus?->name ?? 'En attente');
+        $orderSummaryObj->payment_date = !empty($this->vendorTransaction?->payment_date) ? (string) \Carbon\Carbon::parse($this->vendorTransaction->payment_date)->format('M d, Y') : '';
+        $orderSummaryObj->vendor_name = (string) ($this->vendorTransaction?->vendor?->name ?? $this->vendor?->name ?? '');
         $orderSummaryObj->item_info = $itemInfoArr;
         $orderSummaryObj->sub_total = (string) $allItemSubTotalFromCart;
         $orderSummaryObj->total_discount = (string) $allItemDiscountFromCart;
@@ -123,7 +126,7 @@ class OrderSummaryApiResource extends JsonResource
         $orderSummaryObj->wallet_credited_at = isset($this->wallet_credited_at) ? (string) \Carbon\Carbon::parse($this->wallet_credited_at)->format('M d, Y H:i') : '';
         $orderSummaryObj->user_id = (string) $this->user_id;
         $orderSummaryObj->buyer_user_id = (string) $this->user_id;
-        $orderSummaryObj->seller_user_id = (string) ($this->vendor?->owner_user_id ?? '');
+        $orderSummaryObj->seller_user_id = (string) ($vendorOwnerId ?? $this->vendor?->owner_user_id ?? '');
         $orderSummaryObj->vendor_id = (string) ($this->vendor_id ?? '');
         $orderSummaryObj->is_reviewed = (string) ($this->is_reviewed ?? '0');
         $orderSummaryObj->review_rating = (string) ($this->review_rating ?? '');

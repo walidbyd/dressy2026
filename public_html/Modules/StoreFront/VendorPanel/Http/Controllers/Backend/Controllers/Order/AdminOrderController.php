@@ -200,15 +200,37 @@ class AdminOrderController extends PsController
         $yalidineService = app(\App\Services\YalidineService::class);
         $result = $yalidineService->createParcelForOrder($order);
 
+        \Illuminate\Support\Facades\Log::info("Admin generateParcel for Order #{$order->id}:", $result);
+
         if (empty($result['success'])) {
+            $errorMsg = $result['error'] ?? __('Failed to generate Yalidine parcel.');
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'msg' => $errorMsg,
+                ], 400);
+            }
             return redirect()->back()->withErrors([
-                'msg' => $result['error'] ?? __('Failed to generate Yalidine parcel.')
+                'msg' => $errorMsg,
+            ])->with('status', [
+                'flag' => Constants::danger,
+                'msg' => $errorMsg,
+            ]);
+        }
+
+        $successMsg = __("Yalidine parcel generated successfully! Tracking: :tracking", ['tracking' => $result['tracking']]);
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'tracking' => $result['tracking'],
+                'label_url' => $result['label_url'] ?? '',
+                'msg' => $successMsg,
             ]);
         }
 
         return redirect()->back()->with('status', [
             'flag' => Constants::success,
-            'msg' => __("Yalidine parcel generated successfully! Tracking: :tracking", ['tracking' => $result['tracking']]),
+            'msg' => $successMsg,
         ]);
     }
 

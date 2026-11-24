@@ -749,9 +749,23 @@ class _SellerOrderDetailViewState extends State<SellerOrderDetailView> {
           ? const Center(child: CircularProgressIndicator())
           : _orderDetail == null
               ? Center(
-                  child: Text(
-                    'seller__order_not_found'.tr,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        'seller__order_not_found'.tr,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _loadOrderDetail,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: PsColors.primary500,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Réessayer'),
+                      ),
+                    ],
                   ),
                 )
               : ListView(

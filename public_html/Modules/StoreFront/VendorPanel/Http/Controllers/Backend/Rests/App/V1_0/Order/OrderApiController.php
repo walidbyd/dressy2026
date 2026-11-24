@@ -26,7 +26,7 @@ class OrderApiController extends Controller
     {
         // prepare validation
         $validator = Validator::make($request->all(), [
-            'order_id' => 'required|exists:psx_orders,id',
+            'order_id' => 'required',
         ]);
 
         if ($request->language_symbol) {
@@ -60,7 +60,7 @@ class OrderApiController extends Controller
     public function getSellerOrderDetail(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'order_id' => 'required|exists:psx_orders,id',
+            'order_id' => 'required',
         ]);
 
         if ($request->language_symbol) {
@@ -78,7 +78,7 @@ class OrderApiController extends Controller
     public function acceptOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'order_id' => 'required|exists:psx_orders,id',
+            'order_id' => 'required',
         ]);
 
         if ($request->language_symbol) {
@@ -96,7 +96,7 @@ class OrderApiController extends Controller
     public function dispatchOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'order_id' => 'required|exists:psx_orders,id',
+            'order_id' => 'required',
         ]);
 
         if ($request->language_symbol) {
@@ -114,7 +114,7 @@ class OrderApiController extends Controller
     public function sendToDelivery(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'order_id' => 'required|exists:psx_orders,id',
+            'order_id' => 'required',
         ]);
 
         if ($request->language_symbol) {
@@ -132,7 +132,7 @@ class OrderApiController extends Controller
     public function cancelOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'order_id' => 'required|exists:psx_orders,id',
+            'order_id' => 'required',
             'cancel_reason' => 'required_without_all:status_reason,reason|string|min:3',
         ]);
 

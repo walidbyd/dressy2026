@@ -152,6 +152,7 @@ class _CheckoutViewState extends State<CheckoutView>
   List<_StopDeskOption> _stopDesks = <_StopDeskOption>[];
   List<_StopDeskOption> _communeStopDesks = <_StopDeskOption>[];
   bool _fallbackToWilaya = false;
+  String? _stopDeskError;
   List<_StopDeskOption> get _allWilayaStopDesks => _stopDesks;
 
   int _selectedWilayaCode = 16;
@@ -412,6 +413,7 @@ class _CheckoutViewState extends State<CheckoutView>
       _stopDesks = <_StopDeskOption>[];
       _communeStopDesks = <_StopDeskOption>[];
       _fallbackToWilaya = false;
+      _stopDeskError = null;
       _selectedStopDeskId = null;
       _selectedStopDeskName = '';
       _selectedStopDeskCommune = '';
@@ -563,15 +565,49 @@ class _CheckoutViewState extends State<CheckoutView>
               _stopDesks = allList;
               _communeStopDesks = commList;
               _fallbackToWilaya = isFallback;
+              _stopDeskError = null;
             });
 
             _applyStopDesks(commList.isNotEmpty ? commList : allList);
             return;
+          } else {
+            final String apiMsg = (decoded['message'] ?? decoded['error'] ?? '').toString();
+            setState(() {
+              _stopDesks = <_StopDeskOption>[];
+              _communeStopDesks = <_StopDeskOption>[];
+              _stopDeskError = apiMsg.isNotEmpty ? apiMsg : null;
+            });
           }
         }
+      } else {
+        try {
+          final dynamic decoded = json.decode(response.body);
+          if (decoded is Map<String, dynamic>) {
+            final String apiMsg = (decoded['message'] ?? decoded['error'] ?? '').toString();
+            if (apiMsg.isNotEmpty) {
+              setState(() {
+                _stopDesks = <_StopDeskOption>[];
+                _communeStopDesks = <_StopDeskOption>[];
+                _stopDeskError = apiMsg;
+              });
+            }
+          }
+        } catch (_) {
+          setState(() {
+            _stopDesks = <_StopDeskOption>[];
+            _communeStopDesks = <_StopDeskOption>[];
+            _stopDeskError = 'Erreur HTTP ${response.statusCode}';
+          });
+        }
       }
-    } catch (_) {
-      // Fallback below
+    } catch (e) {
+      if (mounted && _selectedWilayaCode == wilayaCode) {
+        setState(() {
+          _stopDesks = <_StopDeskOption>[];
+          _communeStopDesks = <_StopDeskOption>[];
+          _stopDeskError = e.toString();
+        });
+      }
     } finally {
       if (mounted && _selectedWilayaCode == wilayaCode) {
         setState(() {
@@ -1878,10 +1914,12 @@ class _CheckoutViewState extends State<CheckoutView>
                                 Icon(Icons.info_outline,
                                     size: 18, color: Colors.amber.shade800),
                                 const SizedBox(width: 8),
-                                const Expanded(
+                                Expanded(
                                   child: Text(
-                                    'Aucun bureau Yalidine disponible actuellement pour cette wilaya.',
-                                    style: TextStyle(
+                                    _stopDeskError != null && _stopDeskError!.isNotEmpty
+                                        ? 'Yalidine: $_stopDeskError'
+                                        : 'Aucun bureau Yalidine disponible actuellement pour cette wilaya.',
+                                    style: const TextStyle(
                                       fontSize: 12.5,
                                       color: PsColors.burgundy,
                                       fontWeight: FontWeight.w600,

@@ -35,7 +35,7 @@ return [
         'api_id' => env('YALIDINE_API_ID'),
         'api_token' => env('YALIDINE_API_TOKEN'),
         'api_url' => env('YALIDINE_API_URL', 'https://api.yalidine.app/v1'),
-        'stub_mode' => env('YALIDINE_STUB_MODE', true),
+        'stub_mode' => env('YALIDINE_STUB_MODE', false),
     ],
 
 ];

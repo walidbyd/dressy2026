@@ -83,22 +83,25 @@ class OrderService extends PsService
         }
         // / check permission end
 
-        $orderId = $request->order_id;
-        $getOrder = $this->getOrder($orderId);
-        $vendorId = $getOrder->vendor_id;
+        $rawOrderId = $request->order_id;
+        $order = Order::where('id', $rawOrderId)->orWhere('order_code', $rawOrderId)->first();
+        if (! $order) {
+            return responseMsgApi(__('Order not found.'), Constants::notFoundStatusCode);
+        }
+
         $relation = [
-            'orderItems' => ['item'],
+            'orderItems' => ['item.cover'],
             'shippingAndBilling',
             'vendorTransaction' => [
-                'vendorPaymentStatus' => function ($query) use ($vendorId) {
-                    $query->where('vendor_id', $vendorId);
-                },
+                'vendorPaymentStatus',
                 'currency', 'vendor',
             ],
+            'orderStatus',
+            'vendor',
         ];
 
-        $getOrder = $this->getOrder($orderId, $relation);
-        $data = new OrderSummaryApiResource($getOrder);
+        $order->load($relation);
+        $data = new OrderSummaryApiResource($order);
 
         return responseDataApi($data);
 
@@ -597,18 +600,26 @@ class OrderService extends PsService
         $userId = $request->login_user_id;
         $vendor = Vendor::where('owner_user_id', $userId)->first();
 
-        $order = Order::find($request->order_id);
+        $rawOrderId = $request->order_id;
+        $order = Order::where('id', $rawOrderId)->orWhere('order_code', $rawOrderId)->first();
         if (! $order) {
             return responseMsgApi(__('Order not found.'), Constants::notFoundStatusCode);
         }
 
         $isOwner = false;
-        if ($vendor && $order->vendor_id == $vendor->id) {
+        if (!empty($order->vendor_id) && Vendor::where('id', $order->vendor_id)->where('owner_user_id', $userId)->exists()) {
+            $isOwner = true;
+        } elseif ($vendor && $order->vendor_id == $vendor->id) {
             $isOwner = true;
         } else {
-            $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
-                $q->where('added_user_id', $userId);
-            })->exists();
+            $userVendors = Vendor::where('owner_user_id', $userId)->pluck('id')->toArray();
+            if (!empty($userVendors) && in_array($order->vendor_id, $userVendors)) {
+                $isOwner = true;
+            } else {
+                $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
+                    $q->where('added_user_id', $userId);
+                })->exists();
+            }
         }
 
         if (! $isOwner) {
@@ -616,20 +627,17 @@ class OrderService extends PsService
         }
 
         $relations = [
-            'orderItems' => ['item'],
+            'orderItems' => ['item.cover'],
             'shippingAndBilling',
             'vendorTransaction' => [
-                'vendorPaymentStatus' => function ($query) use ($vendor) {
-                    if ($vendor) {
-                        $query->where('vendor_id', $vendor->id);
-                    }
-                },
+                'vendorPaymentStatus',
                 'currency', 'vendor',
             ],
             'orderStatus',
+            'vendor',
         ];
 
-        $order = $this->getOrder($request->order_id, $relations);
+        $order->load($relations);
 
         return responseDataApi(new OrderSummaryApiResource($order));
     }
@@ -639,18 +647,26 @@ class OrderService extends PsService
         $userId = $request->login_user_id;
         $vendor = Vendor::where('owner_user_id', $userId)->first();
 
-        $order = Order::find($request->order_id);
+        $rawOrderId = $request->order_id;
+        $order = Order::where('id', $rawOrderId)->orWhere('order_code', $rawOrderId)->first();
         if (! $order) {
             return responseMsgApi(__('Order not found.'), Constants::notFoundStatusCode);
         }
 
         $isOwner = false;
-        if ($vendor && $order->vendor_id == $vendor->id) {
+        if (!empty($order->vendor_id) && Vendor::where('id', $order->vendor_id)->where('owner_user_id', $userId)->exists()) {
+            $isOwner = true;
+        } elseif ($vendor && $order->vendor_id == $vendor->id) {
             $isOwner = true;
         } else {
-            $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
-                $q->where('added_user_id', $userId);
-            })->exists();
+            $userVendors = Vendor::where('owner_user_id', $userId)->pluck('id')->toArray();
+            if (!empty($userVendors) && in_array($order->vendor_id, $userVendors)) {
+                $isOwner = true;
+            } else {
+                $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
+                    $q->where('added_user_id', $userId);
+                })->exists();
+            }
         }
 
         if (! $isOwner) {
@@ -714,18 +730,26 @@ class OrderService extends PsService
         $userId = $request->login_user_id;
         $vendor = Vendor::where('owner_user_id', $userId)->first();
 
-        $order = Order::find($request->order_id);
+        $rawOrderId = $request->order_id;
+        $order = Order::where('id', $rawOrderId)->orWhere('order_code', $rawOrderId)->first();
         if (! $order) {
             return responseMsgApi(__('Order not found.'), Constants::notFoundStatusCode);
         }
 
         $isOwner = false;
-        if ($vendor && $order->vendor_id == $vendor->id) {
+        if (!empty($order->vendor_id) && Vendor::where('id', $order->vendor_id)->where('owner_user_id', $userId)->exists()) {
+            $isOwner = true;
+        } elseif ($vendor && $order->vendor_id == $vendor->id) {
             $isOwner = true;
         } else {
-            $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
-                $q->where('added_user_id', $userId);
-            })->exists();
+            $userVendors = Vendor::where('owner_user_id', $userId)->pluck('id')->toArray();
+            if (!empty($userVendors) && in_array($order->vendor_id, $userVendors)) {
+                $isOwner = true;
+            } else {
+                $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
+                    $q->where('added_user_id', $userId);
+                })->exists();
+            }
         }
 
         if (! $isOwner) {
@@ -786,18 +810,26 @@ class OrderService extends PsService
         $userId = $request->login_user_id;
         $vendor = Vendor::where('owner_user_id', $userId)->first();
 
-        $order = Order::find($request->order_id);
+        $rawOrderId = $request->order_id;
+        $order = Order::where('id', $rawOrderId)->orWhere('order_code', $rawOrderId)->first();
         if (! $order) {
             return responseMsgApi(__('Order not found.'), Constants::notFoundStatusCode);
         }
 
         $isOwner = false;
-        if ($vendor && $order->vendor_id == $vendor->id) {
+        if (!empty($order->vendor_id) && Vendor::where('id', $order->vendor_id)->where('owner_user_id', $userId)->exists()) {
+            $isOwner = true;
+        } elseif ($vendor && $order->vendor_id == $vendor->id) {
             $isOwner = true;
         } else {
-            $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
-                $q->where('added_user_id', $userId);
-            })->exists();
+            $userVendors = Vendor::where('owner_user_id', $userId)->pluck('id')->toArray();
+            if (!empty($userVendors) && in_array($order->vendor_id, $userVendors)) {
+                $isOwner = true;
+            } else {
+                $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
+                    $q->where('added_user_id', $userId);
+                })->exists();
+            }
         }
 
         if (! $isOwner) {
@@ -844,20 +876,32 @@ class OrderService extends PsService
             return responseMsgApi(__('Order ID is required.'), Constants::badRequestStatusCode);
         }
 
-        $order = Order::with(['orderItems.item', 'vendor', 'user', 'shippingAndBilling'])->find($orderId);
+        $order = Order::with(['orderItems.item', 'vendor', 'user', 'shippingAndBilling'])
+            ->where('id', $orderId)
+            ->orWhere('order_code', $orderId)
+            ->first();
         if (!$order) {
             return responseMsgApi(__('Order not found.'), Constants::notFoundStatusCode);
         }
 
         // Verify seller ownership
         $isOwner = false;
-        $vendor = Vendor::where('owner_user_id', $userId)->first();
-        if ($vendor && $order->vendor_id == $vendor->id) {
+        if (!empty($order->vendor_id) && Vendor::where('id', $order->vendor_id)->where('owner_user_id', $userId)->exists()) {
             $isOwner = true;
         } else {
-            $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
-                $q->where('added_user_id', $userId);
-            })->exists();
+            $vendor = Vendor::where('owner_user_id', $userId)->first();
+            if ($vendor && $order->vendor_id == $vendor->id) {
+                $isOwner = true;
+            } else {
+                $userVendors = Vendor::where('owner_user_id', $userId)->pluck('id')->toArray();
+                if (!empty($userVendors) && in_array($order->vendor_id, $userVendors)) {
+                    $isOwner = true;
+                } else {
+                    $isOwner = $order->orderItems()->whereHas('item', function ($q) use ($userId) {
+                        $q->where('added_user_id', $userId);
+                    })->exists();
+                }
+            }
         }
 
         if (!$isOwner) {
