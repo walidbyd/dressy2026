@@ -192,23 +192,33 @@ class ShippingAndBillingService extends PsService
                 $toCommuneName = $toWilayaName;
             }
 
-            if ($request->has('delivery_fee') && is_numeric($request->delivery_fee) && (float) $request->delivery_fee > 0) {
-                $deliveryFee = (float) $request->delivery_fee;
-            } else {
-                $quote = $dzshipService->getYalidineQuote(
-                    $firstItemId,
-                    $toWilayaId,
-                    $toCommuneName,
-                    $fromWilayaId,
-                    $request->vendor_id ? (int) $request->vendor_id : null
+            $quote = $dzshipService->getYalidineQuote(
+                $firstItemId,
+                $toWilayaId,
+                $toCommuneName,
+                $fromWilayaId,
+                $request->vendor_id ? (int) $request->vendor_id : null
+            );
+            if (($quote['status'] ?? '') === 'error') {
+                DB::rollBack();
+                return responseMsgApi(
+                    $quote['message'] ?? 'Impossible de récupérer les tarifs réels depuis l\'API Yalidine.',
+                    Constants::badRequestStatusCode
                 );
-                $deliveryFee = (float) ($isStopDesk
-                    ? ($quote['stop_desk']['price_dzd'] ?? $quote['desk_fee'] ?? 400)
-                    : ($quote['home_delivery']['price_dzd'] ?? $quote['home_fee'] ?? 600));
+            }
+            $deliveryFee = (float) ($isStopDesk
+                ? ($quote['stop_desk']['price_dzd'] ?? $quote['desk_fee'] ?? 0)
+                : ($quote['home_delivery']['price_dzd'] ?? $quote['home_fee'] ?? 0));
+            if ($deliveryFee <= 0) {
+                DB::rollBack();
+                return responseMsgApi(
+                    'Tarif de livraison Yalidine indisponible.',
+                    Constants::badRequestStatusCode
+                );
             }
 
-            // Calculate items subtotal
-            $itemsSubtotal = 0;
+            // Calculate items subtotal from order_summary (single source of truth)
+            $itemsSubtotal = 0.0;
             if (is_array($request->order_summary)) {
                 foreach ($request->order_summary as $sumItem) {
                     $sumObj = (object) $sumItem;
@@ -216,10 +226,28 @@ class ShippingAndBillingService extends PsService
                 }
             }
 
-            $computedTotalPrice = (float) $request->total_price;
-            if ($computedTotalPrice < ($itemsSubtotal + $deliveryFee)) {
-                $computedTotalPrice = $itemsSubtotal + $deliveryFee;
+            // Validate & apply coupon if provided
+            $couponId = null;
+            $couponCode = null;
+            $couponDiscount = 0.0;
+            $rawCouponCode = trim((string) ($request->coupon_code ?? ''));
+            if ($rawCouponCode !== '') {
+                $couponService = app(\App\Services\CouponService::class);
+                $couponCheck = $couponService->validateCoupon($rawCouponCode, (int) $userId, $itemsSubtotal);
+                if (empty($couponCheck['valid'])) {
+                    DB::rollBack();
+                    return responseMsgApi(
+                        $couponCheck['message'] ?? 'Code promo invalide.',
+                        Constants::badRequestStatusCode
+                    );
+                }
+                $couponId = $couponCheck['coupon']['id'] ?? null;
+                $couponCode = $couponCheck['coupon']['code'] ?? strtoupper($rawCouponCode);
+                $couponDiscount = (float) ($couponCheck['discount_amount'] ?? 0.0);
             }
+
+            // Single source of truth: final_total = max(0, subtotal - valid_coupon_discount) + real_yalidine_delivery_fee
+            $computedTotalPrice = max(0.0, round($itemsSubtotal - $couponDiscount, 2)) + $deliveryFee;
 
             // Resolve recipient name, phone, email, and auto-composed address (no street address required)
             $buyerUser = DB::table('users')->select('id', 'name', 'email', 'user_phone')->where('id', $userId)->first();
@@ -280,7 +308,27 @@ class ShippingAndBillingService extends PsService
             $order->is_payment_fail = 1; // update it after transaction success
             $order->order_date = Carbon::now();
             $order->added_user_id = $userId;
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'coupon_id')) {
+                    $order->coupon_id = $couponId;
+                    $order->coupon_code = $couponCode;
+                    $order->coupon_discount = $couponDiscount;
+                }
+            } catch (\Throwable $e) {}
             $order->save();
+
+            if ($couponId !== null) {
+                try {
+                    app(\App\Services\CouponService::class)->recordUsage(
+                        (int) $couponId,
+                        (int) $userId,
+                        (int) $order->id,
+                        (float) $couponDiscount
+                    );
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Coupon usage recording failed: ' . $e->getMessage());
+                }
+            }
 
             // save in psx_order_items table
             foreach ($request->order_summary as $orderSummary) {

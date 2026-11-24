@@ -1096,6 +1096,15 @@ Route::middleware(['isInstall'])->group(function () {
             Route::post('/{id}/mark-paid', 'markPaid')->name('admin.escrow.markPaid');
         });
 
+        Route::prefix('coupons')->controller(\App\Http\Controllers\Backend\AdminCouponController::class)->group(function () {
+            Route::get('/', 'index')->name('admin.coupons.index');
+            Route::get('/generate-code', 'generateCode')->name('admin.coupons.generateCode');
+            Route::post('/', 'store')->name('admin.coupons.store');
+            Route::put('/{id}', 'update')->name('admin.coupons.update');
+            Route::post('/{id}/toggle', 'toggle')->name('admin.coupons.toggle');
+            Route::delete('/{id}', 'destroy')->name('admin.coupons.destroy');
+        });
+
         Route::prefix('wallets')->controller(\Modules\StoreFront\VendorPanel\Http\Controllers\Backend\Controllers\Finance\AdminWalletController::class)->group(function () {
             Route::get('/', 'index')->name('admin.wallets.index');
             Route::post('/adjust', 'adjust')->name('admin.wallets.adjust');

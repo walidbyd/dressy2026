@@ -181,4 +181,5 @@ class RoutePaths {
   static const String wallet = '/wallet';
   static const String storyComposer = '/storyComposer';
   static const String storyViewer = '/storyViewer';
+  static const String myCoupons = '/myCoupons';
 }

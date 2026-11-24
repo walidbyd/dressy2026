@@ -303,6 +303,14 @@ Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])-
     Route::post('order/submit-review', [OrderApiController::class, 'submitReview']);
     Route::match(['get', 'post'], 'seller/transactions', [OrderApiController::class, 'getSellerSalesTransactions']);
 
+    // Coupons & 24h Spin Roulette
+    Route::prefix('coupons')->controller(\App\Http\Controllers\Api\V1_0\CouponApiController::class)->group(function () {
+        Route::get('my', 'myCoupons');
+        Route::post('validate', 'validateCode');
+        Route::get('roulette-status', 'rouletteStatus');
+        Route::post('roulette-spin', 'rouletteSpin');
+    });
+
     Route::prefix('vendor')->controller(VendorInfoApiController::class)->group(function () {
         Route::get('info', 'getVendorInfo');
     });

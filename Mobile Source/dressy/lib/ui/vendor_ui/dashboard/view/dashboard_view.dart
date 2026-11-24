@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:app_links/app_links.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
@@ -7,7 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import '../../coupon/widgets/spin_roulette_dialog.dart';
 import 'package:provider/single_child_widget.dart';
 import 'package:psxmpc/core/vendor/provider/common/subscribe_topic_provider.dart';
 import 'package:psxmpc/core/vendor/repository/Common/subscribe_topic_repository.dart';
@@ -151,12 +154,58 @@ class _HomeViewState extends State<DashboardView>
     }
   }
 
+  bool _checkedRouletteThisSession = false;
+
+  Future<void> _checkAndShowSpinRoulette() async {
+    if (_checkedRouletteThisSession ||
+        psValueHolder == null ||
+        Utils.isLoginUserEmpty(psValueHolder)) {
+      return;
+    }
+    _checkedRouletteThisSession = true;
+    final String userId = Utils.checkUserLoginId(psValueHolder);
+    if (userId.isEmpty || userId == 'nologinuser') {
+      return;
+    }
+
+    try {
+      final Uri uri = Uri.parse(
+        '${PsConfig.ps_app_url}rest/coupons/roulette-status?login_user_id=$userId',
+      );
+      final http.Response res = await http.get(
+        uri,
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${psValueHolder?.headerToken ?? ''}',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (!mounted || res.statusCode != 200) {
+        return;
+      }
+      final dynamic decoded = json.decode(res.body);
+      if (decoded is Map<String, dynamic> && decoded['eligible'] == true) {
+        showDialog<void>(
+          context: context,
+          barrierDismissible: true,
+          builder: (BuildContext ctx) => SpinRouletteDialog(
+            userId: userId,
+            headerToken: psValueHolder?.headerToken ?? '',
+          ),
+        );
+      }
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     initDynamicLinks(context);
 
     animationController =
         AnimationController(duration: PsConfig.animation_duration, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndShowSpinRoulette();
+    });
 
     animationControllerForFab = AnimationController(
         duration: const Duration(milliseconds: 300), vsync: this, value: 1);

@@ -575,9 +575,14 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
             return 0;
           });
 
+          // Cap horizontal strip at top 20 vendors (View All shows all vendors with items)
+          final List<VendorUser> stripVendors = mergedVendors.length > 20
+              ? mergedVendors.sublist(0, 20)
+              : mergedVendors;
+
           // Total items: 1 (My Story if logged in) + vendors (or shimmers if loading)
-          final bool showLoading = (isStoryLoading || isVendorLoading) && mergedVendors.isEmpty;
-          final int vendorCount = showLoading ? 4 : mergedVendors.length;
+          final bool showLoading = (isStoryLoading || isVendorLoading) && stripVendors.isEmpty;
+          final int vendorCount = showLoading ? 4 : stripVendors.length;
           final int totalItems = isUserLoggedIn ? 1 + vendorCount : vendorCount;
 
           if (totalItems == 0) {
@@ -664,8 +669,8 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
                       if (showLoading) {
                         return _buildShimmerItem(context);
                       }
-                      if (vendorIndex < mergedVendors.length) {
-                        final VendorUser vendor = mergedVendors[vendorIndex];
+                      if (vendorIndex < stripVendors.length) {
+                        final VendorUser vendor = stripVendors[vendorIndex];
 
                         // Find active stories for this vendor
                         List<VendorStory> stories = vendor.stories ?? <VendorStory>[];

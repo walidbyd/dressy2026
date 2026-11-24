@@ -74,6 +74,7 @@ class VendorApiController extends PsApiController
         // Prepare Filter Conditions
         $conds = $this->getFilterConditions($request);
         $conds['has_items'] = 1;
+        $conds['story_first'] = 1;
         $vendors = $this->vendorService->getAll(null, Constants::vendorAcceptStatus, null, null, $conds, $limit, $offset);
 
         $data = VendorApiResource::collection($vendors);

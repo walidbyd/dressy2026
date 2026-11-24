@@ -138,6 +138,7 @@ import '../../ui/custom_ui/user/phone/view/phone_sign_in_container_view.dart';
 import '../../ui/custom_ui/user/phone/view/verify_phone_container_view.dart';
 import '../../ui/custom_ui/user/profile/component/my_vendor/my_vendor_vertical_list_view.dart';
 import '../../ui/custom_ui/user/register/view/register_container_view.dart';
+import '../../ui/vendor_ui/coupon/view/my_coupons_view.dart';
 import '../../ui/custom_ui/user/search_user/view/search_user_container_view.dart';
 import '../../ui/custom_ui/user/top_seller/view/top_seller_vertical_list_view.dart';
 import '../../ui/custom_ui/user/user_detail/view/user_detail_view.dart';
@@ -600,6 +601,11 @@ Route<dynamic> generateRoute(RouteSettings settings) {
     case '${RoutePaths.wallet}':
       return MaterialPageRoute<dynamic>(builder: (BuildContext context) {
         return const WalletView();
+      });
+
+    case '${RoutePaths.myCoupons}':
+      return MaterialPageRoute<dynamic>(builder: (BuildContext context) {
+        return const MyCouponsView();
       });
 
     // case '${RoutePaths.orderDetail}':

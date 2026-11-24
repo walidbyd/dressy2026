@@ -186,6 +186,99 @@ class _CheckoutViewState extends State<CheckoutView>
   bool _useWallet = false;
   bool _isLoadingWallet = false;
 
+  // Coupon state
+  final TextEditingController _couponController = TextEditingController();
+  String? _appliedCouponCode;
+  double _couponDiscountDzd = 0.0;
+  bool _isValidatingCoupon = false;
+  String? _couponMessage;
+  bool _couponIsValid = false;
+
+  Future<void> _applyCouponCode(double subtotal) async {
+    final String code = _couponController.text.trim().toUpperCase();
+    if (code.isEmpty) {
+      setState(() {
+        _couponIsValid = false;
+        _couponMessage = 'coupon__enter_code'.tr;
+      });
+      return;
+    }
+    setState(() {
+      _isValidatingCoupon = true;
+      _couponMessage = null;
+    });
+    try {
+      final String userId = Utils.checkUserLoginId(psValueHolder);
+      final Uri uri =
+          Uri.parse('${PsConfig.ps_app_url}rest/coupons/validate');
+      final http.Response res = await http
+          .post(
+            uri,
+            headers: <String, String>{
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Bearer ${psValueHolder?.headerToken ?? ''}',
+            },
+            body: json.encode(<String, dynamic>{
+              'code': code,
+              'subtotal': subtotal,
+              'login_user_id': userId,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (!mounted) {
+        return;
+      }
+      final dynamic decoded = json.decode(res.body);
+      if (res.statusCode == 200 &&
+          decoded is Map<String, dynamic> &&
+          decoded['valid'] == true) {
+        final double discount = double.tryParse(
+                decoded['discount_amount']?.toString() ?? '0') ??
+            0.0;
+        setState(() {
+          _isValidatingCoupon = false;
+          _couponIsValid = true;
+          _appliedCouponCode = code;
+          _couponDiscountDzd = discount;
+          _couponMessage = decoded['message']?.toString() ?? 'coupon__applied'.tr;
+        });
+      } else {
+        setState(() {
+          _isValidatingCoupon = false;
+          _couponIsValid = false;
+          _appliedCouponCode = null;
+          _couponDiscountDzd = 0.0;
+          _couponMessage = (decoded is Map<String, dynamic>
+                  ? decoded['message']?.toString()
+                  : null) ??
+              'coupon__invalid'.tr;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isValidatingCoupon = false;
+          _couponIsValid = false;
+          _appliedCouponCode = null;
+          _couponDiscountDzd = 0.0;
+          _couponMessage = 'coupon__invalid'.tr;
+        });
+      }
+    }
+  }
+
+  void _removeCoupon() {
+    setState(() {
+      _couponController.clear();
+      _appliedCouponCode = null;
+      _couponDiscountDzd = 0.0;
+      _couponIsValid = false;
+      _couponMessage = null;
+    });
+  }
+
   static const List<_WilayaOption> _fallbackWilayas = <_WilayaOption>[
     _WilayaOption(code: 1, nameFr: 'Adrar', nameAr: 'أدرار'),
     _WilayaOption(code: 2, nameFr: 'Chlef', nameAr: 'الشلف'),
@@ -2661,9 +2754,12 @@ class _CheckoutViewState extends State<CheckoutView>
                   subTotal = (originalPrice * qty).toStringAsFixed(0);
                   discountPrice =
                       ((originalPrice - currentPrice) * qty).toStringAsFixed(0);
+                  final double itemSub = currentPrice * qty;
+                  final double afterCoupon = (itemSub - _couponDiscountDzd) > 0
+                      ? (itemSub - _couponDiscountDzd)
+                      : 0.0;
                   singleItemTotalPrice =
-                      ((currentPrice * qty) + selectedYalidineFee)
-                          .toStringAsFixed(0);
+                      (afterCoupon + selectedYalidineFee).toStringAsFixed(0);
                   currencySymbol = cart.vendorCurrencySymbol ?? 'DA';
                 }
 
@@ -2674,9 +2770,11 @@ class _CheckoutViewState extends State<CheckoutView>
                         addToCartProvider.shoppingCart.data?.totalDiscount ??
                             '0') ??
                     0.0;
+                final double basketNet = (basketSubtotal - basketDiscount - _couponDiscountDzd) > 0
+                    ? (basketSubtotal - basketDiscount - _couponDiscountDzd)
+                    : 0.0;
                 final String finalBasketTotalPrice =
-                    (basketSubtotal - basketDiscount + selectedYalidineFee)
-                        .toStringAsFixed(0);
+                    (basketNet + selectedYalidineFee).toStringAsFixed(0);
 
                 // For Stop-Desk orders, pass the desk's communeName; for Home, pass selected Commune
                 final String effectiveCommuneName = (_isStopDesk &&
@@ -2772,6 +2870,123 @@ class _CheckoutViewState extends State<CheckoutView>
                               ],
                             ),
                           ),
+
+                        // Coupon Code Card
+                        const SizedBox(height: PsDimens.space12),
+                        Container(
+                          padding: const EdgeInsets.all(PsDimens.space12),
+                          decoration: BoxDecoration(
+                            color: Utils.isLightMode(context)
+                                ? PsColors.achromatic50
+                                : PsColors.achromatic800,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: _couponIsValid
+                                  ? Colors.green
+                                  : (Utils.isLightMode(context)
+                                      ? PsColors.achromatic200
+                                      : PsColors.achromatic700),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                'coupon__code_label'.tr,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _couponController,
+                                      textCapitalization:
+                                          TextCapitalization.characters,
+                                      enabled: _appliedCouponCode == null,
+                                      decoration: InputDecoration(
+                                        hintText: 'coupon__enter_code'.tr,
+                                        isDense: true,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 10),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: _isValidatingCoupon
+                                        ? null
+                                        : (_appliedCouponCode != null
+                                            ? _removeCoupon
+                                            : () {
+                                                final double sub = widget
+                                                        .isSingleItemCheckout
+                                                    ? ((currentPrice ?? 0.0) *
+                                                        (availableShoppingCartList
+                                                                .isNotEmpty
+                                                            ? (double.tryParse(
+                                                                    availableShoppingCartList[0]
+                                                                        .quantity
+                                                                        .toString()) ??
+                                                                1.0)
+                                                            : 1.0))
+                                                    : (basketSubtotal -
+                                                        basketDiscount);
+                                                _applyCouponCode(sub);
+                                              }),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          _appliedCouponCode != null
+                                              ? Colors.grey.shade700
+                                              : PsColors.primary500,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: _isValidatingCoupon
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Text(_appliedCouponCode != null
+                                            ? 'coupon__remove'.tr
+                                            : 'coupon__apply'.tr),
+                                  ),
+                                ],
+                              ),
+                              if (_couponMessage != null) ...<Widget>[
+                                const SizedBox(height: 6),
+                                Text(
+                                  _couponIsValid
+                                      ? '$_couponMessage (-${_couponDiscountDzd.toStringAsFixed(0)} DA)'
+                                      : _couponMessage!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _couponIsValid
+                                        ? Colors.green[700]
+                                        : Colors.red[700],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
 
                         // Wallet Balance Toggle Card
                         if (_walletBalance > 0) ...<Widget>[
@@ -3029,7 +3244,8 @@ class _CheckoutViewState extends State<CheckoutView>
                       walletAmountUsed: walletAmountUsed > 0
                           ? walletAmountUsed.toStringAsFixed(0)
                           : '0',
-                      isWalletOnly: isWalletOnly),
+                      isWalletOnly: isWalletOnly,
+                      couponCode: _appliedCouponCode),
                 ]);
               }))),
     );

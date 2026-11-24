@@ -36,6 +36,7 @@ class OrderAndBillingParameterHolder
       this.stopDeskName,
       this.recipientName,
       this.walletAmountUsed,
+      this.couponCode,
   });
   final String? vendorId;
   final String? shippingFirstName;
@@ -69,6 +70,7 @@ class OrderAndBillingParameterHolder
   final String? stopDeskName;
   final String? recipientName;
   final String? walletAmountUsed;
+  final String? couponCode;
   @override
   Map<String, dynamic> toMap() {
     final Map<String, dynamic> map = <String, dynamic>{};
@@ -76,6 +78,9 @@ class OrderAndBillingParameterHolder
     //
     map['vendor_id'] = vendorId;
     map['wallet_amount_used'] = walletAmountUsed;
+    if (couponCode != null && couponCode!.trim().isNotEmpty) {
+      map['coupon_code'] = couponCode!.trim();
+    }
     map['delivery_type'] = deliveryType;
     map['delivery_fee'] = deliveryFee;
     map['to_wilaya_id'] = toWilayaId;

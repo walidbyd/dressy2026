@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:provider/provider.dart';
 
 import '../../../../../../../../config/ps_colors.dart';
 import '../../../../../../../../core/vendor/constant/ps_dimens.dart';
-import '../../../../../../../../core/vendor/provider/chat/get_chat_history_provider.dart';
 import '../../../../../../../../core/vendor/provider/language/app_localization_provider.dart';
 import '../../../../../../../../core/vendor/utils/utils.dart';
 import '../../../../../../../../core/vendor/viewobject/message.dart';
@@ -18,10 +16,10 @@ class ReceiverTextMsg extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     late dynamic _tapPosition;
-    return Consumer<GetChatHistoryProvider>(builder: (BuildContext context,
-        GetChatHistoryProvider getChatHistoryProvider, Widget? child) {
-      if (getChatHistoryProvider.chatHistory.data != null) {
-        return Container(
+    if ((messageObj.message ?? '').isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Container(
           margin: const EdgeInsets.only(
               left: PsDimens.space16,
               right: PsDimens.space16,
@@ -119,9 +117,5 @@ class ReceiverTextMsg extends StatelessWidget {
             ],
           ),
         );
-      } else {
-        return const SizedBox();
-      }
-    });
   }
 }

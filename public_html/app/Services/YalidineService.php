@@ -654,7 +654,18 @@ class YalidineService
         $productList = !empty($itemsSummaryList) ? implode(', ', $itemsSummaryList) : "Commande #{$order->order_code}";
         $productList = Str::limit($productList, 180);
 
-        $codAmount = (float) ($order->total_price ?? $order->vendorTransaction?->payment_amount ?? 0);
+        $itemsSubtotal = 0.0;
+        if ($orderItems) {
+            foreach ($orderItems as $oi) {
+                $itemsSubtotal += (float) ($oi->sub_total ?? (($oi->sale_price ?? 0) * ($oi->quantity ?? 1)));
+            }
+        }
+        $couponDiscount = (float) ($order->coupon_discount ?? 0.0);
+        $orderDeliveryFee = (float) ($order->delivery_fee ?? 0.0);
+        $recomputedCod = max(0.0, round($itemsSubtotal - $couponDiscount, 2)) + $orderDeliveryFee;
+        $codAmount = ($order->total_price !== null && (float) $order->total_price > 0)
+            ? (float) $order->total_price
+            : $recomputedCod;
 
         $firstName = $shipping?->shipping_first_name ?: ($order->user?->name ?: 'Client');
         $lastName = trim((string) ($shipping?->shipping_last_name ?? '')) ?: $firstName;

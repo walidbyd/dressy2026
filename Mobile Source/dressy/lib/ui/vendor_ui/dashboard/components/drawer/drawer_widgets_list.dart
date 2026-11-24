@@ -115,6 +115,25 @@ class DrawerWidgetState<T extends DrawerWidgetList>
                 const SellerTransactionsMenuWidget(),
               ],
               const WalletMenuWidget(),
+              ListTile(
+                leading: Icon(Icons.local_offer_outlined,
+                    size: 22,
+                    color: Utils.isLightMode(context)
+                        ? PsColors.achromatic800
+                        : PsColors.achromatic50),
+                minLeadingWidth: 0,
+                title: Text(
+                  'coupon__my_coupons'.tr,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall!
+                      .copyWith(fontWeight: FontWeight.w400),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, RoutePaths.myCoupons);
+                },
+              ),
             ],
             if (!Utils.isLoginUserEmpty(valueHolder))
               CustomActivityLogMenuWidget(
