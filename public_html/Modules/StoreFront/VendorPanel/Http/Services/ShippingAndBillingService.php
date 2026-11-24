@@ -155,17 +155,26 @@ class ShippingAndBillingService extends PsService
                 $matchedDesk = null;
                 if ($rawStopDeskId !== null && $rawStopDeskId !== '') {
                     foreach ($desks as $desk) {
-                        if ((string) $desk['id'] === (string) $rawStopDeskId) {
+                        if ((string) ($desk['id'] ?? '') === (string) $rawStopDeskId ||
+                            (string) ($desk['center_id'] ?? '') === (string) $rawStopDeskId) {
                             $matchedDesk = $desk;
                             break;
                         }
                     }
                 }
-                if ($matchedDesk === null && !empty($desks)) {
-                    $matchedDesk = $desks[0];
-                }
                 if ($matchedDesk !== null) {
-                    $rawStopDeskId = (string) $matchedDesk['id'];
+                    $rawStopDeskId = (string) ($matchedDesk['center_id'] ?? $matchedDesk['id'] ?? $rawStopDeskId);
+                    if ($stopDeskName === '') {
+                        $stopDeskName = (string) ($matchedDesk['name'] ?? '');
+                    }
+                    if (!empty($matchedDesk['communeName'])) {
+                        $toCommuneName = (string) $matchedDesk['communeName'];
+                    } elseif (!empty($matchedDesk['commune_name'])) {
+                        $toCommuneName = (string) $matchedDesk['commune_name'];
+                    }
+                } elseif (($rawStopDeskId === null || $rawStopDeskId === '') && !empty($desks)) {
+                    $matchedDesk = $desks[0];
+                    $rawStopDeskId = (string) ($matchedDesk['center_id'] ?? $matchedDesk['id'] ?? '');
                     if ($stopDeskName === '') {
                         $stopDeskName = (string) ($matchedDesk['name'] ?? '');
                     }

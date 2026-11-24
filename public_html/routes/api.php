@@ -266,3 +266,7 @@
 // Yalidine Real-Time Webhook (parcel_status_updated)
 Route::post('v1/yalidine/webhook', [\App\Http\Controllers\Api\YalidineWebhookController::class, 'handle'])->name('yalidine.webhook.v1');
 
+// Yalidine Live Centers Endpoints (supports /api/v1/yalidine/centers/{wilayaId})
+Route::get('v1/yalidine/centers/{wilayaId?}', [\App\Http\Controllers\Api\V1_0\YalidineApiController::class, 'centers'])->name('yalidine.centers.v1');
+Route::get('v1/shipping/centers/{wilayaId?}', [\App\Http\Controllers\Api\V1_0\ShippingApiController::class, 'centers'])->name('shipping.centers.v1');
+

@@ -20,6 +20,40 @@ class YalidineApiController extends Controller
     }
 
     /**
+     * Get Yalidine Stop-Desk centers for a wilaya.
+     *
+     * GET /api/v1/yalidine/centers/{wilayaId?}
+     * GET /api/v1.0/yalidine/centers/{wilayaId?}
+     *
+     * Supports ?refresh=1 to bypass cache and query live Yalidine API.
+     */
+    public function centers(Request $request, $wilayaId = null): JsonResponse
+    {
+        $rawId = $wilayaId
+            ?? $request->query('wilaya_id')
+            ?? $request->query('wilaya')
+            ?? $request->query('wilaya_code')
+            ?? 16;
+
+        $id = $this->yalidineService->normalizeWilayaId($rawId);
+        $refresh = $request->boolean('refresh') || $request->query('refresh') === '1' || $request->query('refresh') === 'true';
+
+        $centers = $this->yalidineService->getCenters($id, $refresh);
+
+        return response()->json([
+            'status' => 'success',
+            'courier' => 'yalidine',
+            'wilaya_id' => $id,
+            'wilaya_code' => $id,
+            'wilaya_name' => $this->yalidineService->getWilayaNameFr($id),
+            'wilaya_name_fr' => $this->yalidineService->getWilayaNameFr($id),
+            'count' => count($centers),
+            'centers' => $centers,
+            'desks' => $centers,
+        ]);
+    }
+
+    /**
      * Get Yalidine Wilayas, Communes, and Stop Desk centers.
      *
      * GET /api/v1.0/yalidine/locations?wilaya_id=16
@@ -27,11 +61,12 @@ class YalidineApiController extends Controller
     public function locations(Request $request): JsonResponse
     {
         $wilayaId = $request->query('wilaya_id');
+        $refresh = $request->boolean('refresh') || $request->query('refresh') === '1' || $request->query('refresh') === 'true';
 
         if (!empty($wilayaId)) {
             $id = $this->yalidineService->normalizeWilayaId($wilayaId);
-            $communes = $this->yalidineService->getCommunes($id);
-            $centers = $this->yalidineService->getCenters($id);
+            $communes = $this->yalidineService->getCommunes($id, $refresh);
+            $centers = $this->yalidineService->getCenters($id, $refresh);
 
             return response()->json([
                 'status' => 'success',

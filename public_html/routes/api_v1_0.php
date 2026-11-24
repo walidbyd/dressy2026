@@ -450,6 +450,7 @@ Route::match(['get', 'post'], 'vendor/calculate_delivery_fee', [OrderApiControll
 // Dedicated Yalidine Logistics Endpoints
 Route::prefix('yalidine')->controller(\App\Http\Controllers\Api\V1_0\YalidineApiController::class)->group(function () {
     Route::get('/locations', 'locations')->name('yalidine.locations');
+    Route::get('/centers/{wilayaId?}', 'centers')->name('yalidine.centers');
     Route::match(['get', 'post'], '/calculate-fee', 'calculateFee')->name('yalidine.calculateFee');
     Route::post('/create-parcel/{orderId}', 'createParcel')->name('yalidine.createParcel');
 });
@@ -458,6 +459,7 @@ Route::prefix('yalidine')->controller(\App\Http\Controllers\Api\V1_0\YalidineApi
 Route::prefix('shipping')->controller(\App\Http\Controllers\Api\V1_0\ShippingApiController::class)->group(function () {
     Route::get('/wilayas', 'wilayas')->name('shipping.wilayas');
     Route::get('/communes', 'communes')->name('shipping.communes');
+    Route::get('/centers/{wilayaId?}', 'centers')->name('shipping.centers');
     Route::match(['get', 'post'], '/yalidine-quote', 'yalidineQuote')->name('shipping.yalidineQuote');
 });
 

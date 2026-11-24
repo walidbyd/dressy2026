@@ -48,6 +48,7 @@ class ShippingApiController extends Controller
     /**
      * GET /api/v1.0/shipping/communes?wilaya={code}
      * Returns communes/regions and stop-desk centers for the requested wilaya.
+     * Supports ?refresh=1 to bypass cache and query live Yalidine API.
      */
     public function communes(Request $request): JsonResponse
     {
@@ -61,8 +62,9 @@ class ShippingApiController extends Controller
             ], 422);
         }
 
-        $communes = $this->shippingService->getCommunes($wilayaCode);
-        $centers = $this->shippingService->getCenters($wilayaCode);
+        $refresh = $request->boolean('refresh') || $request->query('refresh') === '1' || $request->query('refresh') === 'true';
+        $communes = $this->shippingService->getCommunes($wilayaCode, $refresh);
+        $centers = $this->shippingService->getCenters($wilayaCode, $refresh);
         $formatted = [];
 
         foreach ($communes as $c) {
@@ -85,6 +87,32 @@ class ShippingApiController extends Controller
             'count' => count($formatted),
             'communes' => $formatted,
             'centers' => $centers,
+        ]);
+    }
+
+    /**
+     * GET /api/v1.0/shipping/centers/{wilayaId?}
+     * Returns all Yalidine Stop-Desk centers for the requested wilaya.
+     * Supports ?refresh=1 to bypass cache and query live Yalidine API.
+     */
+    public function centers(Request $request, $wilayaId = null): JsonResponse
+    {
+        $wilayaRaw = $wilayaId
+            ?? $request->query('wilaya', $request->query('wilaya_code', $request->query('wilaya_id')));
+        $wilayaCode = $this->shippingService->tryParseWilayaCode($wilayaRaw) ?? 16;
+        $refresh = $request->boolean('refresh') || $request->query('refresh') === '1' || $request->query('refresh') === 'true';
+
+        $centers = $this->shippingService->getCenters($wilayaCode, $refresh);
+
+        return response()->json([
+            'status' => 'success',
+            'courier' => 'yalidine',
+            'wilaya_code' => $wilayaCode,
+            'wilaya_id' => $wilayaCode,
+            'wilaya_name_fr' => $this->shippingService->getWilayaNameFr($wilayaCode),
+            'count' => count($centers),
+            'centers' => $centers,
+            'desks' => $centers,
         ]);
     }
 
@@ -112,13 +140,15 @@ class ShippingApiController extends Controller
         $vendorId = $request->filled('vendor_id') ? (int) $request->input('vendor_id') : null;
         $fromWilaya = $request->input('from_wilaya_code') ?? $request->input('from_wilaya_id') ?? $request->input('from_wilaya');
         $toCommuneName = $request->input('to_commune_name') ?? $request->input('commune_name') ?? $request->input('to_commune');
+        $refresh = $request->boolean('refresh') || $request->query('refresh') === '1' || $request->query('refresh') === 'true';
 
         $quote = $this->shippingService->getYalidineQuote(
             $itemId,
             $toWilayaCode,
             is_string($toCommuneName) ? $toCommuneName : null,
             $fromWilaya,
-            $vendorId
+            $vendorId,
+            $refresh
         );
 
         return response()->json($quote);

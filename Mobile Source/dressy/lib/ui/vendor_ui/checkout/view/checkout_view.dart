@@ -81,12 +81,14 @@ class _StopDeskOption {
     required this.name,
     required this.communeName,
     required this.address,
+    this.isStopdesk = true,
   });
 
   final String id;
   final String name;
   final String communeName;
   final String address;
+  final bool isStopdesk;
 }
 
 class CheckoutView extends StatefulWidget {
@@ -151,6 +153,8 @@ class _CheckoutViewState extends State<CheckoutView>
   String? _selectedStopDeskId;
   String _selectedStopDeskName = '';
   String _selectedStopDeskCommune = '';
+  String _selectedStopDeskAddress = '';
+  bool _isLoadingStopDesks = false;
 
   int _fromWilayaCode = 16;
   String _fromWilayaName = 'Alger';
@@ -398,11 +402,136 @@ class _CheckoutViewState extends State<CheckoutView>
       _selectedStopDeskId = null;
       _selectedStopDeskName = '';
       _selectedStopDeskCommune = '';
+      _selectedStopDeskAddress = '';
       _isLoadingCommunes = true;
+      _isLoadingStopDesks = true;
     });
 
-    await _fetchCommunes(chosen.code);
+    await Future.wait(<Future<void>>[
+      _fetchCommunes(chosen.code),
+      _fetchStopDesks(chosen.code),
+    ]);
     await _fetchYalidineQuote();
+  }
+
+  void _applyStopDesks(List<_StopDeskOption> parsed) {
+    if (!mounted || parsed.isEmpty) {
+      return;
+    }
+
+    _StopDeskOption? candidate;
+    if (_selectedStopDeskId != null && _selectedStopDeskId!.isNotEmpty) {
+      for (final _StopDeskOption d in parsed) {
+        if (d.id == _selectedStopDeskId) {
+          candidate = d;
+          break;
+        }
+      }
+    }
+
+    if (candidate == null && _selectedCommuneName.isNotEmpty) {
+      final String cleanCommune = _selectedCommuneName.toLowerCase().trim();
+      for (final _StopDeskOption d in parsed) {
+        final String dCommune = d.communeName.toLowerCase().trim();
+        final String dName = d.name.toLowerCase().trim();
+        if (dCommune == cleanCommune ||
+            dCommune.contains(cleanCommune) ||
+            cleanCommune.contains(dCommune) ||
+            dName.contains(cleanCommune)) {
+          candidate = d;
+          break;
+        }
+      }
+    }
+
+    candidate ??= parsed.first;
+
+    setState(() {
+      _stopDesks = parsed;
+      _selectedStopDeskId = candidate!.id;
+      _selectedStopDeskName = candidate.name;
+      _selectedStopDeskCommune = candidate.communeName;
+      _selectedStopDeskAddress = candidate.address;
+    });
+  }
+
+  Future<void> _fetchStopDesks(int wilayaCode, {bool refresh = false}) async {
+    try {
+      final String refreshParam = refresh ? '?refresh=1' : '';
+      final Uri uri = Uri.parse(
+          '${PsConfig.ps_app_url}yalidine/centers/$wilayaCode$refreshParam');
+      final http.Response response = await http.get(
+        uri,
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Authorization': PsConfig.ps_bearer_token,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (!mounted || _selectedWilayaCode != wilayaCode) {
+        return;
+      }
+
+      if (response.statusCode == 200) {
+        final dynamic decoded = json.decode(response.body);
+        final List<dynamic> rawList = decoded is Map<String, dynamic>
+            ? (decoded['centers'] as List<dynamic>? ??
+                decoded['desks'] as List<dynamic>? ??
+                decoded['data'] as List<dynamic>? ??
+                <dynamic>[])
+            : (decoded is List<dynamic> ? decoded : <dynamic>[]);
+
+        final List<_StopDeskOption> parsed = <_StopDeskOption>[];
+        for (final dynamic item in rawList) {
+          if (item is Map<String, dynamic>) {
+            final String id =
+                (item['center_id'] ?? item['id'] ?? '').toString().trim();
+            final String name =
+                (item['name'] ?? item['center_name'] ?? '').toString().trim();
+            final String cName = (item['commune_name'] ??
+                    item['communeName'] ??
+                    item['commune'] ??
+                    _selectedWilayaNameFr)
+                .toString()
+                .trim();
+            final String addr = (item['address'] ?? cName).toString().trim();
+            final bool isStopdesk = item['is_stopdesk'] == null ||
+                item['is_stopdesk'] == true ||
+                item['is_stopdesk'].toString() == '1' ||
+                item['is_stopdesk'].toString().toLowerCase() == 'true';
+
+            if (id.isNotEmpty && name.isNotEmpty) {
+              parsed.add(_StopDeskOption(
+                id: id,
+                name: name,
+                communeName: cName,
+                address: addr,
+                isStopdesk: isStopdesk,
+              ));
+            }
+          }
+        }
+
+        if (parsed.isNotEmpty) {
+          _applyStopDesks(parsed);
+          return;
+        }
+      }
+    } catch (_) {
+      // Fallback below
+    } finally {
+      if (mounted && _selectedWilayaCode == wilayaCode) {
+        setState(() {
+          _isLoadingStopDesks = false;
+        });
+      }
+    }
+
+    if (mounted && _selectedWilayaCode == wilayaCode && _stopDesks.isEmpty) {
+      _applyStopDesks(<_StopDeskOption>[
+        _defaultDeskForWilaya(wilayaCode, _selectedWilayaNameFr)
+      ]);
+    }
   }
 
   Future<void> _fetchCommunes(int wilayaCode) async {
@@ -475,16 +604,11 @@ class _CheckoutViewState extends State<CheckoutView>
             _communes = parsed;
             _selectedCommuneName = parsed.first.nameFr;
             _selectedCommuneNameAr = parsed.first.nameAr;
-            if (parsedDesks.isNotEmpty) {
-              _stopDesks = parsedDesks;
-              if (_selectedStopDeskId == null ||
-                  !_stopDesks.any((_StopDeskOption d) => d.id == _selectedStopDeskId)) {
-                _selectedStopDeskId = _stopDesks.first.id;
-                _selectedStopDeskName = _stopDesks.first.name;
-                _selectedStopDeskCommune = _stopDesks.first.communeName;
-              }
-            }
           });
+          if (parsedDesks.isNotEmpty &&
+              (_stopDesks.isEmpty || parsedDesks.length > _stopDesks.length)) {
+            _applyStopDesks(parsedDesks);
+          }
           return;
         }
       }
@@ -606,25 +730,18 @@ class _CheckoutViewState extends State<CheckoutView>
                 _selectedWilayaCode, _selectedWilayaNameFr));
           }
 
-          _StopDeskOption activeDesk = parsedDesks.first;
-          if (_selectedStopDeskId != null) {
-            activeDesk = parsedDesks.firstWhere(
-              (_StopDeskOption d) => d.id == _selectedStopDeskId,
-              orElse: () => parsedDesks.first,
-            );
-          }
-
           setState(() {
             _fromWilayaCode = fromW;
             _fromWilayaName = fromWName;
             _stopDeskFeeDzd = deskPrice;
             _homeFeeDzd = homePrice;
             _estimatedDays = estDays;
-            _stopDesks = parsedDesks;
-            _selectedStopDeskId = activeDesk.id;
-            _selectedStopDeskName = activeDesk.name;
-            _selectedStopDeskCommune = activeDesk.communeName;
           });
+
+          if (parsedDesks.isNotEmpty &&
+              (_stopDesks.isEmpty || parsedDesks.length >= _stopDesks.length)) {
+            _applyStopDesks(parsedDesks);
+          }
           return;
         }
       }
@@ -651,18 +768,15 @@ class _CheckoutViewState extends State<CheckoutView>
             _selectedWilayaCode == 16 ? 300.0 : (isSouth ? 650.0 : 450.0);
         _homeFeeDzd =
             _selectedWilayaCode == 16 ? 400.0 : (isSouth ? 1000.0 : 650.0);
-        _stopDesks = <_StopDeskOption>[desk];
-        _selectedStopDeskId = desk.id;
-        _selectedStopDeskName = desk.name;
-        _selectedStopDeskCommune = desk.communeName;
       });
+      _applyStopDesks(<_StopDeskOption>[desk]);
     }
   }
 
   _StopDeskOption _defaultDeskForWilaya(int code, String wilayaName) {
     return _StopDeskOption(
-      id: (code * 10000 + 101).toString(),
-      name: 'Agence Yalidine $wilayaName Centre',
+      id: (code * 1000 + 1).toString(),
+      name: 'Bureau Yalidine $wilayaName Centre',
       communeName: wilayaName,
       address: 'Centre-ville, $wilayaName',
     );
@@ -960,8 +1074,369 @@ class _CheckoutViewState extends State<CheckoutView>
       setState(() {
         _selectedCommuneName = selected.nameFr;
         _selectedCommuneNameAr = selected.nameAr;
+
+        // When user picks a commune (e.g. Chéraga), auto-select matching bureau if one exists in _stopDesks,
+        // while keeping ALL bureaus in the wilaya available and selectable
+        final String target = selected.nameFr.toLowerCase().trim();
+        _StopDeskOption? matched;
+        for (final _StopDeskOption d in _stopDesks) {
+          final String dComm = d.communeName.toLowerCase().trim();
+          final String dName = d.name.toLowerCase().trim();
+          if (dComm == target ||
+              dComm.contains(target) ||
+              target.contains(dComm) ||
+              dName.contains(target)) {
+            matched = d;
+            break;
+          }
+        }
+        if (matched != null) {
+          _selectedStopDeskId = matched.id;
+          _selectedStopDeskName = matched.name;
+          _selectedStopDeskCommune = matched.communeName;
+          _selectedStopDeskAddress = matched.address;
+        }
       });
       await _fetchYalidineQuote();
+    }
+  }
+
+  Future<void> _showStopDeskPickerSheet() async {
+    if (_stopDesks.isEmpty) {
+      if (!_isLoadingStopDesks) {
+        await _fetchStopDesks(_selectedWilayaCode);
+      }
+      if (_stopDesks.isEmpty) {
+        return;
+      }
+    }
+
+    String query = '';
+    final _StopDeskOption? selected =
+        await showModalBottomSheet<_StopDeskOption>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor:
+          Utils.isLightMode(context) ? Colors.white : PsColors.achromatic800,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            final String q = query.trim().toLowerCase();
+            final String cleanSelectedCommune =
+                _selectedCommuneName.trim().toLowerCase();
+
+            // Filter by search query
+            final List<_StopDeskOption> filtered =
+                _stopDesks.where((_StopDeskOption d) {
+              if (q.isEmpty) {
+                return true;
+              }
+              return d.name.toLowerCase().contains(q) ||
+                  d.communeName.toLowerCase().contains(q) ||
+                  d.address.toLowerCase().contains(q);
+            }).toList();
+
+            // Sort: bureaus matching selected commune come first, keeping all selectable
+            filtered.sort((_StopDeskOption a, _StopDeskOption b) {
+              final bool aMatch = cleanSelectedCommune.isNotEmpty &&
+                  (a.communeName.toLowerCase() == cleanSelectedCommune ||
+                      a.communeName.toLowerCase().contains(cleanSelectedCommune) ||
+                      cleanSelectedCommune.contains(a.communeName.toLowerCase()) ||
+                      a.name.toLowerCase().contains(cleanSelectedCommune));
+              final bool bMatch = cleanSelectedCommune.isNotEmpty &&
+                  (b.communeName.toLowerCase() == cleanSelectedCommune ||
+                      b.communeName.toLowerCase().contains(cleanSelectedCommune) ||
+                      cleanSelectedCommune.contains(b.communeName.toLowerCase()) ||
+                      b.name.toLowerCase().contains(cleanSelectedCommune));
+
+              if (aMatch && !bMatch) {
+                return -1;
+              }
+              if (!aMatch && bMatch) {
+                return 1;
+              }
+              return a.name.compareTo(b.name);
+            });
+
+            final bool isLight = Utils.isLightMode(context);
+
+            return SizedBox(
+              height: MediaQuery.of(context).size.height * 0.78,
+              child: Column(
+                children: <Widget>[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                'Bureaux Yalidine — $_selectedWilayaNameFr',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${_stopDesks.length} bureaux disponibles dans la wilaya',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.refresh_rounded, size: 22),
+                          color: PsColors.burgundy,
+                          tooltip: 'Actualiser en direct',
+                          onPressed: () async {
+                            setModalState(() {
+                              _isLoadingStopDesks = true;
+                            });
+                            await _fetchStopDesks(_selectedWilayaCode,
+                                refresh: true);
+                            if (ctx.mounted) {
+                              setModalState(() {});
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: TextField(
+                      autofocus: false,
+                      decoration: InputDecoration(
+                        hintText:
+                            'Rechercher par bureau, commune ou adresse...',
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        isDense: true,
+                        filled: true,
+                        fillColor: isLight
+                            ? const Color(0xFFFAF7F2)
+                            : PsColors.achromatic700,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      onChanged: (String v) {
+                        setModalState(() {
+                          query = v;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Icon(Icons.location_off_outlined,
+                                      size: 40, color: Colors.grey.shade400),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Aucun bureau trouvé pour "$query"',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, __) => const Divider(
+                                height: 1, indent: 16, endIndent: 16),
+                            itemBuilder: (BuildContext context, int index) {
+                              final _StopDeskOption desk = filtered[index];
+                              final bool isSelected =
+                                  desk.id == _selectedStopDeskId;
+                              final bool isCommuneMatch =
+                                  cleanSelectedCommune.isNotEmpty &&
+                                      (desk.communeName.toLowerCase() ==
+                                              cleanSelectedCommune ||
+                                          desk.communeName
+                                              .toLowerCase()
+                                              .contains(cleanSelectedCommune) ||
+                                          cleanSelectedCommune.contains(
+                                              desk.communeName.toLowerCase()) ||
+                                          desk.name
+                                              .toLowerCase()
+                                              .contains(cleanSelectedCommune));
+
+                              return InkWell(
+                                onTap: () => Navigator.of(ctx).pop(desk),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  color: isSelected
+                                      ? PsColors.burgundy
+                                          .withValues(alpha: 0.06)
+                                      : null,
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 2),
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? PsColors.burgundy
+                                              : (isLight
+                                                  ? const Color(0xFFF0EBE1)
+                                                  : PsColors.achromatic700),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.storefront_rounded,
+                                          size: 18,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : (isLight
+                                                  ? PsColors.burgundy
+                                                  : Colors.white70),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            Row(
+                                              children: <Widget>[
+                                                Expanded(
+                                                  child: Text(
+                                                    desk.name,
+                                                    style: TextStyle(
+                                                      fontWeight: isSelected
+                                                          ? FontWeight.w700
+                                                          : FontWeight.w600,
+                                                      fontSize: 14,
+                                                      color: isSelected
+                                                          ? PsColors.burgundy
+                                                          : null,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (isCommuneMatch) ...<Widget>[
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                          0xFFE8F5E9),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
+                                                    ),
+                                                    child: Text(
+                                                      'Proche de $_selectedCommuneName',
+                                                      style: const TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color:
+                                                            Color(0xFF2E7D32),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Row(
+                                              children: <Widget>[
+                                                const Icon(
+                                                    Icons.location_on_outlined,
+                                                    size: 13,
+                                                    color: Colors.grey),
+                                                const SizedBox(width: 3),
+                                                Expanded(
+                                                  child: Text(
+                                                    desk.address.isNotEmpty
+                                                        ? '${desk.communeName} — ${desk.address}'
+                                                        : desk.communeName,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color:
+                                                          Colors.grey.shade600,
+                                                    ),
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      if (isSelected)
+                                        const Padding(
+                                          padding: EdgeInsets.only(top: 6),
+                                          child: Icon(
+                                            Icons.check_circle_rounded,
+                                            color: PsColors.burgundy,
+                                            size: 20,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (selected != null && selected.id != _selectedStopDeskId) {
+      setState(() {
+        _selectedStopDeskId = selected.id;
+        _selectedStopDeskName = selected.name;
+        _selectedStopDeskCommune = selected.communeName;
+        _selectedStopDeskAddress = selected.address;
+      });
     }
   }
 
@@ -1332,55 +1807,164 @@ class _CheckoutViewState extends State<CheckoutView>
                       ),
                     ],
                   ),
-                  if (_isStopDesk && _stopDesks.isNotEmpty) ...<Widget>[
+                  if (_isStopDesk) ...<Widget>[
                     const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      key: ValueKey<String>(
-                          'desk_${_selectedWilayaCode}_${_selectedStopDeskId ?? ''}'),
-                      initialValue: _stopDesks.any(
-                              (_StopDeskOption d) => d.id == _selectedStopDeskId)
-                          ? _selectedStopDeskId
-                          : _stopDesks.first.id,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                        labelText: 'Choisir le bureau Yalidine',
-                        isDense: true,
-                        filled: true,
-                        fillColor:
-                            isLight ? Colors.white : PsColors.achromatic800,
-                        border: OutlineInputBorder(
+                    if (_isLoadingStopDesks && _stopDesks.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isLight ? Colors.white : PsColors.achromatic800,
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                              color: PsColors.burgundy.withValues(alpha: 0.35)),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 10),
-                      ),
-                      items: _stopDesks.map((_StopDeskOption desk) {
-                        return DropdownMenuItem<String>(
-                          value: desk.id,
-                          child: Text(
-                            '${desk.name} (${desk.communeName})',
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 13),
+                          border: Border.all(
+                            color: PsColors.burgundy.withValues(alpha: 0.3),
                           ),
-                        );
-                      }).toList(),
-                      onChanged: (String? newId) {
-                        if (newId == null) {
-                          return;
-                        }
-                        final _StopDeskOption chosen = _stopDesks.firstWhere(
-                          (_StopDeskOption d) => d.id == newId,
-                          orElse: () => _stopDesks.first,
-                        );
-                        setState(() {
-                          _selectedStopDeskId = chosen.id;
-                          _selectedStopDeskName = chosen.name;
-                          _selectedStopDeskCommune = chosen.communeName;
-                        });
-                      },
-                    ),
+                        ),
+                        child: const Row(
+                          children: <Widget>[
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: PsColors.burgundy,
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Text(
+                              'Chargement des bureaux Yalidine...',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      InkWell(
+                        onTap: _showStopDeskPickerSheet,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color:
+                                isLight ? Colors.white : PsColors.achromatic800,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: PsColors.burgundy.withValues(alpha: 0.45),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Row(
+                            children: <Widget>[
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color:
+                                      PsColors.burgundy.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.storefront_rounded,
+                                    color: PsColors.burgundy, size: 20),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Row(
+                                      children: <Widget>[
+                                        Text(
+                                          'Bureau de retrait',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                        if (_stopDesks.isNotEmpty) ...<Widget>[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 1),
+                                            decoration: BoxDecoration(
+                                              color: PsColors.burgundy
+                                                  .withValues(alpha: 0.08),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              '${_stopDesks.length} disponibles',
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w600,
+                                                color: PsColors.burgundy,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      _selectedStopDeskName.isNotEmpty
+                                          ? _selectedStopDeskName
+                                          : 'Choisir votre bureau Yalidine',
+                                      style: const TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (_selectedStopDeskAddress.isNotEmpty ||
+                                        _selectedStopDeskCommune
+                                            .isNotEmpty) ...<Widget>[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _selectedStopDeskAddress.isNotEmpty
+                                            ? '$_selectedStopDeskCommune — $_selectedStopDeskAddress'
+                                            : _selectedStopDeskCommune,
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 9, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color:
+                                      PsColors.burgundy.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Text(
+                                      'Changer',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: PsColors.burgundy,
+                                      ),
+                                    ),
+                                    SizedBox(width: 2),
+                                    Icon(Icons.keyboard_arrow_down_rounded,
+                                        size: 16, color: PsColors.burgundy),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                   ],
                 ],
               ),
