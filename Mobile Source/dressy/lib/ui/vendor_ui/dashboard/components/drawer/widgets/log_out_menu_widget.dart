@@ -108,26 +108,34 @@ class LogoutMenuWidget extends StatelessWidget {
     }
     final NavigatorState rootNav = Navigator.of(context, rootNavigator: true);
 
-    // Navigate to login screen FIRST so old Dashboard/Drawer dependents unmount cleanly
+    // Persist cleared session BEFORE navigating so Login screen reads clean state
+    // (these methods only write SharedPreferences / PsValueHolder, never notifyListeners)
+    try {
+      await provider.replaceLoginUserId('');
+      await provider.replaceLoginUserName('');
+      await provider.replaceIsUserNameAndPwdNeeded(false, false);
+    } catch (_) {}
+
+    // Navigate FIRST so dependent widgets tear down cleanly without _dependents.isEmpty
     rootNav.pushNamedAndRemoveUntil(
         RoutePaths.login_container, (_) => false);
 
-    // Defer clearing auth/session/provider state until after route transition settles
+    // Defer external SDK sign-outs and DB task cleanup after route transition settles
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         await FacebookAuth.instance.logOut();
       } catch (_) {}
       try {
+        await UserProvider.ensureGoogleSignInInitialized();
         await GoogleSignIn.instance.signOut();
       } catch (_) {}
       try {
         await fb_auth.FirebaseAuth.instance.signOut();
       } catch (_) {}
       try {
-        await deleteTaskProvider.deleteTask();
-        await provider.replaceLoginUserId('');
-        await provider.replaceLoginUserName('');
-        await provider.replaceIsUserNameAndPwdNeeded(false, false);
+        if (!deleteTaskProvider.isDispose) {
+          await deleteTaskProvider.deleteTask();
+        }
       } catch (_) {}
     });
   }

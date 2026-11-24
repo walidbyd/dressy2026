@@ -379,6 +379,7 @@ class _HomeViewState extends State<DashboardView>
         await FacebookAuth.instance.logOut();
       } catch (_) {}
       try {
+        await UserProvider.ensureGoogleSignInInitialized();
         await GoogleSignIn.instance.signOut();
       } catch (_) {}
       try {

@@ -126,26 +126,33 @@ class ProfilePopUpWidgetState<T extends ProfilePopUpWidget>
     }
     final NavigatorState rootNav = Navigator.of(context, rootNavigator: true);
 
+    // Persist cleared session BEFORE navigating so Login screen reads clean state
+    try {
+      await userProvider.replaceLoginUserId('');
+      await userProvider.replaceLoginUserName('');
+      await userProvider.replaceIsUserNameAndPwdNeeded(false, false);
+    } catch (_) {}
+
     // Navigate FIRST so dependent widgets tear down cleanly without _dependents.isEmpty
     rootNav.pushNamedAndRemoveUntil(
         RoutePaths.login_container, (_) => false);
 
-    // Defer clearing auth/session/provider state after route transition settles
+    // Defer external SDK sign-outs and DB task cleanup after route transition settles
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         await FacebookAuth.instance.logOut();
       } catch (_) {}
       try {
+        await UserProvider.ensureGoogleSignInInitialized();
         await GoogleSignIn.instance.signOut();
       } catch (_) {}
       try {
         await fb_auth.FirebaseAuth.instance.signOut();
       } catch (_) {}
       try {
-        await deleteTaskProvider.deleteTask();
-        await userProvider.replaceLoginUserId('');
-        await userProvider.replaceLoginUserName('');
-        await userProvider.replaceIsUserNameAndPwdNeeded(false, false);
+        if (!deleteTaskProvider.isDispose) {
+          await deleteTaskProvider.deleteTask();
+        }
       } catch (_) {}
     });
   }

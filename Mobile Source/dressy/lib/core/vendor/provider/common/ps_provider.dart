@@ -273,7 +273,9 @@ class PsProvider<T> extends ChangeNotifier {
       requestBodyHolder: requestBodyHolder ?? cacheBodyHolder,
       requestPathHolder: requestPathHolder ?? cachePathHolder,
     );
-    notifyListeners();
+    if (!isDispose) {
+      notifyListeners();
+    }
   }
 
   Future<void> loadNextDataList({
@@ -282,7 +284,9 @@ class PsProvider<T> extends ChangeNotifier {
     DataConfiguration? dataConfig,
   }) async {
     cacheDataConfig = dataConfig;
-    notifyListeners();
+    if (!isDispose) {
+      notifyListeners();
+    }
     final DataConfiguration defaultDataConfig = await getDefaultDataConfig;
     await _psRepository?.loadNextDataList(
       streamController: dataListStreamController!,

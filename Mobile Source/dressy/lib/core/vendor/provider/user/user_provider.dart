@@ -7,7 +7,7 @@ import 'package:firebase_auth_platform_interface/firebase_auth_platform_interfac
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
-import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
@@ -74,15 +74,13 @@ class UserProvider extends PsProvider<User> {
   StreamController<PsResource<User>>? userListStream;
   final fb_auth.FirebaseAuth _firebaseAuth = fb_auth.FirebaseAuth.instance;
   
-  Future<void>? _initialization;
-  Future<void> _ensureInitialized() {
-    // The example app uses the parsing of values from google-services.json
-    // to provide the serverClientId, otherwise it would be required here.
-    return _initialization ??=
-        GoogleSignInPlatform.instance.init(const InitParameters())
-          ..catchError((dynamic _) {
-            _initialization = null;
-          });
+  static Future<void>? _googleInitFuture;
+  static Future<void> ensureGoogleSignInInitialized() {
+    return _googleInitFuture ??=
+        GoogleSignIn.instance.initialize().catchError((Object e) {
+      _googleInitFuture = null;
+      throw e;
+    });
   }
 
   // Register
@@ -882,89 +880,22 @@ class UserProvider extends PsProvider<User> {
       Function? onGoogleIdSignInSelected,
       Function? callBackAfterLoginSuccess,
       String languageCode) async {
-    ///
-    /// Check User is Accept Terms and Conditions
-    ///
-    if (isCheckBoxSelect) {
-      ///
-      /// Check Connection
-      ///
-      if (await Utils.checkInternetConnectivity()) {
-        ///
-        /// Get Firebase User with Google Id Login
-        ///
-        final fb_auth.User? firebaseUser = await _getFirebaseUserWithGoogleId();
+    if (!isCheckBoxSelect) {
+      if (context.mounted) {
+        showDialog<dynamic>(
+            context: context,
+            builder: (BuildContext context) {
+              return WarningDialog(
+                message: 'login__warning_agree_privacy'.tr,
+                onPressed: () {},
+              );
+            });
+      }
+      return;
+    }
 
-        if (firebaseUser != null) {
-          ///
-          /// Got Firebase User
-          ///
-          Utils.psPrint('User id : ${firebaseUser.uid}');
-
-          ///
-          /// Show Progress Dialog
-          ///
-          await PsProgressDialog.showDialog(context);
-
-          ///
-          /// Submit to backend
-          ///
-          final PsResource<User>? resourceUser =
-              await _submitLoginWithGoogleId(firebaseUser, languageCode);
-
-          ///
-          /// Close Progress Dialog
-          ///
-          await PsProgressDialog.dismissDialog();
-
-          if (resourceUser != null && resourceUser.data != null) {
-            final User user = resourceUser.data!;
-            print('valueHolder::::: ${user.userEmail}');
-
-            try {
-              final PsValueHolder liveHolder =
-                  Provider.of<PsValueHolder>(context, listen: false);
-              liveHolder.loginUserId = user.userId;
-              if (user.userName != null && user.userName!.isNotEmpty) {
-                liveHolder.loginUserName = user.userName;
-              }
-              liveHolder.isToShowIntroSlider = false;
-              liveHolder.showOnboardLanguage = false;
-            } catch (_) {}
-
-            ///
-            /// Success
-            ///
-            if (onGoogleIdSignInSelected != null) {
-              await onGoogleIdSignInSelected(user.userId);
-            }
-            if (callBackAfterLoginSuccess != null) {
-              await callBackAfterLoginSuccess(user);
-            }
-            await Utils.completeAuthAndGoHome(context, user);
-          } else {
-            ///
-            /// Error from server
-            ///
-            showDialog<dynamic>(
-                context: context,
-                builder: (BuildContext context) {
-                  if (resourceUser != null) {
-                    return ErrorDialog(
-                      message: resourceUser.message,
-                    );
-                  } else {
-                    return ErrorDialog(
-                      message: 'login__error_signin'.tr,
-                    );
-                  }
-                });
-          }
-        }
-      } else {
-        ///
-        /// No Internet Connection
-        ///
+    if (!await Utils.checkInternetConnectivity()) {
+      if (context.mounted) {
         showDialog<dynamic>(
             context: context,
             builder: (BuildContext context) {
@@ -973,79 +904,118 @@ class UserProvider extends PsProvider<User> {
               );
             });
       }
-    } else {
-      ///
-      /// Not yet agree on Privacy Policy
-      ///
-      showDialog<dynamic>(
-          context: context,
-          builder: (BuildContext context) {
-            return WarningDialog(
-              message: 'login__warning_agree_privacy'.tr,
-              onPressed: () {},
-            );
-          });
+      return;
+    }
+
+    try {
+      final fb_auth.User? firebaseUser = await _getFirebaseUserWithGoogleId();
+      if (firebaseUser == null) {
+        if (context.mounted) {
+          showDialog<dynamic>(
+              context: context,
+              builder: (BuildContext context) {
+                return ErrorDialog(
+                  message: 'login__error_signin'.tr,
+                );
+              });
+        }
+        return;
+      }
+
+      Utils.psPrint('User id : ${firebaseUser.uid}');
+      if (context.mounted) {
+        await PsProgressDialog.showDialog(context);
+      }
+
+      final PsResource<User>? resourceUser =
+          await _submitLoginWithGoogleId(firebaseUser, languageCode);
+
+      await PsProgressDialog.dismissDialog();
+
+      if (resourceUser != null && resourceUser.data != null) {
+        final User user = resourceUser.data!;
+
+        try {
+          final PsValueHolder liveHolder =
+              Provider.of<PsValueHolder>(context, listen: false);
+          liveHolder.loginUserId = user.userId;
+          if (user.userName != null && user.userName!.isNotEmpty) {
+            liveHolder.loginUserName = user.userName;
+          }
+          liveHolder.isToShowIntroSlider = false;
+          liveHolder.showOnboardLanguage = false;
+        } catch (_) {}
+
+        if (onGoogleIdSignInSelected != null) {
+          await onGoogleIdSignInSelected(user.userId);
+        }
+        if (callBackAfterLoginSuccess != null) {
+          await callBackAfterLoginSuccess(user);
+        } else if (context.mounted) {
+          await Utils.completeAuthAndGoHome(context, user);
+        }
+      } else {
+        if (context.mounted) {
+          showDialog<dynamic>(
+              context: context,
+              builder: (BuildContext context) {
+                return ErrorDialog(
+                  message: (resourceUser != null && resourceUser.message.isNotEmpty)
+                      ? resourceUser.message
+                      : 'login__error_signin'.tr,
+                );
+              });
+        }
+      }
+    } on GoogleSignInException catch (e) {
+      await PsProgressDialog.dismissDialog();
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        return;
+      }
+      if (context.mounted) {
+        showDialog<dynamic>(
+            context: context,
+            builder: (BuildContext context) {
+              return ErrorDialog(
+                message: 'Google Sign-In failed: ${e.description ?? e.code.name}',
+              );
+            });
+      }
+    } catch (e) {
+      await PsProgressDialog.dismissDialog();
+      if (context.mounted) {
+        showDialog<dynamic>(
+            context: context,
+            builder: (BuildContext context) {
+              return ErrorDialog(
+                message: 'Google Sign-In error: $e',
+              );
+            });
+      }
     }
   }
 
-
-  Future<String?> _handleSignIn() async {
-      try {
-        await _ensureInitialized();
-        String? idToken;
-        final AuthenticationResults result = await GoogleSignInPlatform.instance
-            .authenticate(const AuthenticateParameters());
-        idToken = result.authenticationTokens.idToken;
-        return idToken;
-      } on GoogleSignInException catch (_) {       
-        return null;
-      }
-    }
-    
   Future<fb_auth.User?> _getFirebaseUserWithGoogleId() async {
-    try {
+    await ensureGoogleSignInInitialized();
 
-      await _ensureInitialized();
-      
-      String? idToken;
-      try {
-
-        final AuthenticationResults? result = await GoogleSignInPlatform.instance
-          .attemptLightweightAuthentication(
-              const AttemptLightweightAuthenticationParameters());
-          idToken = result?.authenticationTokens.idToken;
-
-
-          if(idToken == null || idToken.isEmpty) {
-            idToken = await _handleSignIn();            
-          }
-      
-    } on GoogleSignInException catch (e) {
-      idToken = await _handleSignIn();
-      print('Google Sign In Exception: $e');      
-    } on Exception catch (_) {
-      idToken = await _handleSignIn();      
-  
-    }
-
-    if(idToken == null || idToken.isEmpty) {
-      return null;
+    final GoogleSignInAccount account = await GoogleSignIn.instance.authenticate();
+    final GoogleSignInAuthentication auth = account.authentication;
+    final String? idToken = auth.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      throw Exception('Google authentication did not return an ID token.');
     }
 
     final AuthCredential credential = GoogleAuthProvider.credential(
-      accessToken: idToken,
-      idToken: idToken
+      idToken: idToken,
     );
 
-    final fb_auth.User user =
-        (await _firebaseAuth.signInWithCredential(credential)).user!;
-      
-      print('signed in' + user.displayName!);
-      return user;
-    } on Exception catch (e) {
-      print('not select google account: $e');
-      return null;
+    final fb_auth.UserCredential userCredential =
+        await _firebaseAuth.signInWithCredential(credential);
+    final fb_auth.User? user = userCredential.user;
+    if (user != null) {
+      print('signed in ${user.displayName ?? user.email ?? user.uid}');
     }
+    return user;
   }
 
   Future<PsResource<User>?> _submitLoginWithGoogleId(
@@ -1075,10 +1045,14 @@ class UserProvider extends PsProvider<User> {
         userName: user.displayName,
         userEmail: email,
         profilePhotoUrl: user.photoURL,
-        deviceToken: psValueHolder!.deviceToken,
+        deviceToken: psValueHolder?.deviceToken ?? '',
         platformName: PsConst.PLATFORM,
-        deviceInfo: psValueHolder!.deviceModelName,
-        deviceId: psValueHolder!.deviceUniqueId,
+        deviceInfo: (psValueHolder?.deviceModelName?.isNotEmpty == true)
+            ? psValueHolder!.deviceModelName!
+            : (Platform.isIOS ? 'iOS Device' : 'Android Device'),
+        deviceId: (psValueHolder?.deviceUniqueId?.isNotEmpty == true)
+            ? psValueHolder!.deviceUniqueId!
+            : 'device_${DateTime.now().millisecondsSinceEpoch}',
       );
 
       final PsResource<User> _apiStatus = await postGoogleLogin(
@@ -1367,76 +1341,55 @@ class UserProvider extends PsProvider<User> {
       ///
       await PsProgressDialog.showDialog(context);
 
-      ///
-      /// Get Firebase User with Email Id Login
-      ///
-      final fb_auth.User? fbUser = await signInWithEmailAndPasswordNext(context, email, email);
+      // Firebase sign-in for RTDB chat is best-effort; never block Laravel backend login
+      try {
+        await signInWithEmailAndPasswordNext(context, email, email);
+      } catch (_) {}
 
-      // When User Can't Sign In to Firebase
-      // Need to Show Error Dialog
-      if (fbUser == null) {
+      try {
+        final PsResource<User> resourceUser =
+            await _submitLoginWithEmailId(email, password, languageCode, context);
+
         await PsProgressDialog.dismissDialog();
-        showDialog<dynamic>(
-          context: context,
-          builder: (BuildContext context) {              
-            return ErrorDialog(
-              message: 'login__error_signin'.tr,
-            );              
-        });
-        return;
-      }
 
-      ///
-      /// Submit to backend
-      ///
-      final PsResource<User> resourceUser =
-          await _submitLoginWithEmailId(email, password, languageCode, context);
+        // ignore: unnecessary_null_comparison
+        if (resourceUser != null && resourceUser.data != null) {
+          if (resourceUser.data!.code == PsConst.ONE) {
+            psValueHolder?.userEmailToVerify = resourceUser.data!.userEmail;
+            final ResendCodeAgainParameterHolder resendCodeParameterHolder =
+                ResendCodeAgainParameterHolder(
+                    userEmail: resourceUser.data!.userEmail);
 
-      ///
-      /// Close Progress Dialog
-      ///
-      await PsProgressDialog.dismissDialog();
-
-      // ignore: unnecessary_null_comparison
-      if (resourceUser != null && resourceUser.data != null) {
-        ///
-        /// Success
-        ///
-        print('valueholder::::${resourceUser.data!.userEmail}');
-
-        if (resourceUser.data!.code == PsConst.ONE) {
-          psValueHolder!.userEmailToVerify = resourceUser.data!.userEmail;
-          final ResendCodeAgainParameterHolder resendCodeParameterHolder =
-              ResendCodeAgainParameterHolder(
-                  userEmail: resourceUser.data!.userEmail);
-
-          postResendCode(resendCodeParameterHolder.toMap(), languageCode);
-          await Navigator.pushNamed(
-              context, RoutePaths.user_verify_email_container,
-              arguments: resourceUser.data!.userId);
-        } else if (resourceUser.data!.code == PsConst.ZERO &&
-            resourceUser.data!.status == PsConst.ZERO) {
-          showDialog<dynamic>(
-              context: context,
-              builder: (BuildContext context) {
-                return ErrorDialog(
-                  message: 'user_status__unpublished'.tr,
-                );
-              });
-        } else {
-          String? loginName = email; // input from textbox
-          if (resourceUser.data?.userEmail != null &&
-              resourceUser.data?.userEmail != '') {
-            loginName = resourceUser.data?.userEmail!;
-          } else if (resourceUser.data?.userPhone != null &&
-              resourceUser.data?.userPhone != '') {
-            loginName = resourceUser.data?.userPhone!;
-          }
-          if (_apiStatus.data != null) {
+            postResendCode(resendCodeParameterHolder.toMap(), languageCode);
+            if (context.mounted) {
+              await Navigator.pushNamed(
+                  context, RoutePaths.user_verify_email_container,
+                  arguments: resourceUser.data!.userId);
+            }
+          } else if (resourceUser.data!.code == PsConst.ZERO &&
+              resourceUser.data!.status == PsConst.ZERO) {
+            if (context.mounted) {
+              showDialog<dynamic>(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return ErrorDialog(
+                      message: 'user_status__unpublished'.tr,
+                    );
+                  });
+            }
+          } else {
+            String? loginName = email;
+            if (resourceUser.data?.userEmail != null &&
+                resourceUser.data?.userEmail != '') {
+              loginName = resourceUser.data?.userEmail!;
+            } else if (resourceUser.data?.userPhone != null &&
+                resourceUser.data?.userPhone != '') {
+              loginName = resourceUser.data?.userPhone!;
+            }
             final User user = resourceUser.data!;
             await checkForUserNameNeeded(PsConst.NORMAL_LOGIN, loginName, '');
             await replaceVerifyUserData('', '', '', '');
-            await replaceLoginUserId(user.userId!);
+            await replaceLoginUserId(user.userId ?? '');
             if (user.userName != null && user.userName!.isNotEmpty) {
               await replaceLoginUserName(user.userName!);
             }
@@ -1444,52 +1397,49 @@ class UserProvider extends PsProvider<User> {
             await replaceShowOnboardLanguage(false);
             await replaceCurrentLoginMethod(PsConst.NORMAL_LOGIN);
 
-            if (psValueHolder != null) {
-              psValueHolder!.loginUserId = user.userId;
+            try {
+              final PsValueHolder liveHolder =
+                  Provider.of<PsValueHolder>(context, listen: false);
+              liveHolder.loginUserId = user.userId;
               if (user.userName != null && user.userName!.isNotEmpty) {
-                psValueHolder!.loginUserName = user.userName;
+                liveHolder.loginUserName = user.userName;
               }
-              psValueHolder!.isToShowIntroSlider = false;
-              psValueHolder!.showOnboardLanguage = false;
+              liveHolder.isToShowIntroSlider = false;
+              liveHolder.showOnboardLanguage = false;
+            } catch (_) {}
+            if (onProfileSelected != null) {
+              await onProfileSelected(user.userId);
+            }
+            if (callBackAfterLoginSuccess != null) {
+              await callBackAfterLoginSuccess(user);
+            } else if (context.mounted) {
+              await Utils.completeAuthAndGoHome(context, user);
             }
           }
-          try {
-            final PsValueHolder liveHolder =
-                Provider.of<PsValueHolder>(context, listen: false);
-            liveHolder.loginUserId = resourceUser.data!.userId;
-            if (resourceUser.data!.userName != null &&
-                resourceUser.data!.userName!.isNotEmpty) {
-              liveHolder.loginUserName = resourceUser.data!.userName;
-            }
-            liveHolder.isToShowIntroSlider = false;
-            liveHolder.showOnboardLanguage = false;
-          } catch (_) {}
-          if (onProfileSelected != null) {
-            await onProfileSelected(resourceUser.data!.userId);
+        } else {
+          if (context.mounted) {
+            showDialog<dynamic>(
+                context: context,
+                builder: (BuildContext context) {
+                  return ErrorDialog(
+                    message: (resourceUser.message.isNotEmpty)
+                        ? resourceUser.message
+                        : 'login__error_signin'.tr,
+                  );
+                });
           }
-          if (callBackAfterLoginSuccess != null) {
-            await callBackAfterLoginSuccess(resourceUser.data);
-          }
-          await Utils.completeAuthAndGoHome(context, resourceUser.data!);
         }
-      } else {
-        ///
-        /// Error from server
-        ///
-        showDialog<dynamic>(
-            context: context,
-            builder: (BuildContext context) {
-              // ignore: unnecessary_null_comparison
-              if (resourceUser.message != null) {
+      } catch (e) {
+        await PsProgressDialog.dismissDialog();
+        if (context.mounted) {
+          showDialog<dynamic>(
+              context: context,
+              builder: (BuildContext context) {
                 return ErrorDialog(
-                  message: resourceUser.message,
+                  message: 'Login error: $e',
                 );
-              } else {
-                return ErrorDialog(
-                  message: 'login__error_signin'.tr,
-                );
-              }
-            });
+              });
+        }
       }
     } else {
       ///
@@ -1616,10 +1566,14 @@ class UserProvider extends PsProvider<User> {
         UserLoginParameterHolder(
       userEmail: email,
       userPassword: password,
-      deviceToken: psValueHolder!.deviceToken,
+      deviceToken: psValueHolder?.deviceToken ?? '',
       platformName: PsConst.PLATFORM,
-      deviceInfo: psValueHolder!.deviceModelName,
-      deviceId: psValueHolder!.deviceUniqueId,
+      deviceInfo: (psValueHolder?.deviceModelName?.isNotEmpty == true)
+          ? psValueHolder!.deviceModelName!
+          : (Platform.isIOS ? 'iOS Device' : 'Android Device'),
+      deviceId: (psValueHolder?.deviceUniqueId?.isNotEmpty == true)
+          ? psValueHolder!.deviceUniqueId!
+          : 'device_${DateTime.now().millisecondsSinceEpoch}',
     );
 
     final PsResource<User> _apiStatus =
@@ -1686,88 +1640,63 @@ class UserProvider extends PsProvider<User> {
         ///
         await PsProgressDialog.showDialog(context);
 
-        ///
-        /// Get Firebase User with Email Id Login
-        ///
-        final fb_auth.User? firebaseUser =
-            await createUserWithEmailAndPasswordNext(context, email, email);
+        // Firebase user creation for RTDB chat is best-effort; never block Laravel registration
+        try {
+          await createUserWithEmailAndPasswordNext(context, email, email);
+        } catch (_) {}
 
-        // When User Can't Sign In to Firebase
-        // Need to Show Error Dialog
-        if (firebaseUser == null) {
+        try {
+          final PsResource<User> resourceUser = await _submitSignUpWithEmailId(
+              context,
+              onRegisterSelected,
+              name,
+              userName,
+              email,
+              password,
+              languageCode);
+
           await PsProgressDialog.dismissDialog();
-          showDialog<dynamic>(
-            context: context,
-            builder: (BuildContext context) {              
-              return ErrorDialog(
-                message: 'login__error_signin'.tr,
-              );              
-          });
-          return;
-        }
 
-        ///
-        /// Submit to backend
-        ///
-        final PsResource<User> resourceUser = await _submitSignUpWithEmailId(
-            context,
-            onRegisterSelected,
-            name,
-            userName,
-            email,
-            password,
-            languageCode);
-
-        ///
-        /// Close Progress Dialog
-        ///
-        ///
-        await PsProgressDialog.dismissDialog();
-
-        if (resourceUser.data != null) {
-          ///
-          /// Success
-          ///
-
-          final User user = resourceUser.data!;
-          if (user.needVerify != PsConst.ONE) {
-            // Approval Off
-            await replaceVerifyUserData('', '', '', '');
-            await replaceLoginUserId(user.userId!);
-            if (user.userName != null && user.userName!.isNotEmpty) {
-              await replaceLoginUserName(user.userName!);
-            }
-            await replaceIsToShowIntroSlider(false);
-            await replaceShowOnboardLanguage(false);
-
-            if (psValueHolder != null) {
-              psValueHolder!.loginUserId = user.userId;
+          if (resourceUser.data != null) {
+            final User user = resourceUser.data!;
+            if (user.needVerify != PsConst.ONE) {
+              await replaceVerifyUserData('', '', '', '');
+              await replaceLoginUserId(user.userId ?? '');
               if (user.userName != null && user.userName!.isNotEmpty) {
-                psValueHolder!.loginUserName = user.userName;
+                await replaceLoginUserName(user.userName!);
               }
-              psValueHolder!.isToShowIntroSlider = false;
-              psValueHolder!.showOnboardLanguage = false;
-            }
+              await replaceIsToShowIntroSlider(false);
+              await replaceShowOnboardLanguage(false);
 
-            try {
-              final PsValueHolder liveHolder =
-                  Provider.of<PsValueHolder>(context, listen: false);
-              liveHolder.loginUserId = user.userId;
-              if (user.userName != null && user.userName!.isNotEmpty) {
-                liveHolder.loginUserName = user.userName;
+              if (psValueHolder != null) {
+                psValueHolder!.loginUserId = user.userId;
+                if (user.userName != null && user.userName!.isNotEmpty) {
+                  psValueHolder!.loginUserName = user.userName;
+                }
+                psValueHolder!.isToShowIntroSlider = false;
+                psValueHolder!.showOnboardLanguage = false;
               }
-              liveHolder.isToShowIntroSlider = false;
-              liveHolder.showOnboardLanguage = false;
-            } catch (_) {}
 
-            if (onRegisterSelected != null) {
-              await onRegisterSelected(user);
-            }
-            if (callBackAfterLoginSuccess != null) {
-              await callBackAfterLoginSuccess(user);
-            }
-            await Utils.completeAuthAndGoHome(context, user);
-          } else {
+              try {
+                final PsValueHolder liveHolder =
+                    Provider.of<PsValueHolder>(context, listen: false);
+                liveHolder.loginUserId = user.userId;
+                if (user.userName != null && user.userName!.isNotEmpty) {
+                  liveHolder.loginUserName = user.userName;
+                }
+                liveHolder.isToShowIntroSlider = false;
+                liveHolder.showOnboardLanguage = false;
+              } catch (_) {}
+
+              if (onRegisterSelected != null) {
+                await onRegisterSelected(user);
+              }
+              if (callBackAfterLoginSuccess != null) {
+                await callBackAfterLoginSuccess(user);
+              } else if (context.mounted) {
+                await Utils.completeAuthAndGoHome(context, user);
+              }
+            } else {
             // Approval On
             showDialog<dynamic>(
                 barrierDismissible: false,
@@ -1831,6 +1760,18 @@ class UserProvider extends PsProvider<User> {
                   );
                 }
               });
+        }
+        } catch (e) {
+          await PsProgressDialog.dismissDialog();
+          if (context.mounted) {
+            showDialog<dynamic>(
+                context: context,
+                builder: (BuildContext context) {
+                  return ErrorDialog(
+                    message: 'Register error: $e',
+                  );
+                });
+          }
         }
         
       } else {
@@ -1961,10 +1902,14 @@ class UserProvider extends PsProvider<User> {
       userEmail: email,
       userPassword: password,
       userPhone: '',
-      deviceToken: psValueHolder!.deviceToken,
+      deviceToken: psValueHolder?.deviceToken ?? '',
       platformName: PsConst.PLATFORM,
-      deviceInfo: psValueHolder!.deviceModelName,
-      deviceId: psValueHolder!.deviceUniqueId,
+      deviceInfo: (psValueHolder?.deviceModelName?.isNotEmpty == true)
+          ? psValueHolder!.deviceModelName!
+          : (Platform.isIOS ? 'iOS Device' : 'Android Device'),
+      deviceId: (psValueHolder?.deviceUniqueId?.isNotEmpty == true)
+          ? psValueHolder!.deviceUniqueId!
+          : 'device_${DateTime.now().millisecondsSinceEpoch}',
     );
 
     final PsResource<User> _apiStatus = await postUserRegister(
