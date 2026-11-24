@@ -46,6 +46,26 @@ class OrderHistoryApiResource extends JsonResource
             default => 'Livré et payé',
         };
 
+        $requestingUserId = $request->login_user_id
+            ?? $request->user_id
+            ?? $request->header('login-user-id')
+            ?? ($request->user()?->id);
+
+        $vendorOwnerId = $this->vendor?->owner_user_id;
+        if (!$vendorOwnerId && $this->vendor_id) {
+            $vendorOwnerId = \Modules\Core\Entities\Vendor\Vendor::where('id', $this->vendor_id)->value('owner_user_id');
+        }
+
+        $isSeller = (!empty($requestingUserId) && !empty($vendorOwnerId) && (int) $vendorOwnerId === (int) $requestingUserId);
+        $isAdmin = false;
+        if ($request->user() && ($request->user()->is_admin || $request->user()->role_id == 1)) {
+            $isAdmin = true;
+        }
+
+        // Bordereau d'envoi privacy: ONLY vendor owner and admin can see the shipping label URL.
+        // Buyers can only see the tracking number and delivery status.
+        $labelUrl = ($isSeller || $isAdmin) ? (string) ($this->yalidine_label_url ?? '') : '';
+
         return [
             'id' => (string) $this->id,
             'order_status_id' => (string) $this->order_status_id,
@@ -68,7 +88,7 @@ class OrderHistoryApiResource extends JsonResource
             'delivery_fee' => (string) ($this->delivery_fee ?? '0'),
             'delivery_type' => (string) ($this->delivery_type ?? 'home'),
             'yalidine_tracking' => (string) ($this->yalidine_tracking ?? ''),
-            'yalidine_label_url' => (string) ($this->yalidine_label_url ?? ''),
+            'yalidine_label_url' => $labelUrl,
             'yalidine_status' => (string) ($this->yalidine_parcel_status ?? $this->yalidine_status ?? ''),
             'yalidine_parcel_status' => (string) ($this->yalidine_parcel_status ?? $this->yalidine_status ?? ''),
             'from_wilaya_id' => (string) ($this->from_wilaya_id ?? ''),

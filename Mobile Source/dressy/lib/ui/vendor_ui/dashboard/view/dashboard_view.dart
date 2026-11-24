@@ -33,6 +33,7 @@ import '../../../../core/vendor/repository/item_entry_field_repository.dart';
 import '../../../../core/vendor/repository/product_repository.dart';
 import '../../../../core/vendor/repository/user_repository.dart';
 import '../../../../core/vendor/repository/user_unread_message_repository.dart';
+import '../../../../core/vendor/utils/ps_progress_dialog.dart';
 import '../../../../core/vendor/utils/utils.dart';
 import '../../../../core/vendor/viewobject/common/ps_value_holder.dart';
 import '../../../../core/vendor/viewobject/holder/chat_history_parameter_holder.dart';
@@ -371,29 +372,30 @@ class _HomeViewState extends State<DashboardView>
 
     dynamic callLogout(UserProvider provider,
         DeleteTaskProvider deleteTaskProvider, int index) async {
-      appBarTitle = 'app_name'.tr;
-      await updateSelectedIndex(index);
-      await provider.replaceLoginUserId('');
-      //   await provider.replaceOwnerUserId('');
-      await provider.replaceLoginUserName('');
-      await provider.replaceIsUserNameAndPwdNeeded(false, false);
-      await deleteTaskProvider.deleteTask();
+      if (PsProgressDialog.isShowing()) {
+        await PsProgressDialog.dismissDialog();
+      }
+      try {
+        await FacebookAuth.instance.logOut();
+      } catch (_) {}
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (_) {}
+      try {
+        await fb_auth.FirebaseAuth.instance.signOut();
+      } catch (_) {}
       buyerListProvider = null;
       sellerListProvider = null;
-      // await provider.removeHeaderToken();
-      // await Utils.saveHeaderInfoAndToken(provider);
-      try{
-        await FacebookAuth.instance.logOut();
-      // ignore: empty_catches
-      }catch(e){}
-      try{
-        await GoogleSignIn.instance.signOut();
-      // ignore: empty_catches
-      }catch(e){}
-      try{
-        await fb_auth.FirebaseAuth.instance.signOut();
-      // ignore: empty_catches
-      }catch(e){}
+      await deleteTaskProvider.deleteTask();
+      await provider.replaceLoginUserId('');
+      await provider.replaceLoginUserName('');
+      await provider.replaceIsUserNameAndPwdNeeded(false, false);
+      appBarTitle = 'app_name'.tr;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          updateSelectedIndex(index);
+        }
+      });
     }
 
     Future<bool> _onWillPop() {

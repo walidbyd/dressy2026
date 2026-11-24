@@ -115,8 +115,79 @@ class _SellerOrderDetailViewState extends State<SellerOrderDetailView> {
         await showDialog<dynamic>(
           context: context,
           builder: (BuildContext context) {
-            return SuccessDialog(
-              message: res.data?.message ?? 'seller__order_accepted_success'.tr,
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: <Widget>[
+                  Icon(Icons.local_shipping_outlined, color: PsColors.primary500, size: 28),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Commande Acceptée !',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Votre commande a été acceptée avec succès. Voici la marche à suivre pour l\'expédition :',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildInstructionStep(
+                      context,
+                      '1',
+                      'Imprimez le bordereau Yalidine',
+                      'Cliquez sur le bouton "Imprimer le bordereau Yalidine" ci-dessous pour télécharger et imprimer le PDF.',
+                    ),
+                    const SizedBox(height: 8),
+                    _buildInstructionStep(
+                      context,
+                      '2',
+                      'Emballez l\'article soigneusement',
+                      'Placez l\'article dans un emballage propre et scellé, puis collez fermement le bordereau dessus.',
+                    ),
+                    const SizedBox(height: 8),
+                    _buildInstructionStep(
+                      context,
+                      '3',
+                      'Déposez le colis',
+                      'Remettez le colis à l\'agence Yalidine la plus proche ou au livreur.',
+                    ),
+                    const SizedBox(height: 8),
+                    _buildInstructionStep(
+                      context,
+                      '4',
+                      'Crédit automatique à la livraison',
+                      'Dès que le colis est livré à l\'acheteur, votre portefeuille Dressy sera crédité automatiquement !',
+                    ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PsColors.primary500,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Compris',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             );
           },
         );
@@ -393,6 +464,54 @@ class _SellerOrderDetailViewState extends State<SellerOrderDetailView> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildInstructionStep(
+      BuildContext context, String stepNum, String title, String desc) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: PsColors.primary500.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            stepNum,
+            style: TextStyle(
+              color: PsColors.primary500,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                title,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                desc,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                      fontSize: 11,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

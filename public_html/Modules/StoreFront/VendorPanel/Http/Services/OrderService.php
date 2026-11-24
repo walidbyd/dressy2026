@@ -661,12 +661,12 @@ class OrderService extends PsService
             return responseMsgApi(__('Only pending orders can be accepted.'), Constants::badRequestStatusCode);
         }
 
-        // Generate Yalidine parcel on seller order approval via DZBuild dzship
+        // Generate Yalidine parcel on seller order approval
         $order->load(['shippingAndBilling', 'orderItems.item', 'vendorTransaction', 'user']);
         $dzshipService = app(\App\Services\DzshipYalidineService::class);
         $yalResult = $dzshipService->createShipment($order);
 
-        $order->order_status_id = Constants::orderApprovedStatus;
+        $order->order_status_id = Constants::orderDeliveringStatus;
         if (!empty($yalResult['success'])) {
             $order->yalidine_tracking = $yalResult['tracking'] ?? null;
             $order->yalidine_parcel_id = $yalResult['parcel_id'] ?? null;
@@ -678,18 +678,34 @@ class OrderService extends PsService
 
         try {
             $chatNotiService = app(\App\Services\OrderChatNotificationService::class);
-            $chatNotiService->updateOrderActionStatus($order, 'accepted');
-            $trackingText = !empty($order->yalidine_tracking) ? " (Suivi Yalidine: {$order->yalidine_tracking})" : "";
-            $chatNotiService->sendOrderStatusUpdate($order, "Votre commande a été acceptée par le vendeur.{$trackingText}", 'buyer');
+            $chatNotiService->updateOrderActionStatus($order, 'in_delivery');
+            $trackingText = !empty($order->yalidine_tracking) ? " (Numéro de suivi Yalidine: {$order->yalidine_tracking})" : "";
+            $chatNotiService->sendOrderStatusUpdate($order, "Votre commande #{$order->order_code} a été acceptée par le vendeur et est en cours d'acheminement.{$trackingText}", 'buyer');
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('acceptOrder chat noti error: ' . $e->getMessage());
         }
 
+        $shippingInstructions = [
+            'title' => "Instructions d'expédition",
+            'steps' => [
+                "1. Imprimez le bordereau d'envoi Yalidine et collez-le soigneusement sur le colis.",
+                "2. Emballez le produit de façon sécurisée pour le protéger durant le transport.",
+                "3. Déposez le colis au bureau Yalidine ou remettez-le au livreur.",
+                "4. Le suivi du colis et le paiement seront automatiquement mis à jour à la livraison.",
+            ],
+            'tracking' => $order->yalidine_tracking,
+            'label_url' => $order->yalidine_label_url,
+        ];
+
         return response()->json([
             'status' => 'success',
+            'action_status' => 'in_delivery',
+            'order_status_id' => $order->order_status_id,
+            'order_code' => $order->order_code,
             'message' => __('Order has been accepted and Yalidine parcel created.'),
             'tracking' => $order->yalidine_tracking,
             'label_url' => $order->yalidine_label_url,
+            'shipping_instructions' => $shippingInstructions,
         ], Constants::okStatusCode);
     }
 
@@ -882,7 +898,7 @@ class OrderService extends PsService
                 return responseMsgApi(__('Only pending orders can be confirmed.'), Constants::badRequestStatusCode);
             }
 
-            // Create Yalidine shipment parcel via DZBuild dzship if not already created
+            // Create Yalidine shipment parcel via direct Yalidine API if not already created
             if (empty($order->yalidine_tracking)) {
                 $dzshipService = app(\App\Services\DzshipYalidineService::class);
                 $yalResult = $dzshipService->createShipment($order);
@@ -896,25 +912,38 @@ class OrderService extends PsService
                 }
             }
 
-            $order->order_status_id = Constants::orderApprovedStatus;
+            $order->order_status_id = Constants::orderDeliveringStatus;
             $order->save();
 
             // Update action status across DB and Firebase RTDB
-            $chatNotiService->updateOrderActionStatus($order, 'accepted');
+            $chatNotiService->updateOrderActionStatus($order, 'in_delivery');
 
             // Send automated status message to Buyer
-            $trackingText = !empty($order->yalidine_tracking) ? " (Suivi Yalidine: {$order->yalidine_tracking})" : "";
-            $buyerMsg = "Votre commande a été acceptée par le vendeur.{$trackingText}";
+            $trackingText = !empty($order->yalidine_tracking) ? " (Numéro de suivi Yalidine: {$order->yalidine_tracking})" : "";
+            $buyerMsg = "Votre commande #{$order->order_code} a été acceptée par le vendeur et est en cours d'acheminement.{$trackingText}";
             $chatNotiService->sendOrderStatusUpdate($order, $buyerMsg, 'buyer');
+
+            $shippingInstructions = [
+                'title' => "Instructions d'expédition",
+                'steps' => [
+                    "1. Imprimez le bordereau d'envoi Yalidine et collez-le soigneusement sur le colis.",
+                    "2. Emballez le produit de façon sécurisée pour le protéger durant le transport.",
+                    "3. Déposez le colis au bureau Yalidine ou remettez-le au livreur.",
+                    "4. Le suivi du colis et le paiement seront automatiquement mis à jour à la livraison.",
+                ],
+                'tracking' => $order->yalidine_tracking,
+                'label_url' => $order->yalidine_label_url,
+            ];
 
             return response()->json([
                 'status' => 'success',
-                'action_status' => 'accepted',
+                'action_status' => 'in_delivery',
                 'order_status_id' => $order->order_status_id,
                 'order_code' => $order->order_code,
                 'message' => __('Order has been accepted by seller.'),
                 'tracking' => $order->yalidine_tracking,
                 'label_url' => $order->yalidine_label_url,
+                'shipping_instructions' => $shippingInstructions,
             ], Constants::okStatusCode);
         }
 

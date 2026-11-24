@@ -71,8 +71,10 @@ class YalidineApiController extends Controller
 
         if (!empty($wilayaId)) {
             $id = $this->yalidineService->normalizeWilayaId($wilayaId);
+            $communeId = $request->query('commune_id');
+            $communeName = $request->query('commune_name') ?? $request->query('commune');
             $communes = $this->yalidineService->getCommunes($id, $refresh);
-            $centers = $this->yalidineService->getCenters($id, $refresh);
+            $centers = $this->yalidineService->getCenters($id, $communeId, $communeName, $refresh);
 
             return response()->json([
                 'status' => 'success',
@@ -126,7 +128,9 @@ class YalidineApiController extends Controller
 
         // Fetch available Stop Desk centers in destination wilaya
         $toWilayaId = $feeData['to_wilaya_id'];
-        $centers = $this->yalidineService->getCenters($toWilayaId);
+        $communeId = $request->input('to_commune_id') ?? $request->query('to_commune_id');
+        $communeName = $request->input('to_commune_name') ?? $request->query('to_commune_name');
+        $centers = $this->yalidineService->getCenters($toWilayaId, $communeId, $communeName);
 
         $itemPrice = (float) ($request->input('item_price') ?? $request->input('sub_total') ?? $request->input('total_price') ?? 0);
         $totalPrice = $itemPrice + (float) $feeData['delivery_fee'];

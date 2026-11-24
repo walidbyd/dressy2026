@@ -88,11 +88,31 @@ class OrderSummaryApiResource extends JsonResource
         $orderSummaryObj->total_discount = (string) $allItemDiscountFromCart;
         $orderSummaryObj->delivery_fee = (string) $deliveryFee;
         $orderSummaryObj->total = (string) $totalAmount;
+        $requestingUserId = $request->login_user_id
+            ?? $request->user_id
+            ?? $request->header('login-user-id')
+            ?? ($request->user()?->id);
+
+        $vendorOwnerId = $this->vendor?->owner_user_id;
+        if (!$vendorOwnerId && $this->vendor_id) {
+            $vendorOwnerId = \Modules\Core\Entities\Vendor\Vendor::where('id', $this->vendor_id)->value('owner_user_id');
+        }
+
+        $isSeller = (!empty($requestingUserId) && !empty($vendorOwnerId) && (int) $vendorOwnerId === (int) $requestingUserId);
+        $isAdmin = false;
+        if ($request->user() && ($request->user()->is_admin || $request->user()->role_id == 1)) {
+            $isAdmin = true;
+        }
+
+        // Bordereau d'envoi privacy: ONLY vendor owner and admin can see the shipping label URL.
+        // Buyers can only see the tracking number and delivery status.
+        $labelUrl = ($isSeller || $isAdmin) ? (string) ($this->yalidine_label_url ?? '') : '';
+
         $orderSummaryObj->yalidine_tracking = (string) ($this->yalidine_tracking ?? '');
         $orderSummaryObj->yalidine_parcel_id = (string) ($this->yalidine_parcel_id ?? '');
         $orderSummaryObj->yalidine_status = (string) ($this->yalidine_parcel_status ?? $this->yalidine_status ?? '');
         $orderSummaryObj->yalidine_parcel_status = (string) ($this->yalidine_parcel_status ?? $this->yalidine_status ?? '');
-        $orderSummaryObj->yalidine_label_url = (string) ($this->yalidine_label_url ?? '');
+        $orderSummaryObj->yalidine_label_url = $labelUrl;
         $orderSummaryObj->delivery_type = (string) ($this->delivery_type ?? 'home');
         $orderSummaryObj->from_wilaya_id = (string) ($this->from_wilaya_id ?? '');
         $orderSummaryObj->to_wilaya_id = (string) ($this->to_wilaya_id ?? '');

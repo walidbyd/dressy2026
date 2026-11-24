@@ -90,13 +90,12 @@ class YalidineService
         $this->apiUrl = rtrim((string) config('services.yalidine.api_url', env('YALIDINE_API_URL', 'https://api.yalidine.app/v1')), '/');
 
         // Check if stub mode is explicitly enabled or credentials missing
-        $configuredStub = (bool) config('services.yalidine.stub_mode', env('YALIDINE_STUB_MODE', false));
-        $this->stubMode = $configuredStub || empty($this->apiId) || empty($this->apiToken);
+        $this->stubMode = false;
     }
 
     public function isStubMode(): bool
     {
-        return $this->stubMode;
+        return false;
     }
 
     public function getApiId(): string
@@ -287,8 +286,22 @@ class YalidineService
                         if (!is_array($json)) {
                             break;
                         }
-                        $data = $json['data'] ?? $json['results'] ?? $json['centers'] ?? (isset($json[0]) ? $json : []);
-                        if (!is_array($data) || empty($data)) {
+
+                        if (isset($json['data']) && is_array($json['data'])) {
+                            $data = $json['data'];
+                        } elseif (isset($json['results']) && is_array($json['results'])) {
+                            $data = $json['results'];
+                        } elseif (isset($json['centers']) && is_array($json['centers'])) {
+                            $data = $json['centers'];
+                        } elseif (isset($json[0]) && is_array($json[0])) {
+                            $data = $json;
+                        } else {
+                            $data = array_filter($json, function ($item, $k) {
+                                return is_array($item) && !in_array((string) $k, ['links', 'meta', 'pagination', 'error', 'has_more', 'total_data', 'page', 'page_size', 'status'], true);
+                            }, ARRAY_FILTER_USE_BOTH);
+                        }
+
+                        if (empty($data)) {
                             break;
                         }
 
@@ -345,12 +358,12 @@ class YalidineService
                         $page++;
                     } else {
                         $apiError = "Yalidine API returned HTTP {$response->status()}: " . $response->body();
-                        Log::warning("Yalidine getCenters HTTP error {$response->status()} for wilaya {$id} page {$page}: " . $response->body());
+                        Log::error("Yalidine getCenters HTTP error {$response->status()} for wilaya {$id} page {$page}: " . $response->body());
                         break;
                     }
                 } catch (\Throwable $e) {
                     $apiError = "Yalidine API connection failed: " . $e->getMessage();
-                    Log::warning("Yalidine getCenters live API call failed for wilaya {$id}: " . $e->getMessage());
+                    Log::error("Yalidine getCenters live API call failed for wilaya {$id}: " . $e->getMessage());
                     break;
                 }
             }
@@ -384,11 +397,23 @@ class YalidineService
                 $isMatch = false;
                 if ($normCommuneId !== null && !empty($center['commune_id']) && (int) $center['commune_id'] === $normCommuneId) {
                     $isMatch = true;
-                } elseif ($normCommuneName !== '' && !empty($center['commune_name'])) {
-                    $normCenterCommune = $this->normalizeStringForMatching($center['commune_name']);
-                    if ($normCenterCommune === $normCommuneName
+                } elseif ($normCommuneName !== '') {
+                    $normCenterCommune = !empty($center['commune_name']) ? $this->normalizeStringForMatching($center['commune_name']) : '';
+                    $normCenterName = !empty($center['name']) ? $this->normalizeStringForMatching($center['name']) : '';
+                    $normCenterAddress = !empty($center['address']) ? $this->normalizeStringForMatching($center['address']) : '';
+
+                    if ($normCenterCommune !== '' && (
+                        $normCenterCommune === $normCommuneName
                         || str_contains($normCenterCommune, $normCommuneName)
-                        || str_contains($normCommuneName, $normCenterCommune)) {
+                        || str_contains($normCommuneName, $normCenterCommune)
+                    )) {
+                        $isMatch = true;
+                    } elseif ($normCenterName !== '' && (
+                        str_contains($normCenterName, $normCommuneName)
+                        || str_contains($normCommuneName, $normCenterName)
+                    )) {
+                        $isMatch = true;
+                    } elseif ($normCenterAddress !== '' && str_contains($normCenterAddress, $normCommuneName)) {
                         $isMatch = true;
                     }
                 }
@@ -464,12 +489,20 @@ class YalidineService
      * Get Yalidine Stop Desk Centers for a specific Wilaya.
      *
      * @param int|string $wilayaId
+     * @param int|string|bool|null $communeId
+     * @param string|null $communeName
      * @param bool $refresh Force cache refresh / bust
      * @return array
      */
-    public function getCenters($wilayaId, bool $refresh = false): array
+    public function getCenters($wilayaId, $communeId = null, $communeName = null, bool $refresh = false): array
     {
-        $detailed = $this->getCentersDetailed($wilayaId, null, null, $refresh);
+        // Handle legacy call where 2nd argument was boolean $refresh
+        if (is_bool($communeId)) {
+            $refresh = $communeId;
+            $communeId = null;
+        }
+
+        $detailed = $this->getCentersDetailed($wilayaId, $communeId, $communeName, $refresh);
         return $detailed['centers'] ?? [];
     }
 
@@ -621,31 +654,11 @@ class YalidineService
             $parcelPayload['stopdesk_id'] = (int) $order->yalidine_stop_desk_id;
         }
 
-        if ($this->stubMode) {
-            Log::info('Yalidine [STUB MODE] Creating parcel payload:', [
-                'order_id' => $order->id,
-                'order_code' => $order->order_code,
-                'payload' => $parcelPayload,
-            ]);
-
-            $stubTracking = 'yal-' . strtoupper(Str::random(8));
-            $stubParcelId = 'PARCEL-' . strtoupper(Str::random(6));
-            $stubLabelUrl = "https://api.yalidine.app/v1/parcels/print/?tracking={$stubTracking}";
-
-            $order->yalidine_tracking = $stubTracking;
-            $order->yalidine_parcel_id = $stubParcelId;
-            $order->yalidine_label_url = $stubLabelUrl;
-            $order->yalidine_parcel_status = 'dispatched';
-            $order->yalidine_status = 'dispatched';
-            $order->save();
-
+        if (empty($this->apiId) || empty($this->apiToken)) {
+            Log::error("Yalidine createParcelForOrder failed: API credentials are not configured in Admin Panel.");
             return [
-                'success' => true,
-                'tracking' => $stubTracking,
-                'parcel_id' => $stubParcelId,
-                'label_url' => $stubLabelUrl,
-                'status' => 'dispatched',
-                'is_stub' => true,
+                'success' => false,
+                'error' => 'Identifiants API Yalidine manquants ou non configurés dans les paramètres de livraison.',
             ];
         }
 
@@ -681,7 +694,7 @@ class YalidineService
                     $parcelInfo = $body;
                 }
 
-                if ($parcelInfo && (!empty($parcelInfo['tracking']) || !empty($parcelInfo['success']))) {
+                if ($parcelInfo && (!empty($parcelInfo['tracking']) || (!empty($parcelInfo['success']) && !empty($parcelInfo['tracking'])))) {
                     $tracking = (string) ($parcelInfo['tracking'] ?? '');
                     $parcelId = (string) ($parcelInfo['parcel_id'] ?? $tracking);
                     $labelUrl = (string) ($parcelInfo['label'] ?? $parcelInfo['label_url'] ?? "https://api.yalidine.app/v1/parcels/print/?tracking={$tracking}");
@@ -703,16 +716,21 @@ class YalidineService
                     ];
                 }
 
-                $err = $parcelInfo['error'] ?? $parcelInfo['message'] ?? ($body['message'] ?? 'Yalidine rejected parcel creation.');
+                $rawErr = $parcelInfo['error'] ?? $parcelInfo['message'] ?? ($body['error'] ?? $body['message'] ?? 'Yalidine a rejeté la création du colis.');
+                $errMsg = is_array($rawErr) ? implode(', ', $rawErr) : (string) $rawErr;
+                Log::error("Yalidine parcel rejection for order {$order->order_code}: {$errMsg}");
                 return [
                     'success' => false,
-                    'error' => is_array($err) ? implode(', ', $err) : (string) $err,
+                    'error' => $errMsg,
                 ];
             }
 
+            $rawErr = is_array($body) ? ($body['message'] ?? $body['error'] ?? $response->body()) : $response->body();
+            $errMsg = is_array($rawErr) ? implode(', ', $rawErr) : (string) $rawErr;
+            Log::error("Yalidine request failed with HTTP {$response->status()} for order {$order->order_code}: {$errMsg}");
             return [
                 'success' => false,
-                'error' => "Yalidine request failed with HTTP {$response->status()}",
+                'error' => "Erreur API Yalidine (HTTP {$response->status()}): {$errMsg}",
             ];
         } catch (\Throwable $e) {
             Log::error('Yalidine Exception: ' . $e->getMessage());
