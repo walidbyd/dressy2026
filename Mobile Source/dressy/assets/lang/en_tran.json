@@ -540,7 +540,7 @@
   "item_entry__sold_out": "Sold Out",
   "item_entry__not_set": "Not set",
   "item_entry__remark": "Remark",
-  "item_entry__location": "Wilaya",
+  "item_entry__location": "Item location",
   "item_entry__location_township": "Township",
   "item_entry__pin_shop_location": "Pin shop location",
   "item_entry__latitude": "Latitude",

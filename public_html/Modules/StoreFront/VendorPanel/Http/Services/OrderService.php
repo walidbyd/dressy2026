@@ -692,7 +692,20 @@ class OrderService extends PsService
         // Generate Yalidine parcel on seller order approval
         $order->load(['shippingAndBilling', 'orderItems.item', 'vendorTransaction', 'user']);
         $dzshipService = app(\App\Services\DzshipYalidineService::class);
-        $yalResult = $dzshipService->createShipment($order);
+        $yalResult = empty($order->yalidine_tracking)
+            ? $dzshipService->createShipment($order)
+            : [
+                'success' => true,
+                'tracking' => $order->yalidine_tracking,
+                'parcel_id' => $order->yalidine_parcel_id,
+                'label_url' => $order->yalidine_label_url,
+                'status' => $order->yalidine_parcel_status ?? 'dispatched',
+            ];
+
+        if (empty($yalResult['success']) || empty($yalResult['tracking'])) {
+            $errMsg = $yalResult['error'] ?? __('Failed to create Yalidine shipment.');
+            return responseMsgApi($errMsg, Constants::badRequestStatusCode);
+        }
 
         $order->order_status_id = Constants::orderDeliveringStatus;
         try {
@@ -700,13 +713,11 @@ class OrderService extends PsService
                 $order->fulfillment_deadline_at = \Carbon\Carbon::now()->addHours(72);
             }
         } catch (\Throwable $e) {}
-        if (!empty($yalResult['success'])) {
-            $order->yalidine_tracking = $yalResult['tracking'] ?? null;
-            $order->yalidine_parcel_id = $yalResult['parcel_id'] ?? null;
-            $order->yalidine_label_url = $yalResult['label_url'] ?? null;
-            $order->yalidine_parcel_status = $yalResult['status'] ?? 'dispatched';
-            $order->yalidine_status = $yalResult['status'] ?? 'dispatched';
-        }
+        $order->yalidine_tracking = $yalResult['tracking'];
+        $order->yalidine_parcel_id = $yalResult['parcel_id'] ?? $yalResult['tracking'];
+        $order->yalidine_label_url = $yalResult['label_url'] ?? null;
+        $order->yalidine_parcel_status = $yalResult['status'] ?? 'dispatched';
+        $order->yalidine_status = $yalResult['status'] ?? 'dispatched';
         $order->save();
 
         try {
@@ -961,16 +972,20 @@ class OrderService extends PsService
 
             // Create Yalidine shipment parcel via direct Yalidine API if not already created
             if (empty($order->yalidine_tracking)) {
+                $order->loadMissing(['shippingAndBilling', 'orderItems.item', 'vendorTransaction', 'user']);
                 $dzshipService = app(\App\Services\DzshipYalidineService::class);
                 $yalResult = $dzshipService->createShipment($order);
 
-                if (!empty($yalResult['success'])) {
-                    $order->yalidine_tracking = $yalResult['tracking'] ?? null;
-                    $order->yalidine_parcel_id = $yalResult['parcel_id'] ?? null;
-                    $order->yalidine_label_url = $yalResult['label_url'] ?? null;
-                    $order->yalidine_parcel_status = $yalResult['status'] ?? 'dispatched';
-                    $order->yalidine_status = $yalResult['status'] ?? 'dispatched';
+                if (empty($yalResult['success']) || empty($yalResult['tracking'])) {
+                    $errMsg = $yalResult['error'] ?? __('Failed to create Yalidine shipment.');
+                    return responseMsgApi($errMsg, Constants::badRequestStatusCode);
                 }
+
+                $order->yalidine_tracking = $yalResult['tracking'];
+                $order->yalidine_parcel_id = $yalResult['parcel_id'] ?? $yalResult['tracking'];
+                $order->yalidine_label_url = $yalResult['label_url'] ?? null;
+                $order->yalidine_parcel_status = $yalResult['status'] ?? 'dispatched';
+                $order->yalidine_status = $yalResult['status'] ?? 'dispatched';
             }
 
             $order->order_status_id = Constants::orderDeliveringStatus;

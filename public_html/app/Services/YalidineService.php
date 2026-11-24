@@ -523,66 +523,97 @@ class YalidineService
 
         $cacheKey = "yalidine_fee_v2_{$fromId}_{$toId}";
 
-        $rates = Cache::remember($cacheKey, 21600, function () use ($fromId, $toId, $weight) {
-            $liveHomeFee = null;
-            $liveDeskFee = null;
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached) && !empty($cached['home_fee']) && !empty($cached['desk_fee'])) {
+            $chosenFee = $isStopDesk ? $cached['desk_fee'] : $cached['home_fee'];
+            return [
+                'status' => 'success',
+                'delivery_type' => $isStopDesk ? 'stop_desk' : 'home',
+                'delivery_fee' => (float) $chosenFee,
+                'home_fee' => (float) $cached['home_fee'],
+                'desk_fee' => (float) $cached['desk_fee'],
+                'from_wilaya_id' => $fromId,
+                'from_wilaya_name' => $this->getWilayaNameById($fromId),
+                'to_wilaya_id' => $toId,
+                'to_wilaya_name' => $this->getWilayaNameById($toId),
+                'currency' => 'DA',
+                'is_stub' => false,
+            ];
+        }
 
-            if (!$this->stubMode) {
-                try {
-                    $response = Http::withHeaders([
-                        'X-API-ID' => $this->apiId,
-                        'X-API-TOKEN' => $this->apiToken,
-                        'Accept' => 'application/json',
-                    ])->timeout(10)->get("{$this->apiUrl}/fees/", [
-                        'from_wilaya_id' => $fromId,
-                        'to_wilaya_id' => $toId,
-                    ]);
+        $liveHomeFee = null;
+        $liveDeskFee = null;
 
-                    if ($response->successful()) {
-                        $data = $response->json();
-                        if (is_array($data)) {
-                            if (isset($data['home_fee'])) {
-                                $liveHomeFee = (float) $data['home_fee'];
-                                $liveDeskFee = (float) ($data['desk_fee'] ?? $data['stopdesk_fee'] ?? null);
-                            } elseif (isset($data[(string) $toId]['home_fee'])) {
-                                $liveHomeFee = (float) $data[(string) $toId]['home_fee'];
-                                $liveDeskFee = (float) ($data[(string) $toId]['desk_fee'] ?? $data[(string) $toId]['stopdesk_fee'] ?? null);
-                            } elseif (isset($data[0]['home_fee'])) {
-                                $liveHomeFee = (float) $data[0]['home_fee'];
-                                $liveDeskFee = (float) ($data[0]['desk_fee'] ?? $data[0]['stopdesk_fee'] ?? null);
-                            } elseif (isset($data['data']['home_fee'])) {
-                                $liveHomeFee = (float) $data['data']['home_fee'];
-                                $liveDeskFee = (float) ($data['data']['desk_fee'] ?? $data['data']['stopdesk_fee'] ?? null);
+        if (!$this->stubMode && !empty($this->apiId) && !empty($this->apiToken)) {
+            try {
+                $response = Http::withHeaders([
+                    'X-API-ID' => $this->apiId,
+                    'X-API-TOKEN' => $this->apiToken,
+                    'Accept' => 'application/json',
+                ])->timeout(10)->get("{$this->apiUrl}/fees/", [
+                    'from_wilaya_id' => $fromId,
+                    'to_wilaya_id' => $toId,
+                ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    if (is_array($data)) {
+                        $extractFees = function (array $node): array {
+                            $h = $node['home_fee'] ?? $node['express_home'] ?? $node['economic_home'] ?? null;
+                            $d = $node['desk_fee'] ?? $node['stopdesk_fee'] ?? $node['express_desk'] ?? $node['economic_desk'] ?? null;
+                            return [
+                                $h !== null ? (float) $h : null,
+                                $d !== null ? (float) $d : null,
+                            ];
+                        };
+
+                        if (isset($data['home_fee']) || isset($data['express_home'])) {
+                            [$liveHomeFee, $liveDeskFee] = $extractFees($data);
+                        } elseif (isset($data['per_commune']) && is_array($data['per_commune'])) {
+                            foreach ($data['per_commune'] as $communeFees) {
+                                if (is_array($communeFees)) {
+                                    [$h, $d] = $extractFees($communeFees);
+                                    if ($h !== null && $h > 0 && $d !== null && $d > 0) {
+                                        $liveHomeFee = $h;
+                                        $liveDeskFee = $d;
+                                        break;
+                                    }
+                                }
                             }
+                        } elseif (isset($data[(string) $toId]) && is_array($data[(string) $toId])) {
+                            [$liveHomeFee, $liveDeskFee] = $extractFees($data[(string) $toId]);
+                        } elseif (isset($data[0]) && is_array($data[0])) {
+                            [$liveHomeFee, $liveDeskFee] = $extractFees($data[0]);
+                        } elseif (isset($data['data']) && is_array($data['data'])) {
+                            [$liveHomeFee, $liveDeskFee] = $extractFees($data['data']);
                         }
                     }
-                } catch (\Throwable $e) {
-                    Log::warning("Yalidine calculateDeliveryFee API failed: " . $e->getMessage());
+                } else {
+                    Log::warning("Yalidine calculateDeliveryFee HTTP {$response->status()}: " . $response->body());
                 }
+            } catch (\Throwable $e) {
+                Log::warning("Yalidine calculateDeliveryFee API failed: " . $e->getMessage());
             }
+        }
 
-            // Fallback matrix in DZD
-            $southWilayas = [11, 30, 33, 37, 39, 47, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58];
-            $isSouth = in_array($fromId, $southWilayas) || in_array($toId, $southWilayas);
-            $isIntra = ($fromId === $toId);
-
-            if ($isIntra) {
-                $defaultHome = 400.00;
-                $defaultDesk = 300.00;
-            } elseif ($isSouth) {
-                $defaultHome = 850.00;
-                $defaultDesk = 750.00;
-            } else {
-                $defaultHome = 600.00;
-                $defaultDesk = 500.00;
-            }
-
+        if ($liveHomeFee === null || $liveHomeFee <= 0 || $liveDeskFee === null || $liveDeskFee <= 0) {
             return [
-                'home_fee' => ($liveHomeFee !== null && $liveHomeFee > 0) ? $liveHomeFee : $defaultHome,
-                'desk_fee' => ($liveDeskFee !== null && $liveDeskFee > 0) ? $liveDeskFee : $defaultDesk,
-                'is_stub' => ($liveHomeFee === null),
+                'status' => 'error',
+                'success' => false,
+                'message' => 'Impossible de récupérer les tarifs réels depuis l\'API Yalidine.',
+                'from_wilaya_id' => $fromId,
+                'to_wilaya_id' => $toId,
+                'currency' => 'DA',
+                'is_stub' => false,
             ];
-        });
+        }
+
+        $rates = [
+            'home_fee' => $liveHomeFee,
+            'desk_fee' => $liveDeskFee,
+            'is_stub' => false,
+        ];
+        Cache::put($cacheKey, $rates, 21600);
 
         $chosenFee = $isStopDesk ? $rates['desk_fee'] : $rates['home_fee'];
 
@@ -597,7 +628,7 @@ class YalidineService
             'to_wilaya_id' => $toId,
             'to_wilaya_name' => $this->getWilayaNameById($toId),
             'currency' => 'DA',
-            'is_stub' => $rates['is_stub'] ?? false,
+            'is_stub' => false,
         ];
     }
 
@@ -626,13 +657,13 @@ class YalidineService
         $codAmount = (float) ($order->total_price ?? $order->vendorTransaction?->payment_amount ?? 0);
 
         $firstName = $shipping?->shipping_first_name ?: ($order->user?->name ?: 'Client');
-        $lastName = $shipping?->shipping_last_name ?: '';
+        $lastName = trim((string) ($shipping?->shipping_last_name ?? '')) ?: $firstName;
         $phone = $shipping?->shipping_phone_no ?: ($order->user?->user_phone ?: '');
         $address = $shipping?->shipping_address ?: 'Livraison';
 
         $isStopDesk = in_array(strtolower(trim((string) ($order->delivery_type ?? ''))), ['stop_desk', 'stopdesk', 'desk', 'bureau'], true);
         $toWilayaId = $order->to_wilaya_id ?: $this->normalizeWilayaId($shipping?->shipping_state ?: $shipping?->shipping_city);
-        $toWilayaName = $this->getWilayaNameById($toWilayaId);
+        $toWilayaName = $this->cleanWilayaNameForYalidine($this->getWilayaNameById($toWilayaId));
         $toCommuneName = $order->to_commune_name ?: ($shipping?->shipping_city ?: $toWilayaName);
 
         // Resolve sender wilaya from product/vendor first, fallback to order->from_wilaya_id or Admin default
@@ -1350,6 +1381,15 @@ class YalidineService
         $cleanCommune = $toCommuneName ? trim($toCommuneName) : null;
 
         $fees = $this->calculateDeliveryFee($fromWilayaCode, $toWilayaCode, 'home');
+        if (($fees['status'] ?? '') === 'error' || empty($fees['desk_fee']) || empty($fees['home_fee'])) {
+            return [
+                'status' => 'error',
+                'success' => false,
+                'message' => $fees['message'] ?? 'Impossible de récupérer les tarifs réels depuis l\'API Yalidine.',
+                'from_wilaya_code' => $fromWilayaCode,
+                'to_wilaya_code' => $toWilayaCode,
+            ];
+        }
         $stopDeskPrice = (int) round($fees['desk_fee']);
         $homePrice = (int) round($fees['home_fee']);
         $desks = $this->getDesks($toWilayaCode, $refresh);

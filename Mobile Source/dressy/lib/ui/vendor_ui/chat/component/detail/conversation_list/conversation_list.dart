@@ -47,13 +47,17 @@ class ConversationList extends StatelessWidget {
     final Product itemDetail = itemDetailProvider.product;
     int _totalCount = 0;
 
-    final bool isOrderScopedSession =
-        sessionId != null && sessionId!.contains('_order_');
+    if (sessionId == null || sessionId!.isEmpty) {
+      return const Flexible(child: SizedBox());
+    }
+
+    final bool isOrderScopedSession = sessionId!.contains('_order_');
+    final String effectiveItemId = (itemDetail.id ?? '').trim().isNotEmpty
+        ? itemDetail.id!.trim()
+        : (Utils.activeChatItemId ?? '').trim();
 
     Future<void> _getTotalChildrenCount(String itemid) async {
-      final Query q = isOrderScopedSession
-          ? messagesRef.child(sessionId!)
-          : messagesRef.child(sessionId!).orderByChild('itemId').equalTo(itemid);
+      final Query q = messagesRef.child(sessionId!);
       final DatabaseEvent event = await q.once();
 
       final DataSnapshot snapshot = event.snapshot;
@@ -68,7 +72,7 @@ class ConversationList extends StatelessWidget {
 
     // ignore: always_specify_types
     Future.delayed(const Duration(milliseconds: 2000)).then((_) {
-      _getTotalChildrenCount(itemDetail.id ?? '');
+      _getTotalChildrenCount(effectiveItemId);
     });
 
     return Flexible(
@@ -76,12 +80,7 @@ class ConversationList extends StatelessWidget {
         margin: const EdgeInsets.only(top: PsDimens.space16),
         child: FirebaseAnimatedList(
           key: ValueKey<String>(sessionId ?? 'chat_list'),
-          query: isOrderScopedSession
-              ? messagesRef.child(sessionId!)
-              : messagesRef
-                  .child(sessionId!)
-                  .orderByChild('itemId')
-                  .equalTo(itemDetail.id),
+          query: messagesRef.child(sessionId!),
           reverse: _anchorToBottom,
           sort: (DataSnapshot a, DataSnapshot b) {
             final dynamic valB = b.value;
@@ -100,6 +99,12 @@ class ConversationList extends StatelessWidget {
             final Message? parsedMsg = Message().fromMap(snapshot.value);
             if (parsedMsg == null) {
               return const SizedBox();
+            }
+            if (!isOrderScopedSession &&
+                effectiveItemId.isNotEmpty &&
+                (parsedMsg.itemId ?? '').trim().isNotEmpty &&
+                parsedMsg.itemId!.trim() != effectiveItemId) {
+              return const SizedBox.shrink();
             }
             final Message messages = parsedMsg;
             final int timeStamp = messages.addedDateTimeStamp ?? 0;

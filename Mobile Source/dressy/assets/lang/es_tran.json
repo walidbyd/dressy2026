@@ -536,7 +536,7 @@
   "item_entry__sold_out": "Vendido",
   "item_entry__not_set": "No establecido",
   "item_entry__remark": "Observación",
-  "item_entry__location": "Ubicación",
+  "item_entry__location": "Ubicación del artículo",
   "item_entry__location_township": "Municipio",
   "item_entry__pin_shop_location": "Ubicación de la tienda de alfileres",
   "item_entry__latitude": "Latitud",

@@ -321,8 +321,19 @@ class ItemEntryViewState<T extends ItemEntryView> extends State<ItemEntryView> {
         userInputLongitude.text = '0.0';
       }
     }
-    _itemEntryProvider.itemLocationId = valueHolder!.locationId;
-    _itemEntryProvider.locationName = valueHolder!.locactionName ?? '';
+    final String defaultLocId = (valueHolder!.locationId ?? '').trim().toLowerCase();
+    final String defaultLocName = (valueHolder!.locactionName ?? '').trim();
+    final String defaultLocNameLower = defaultLocName.toLowerCase();
+    final bool isSyntheticDefault = defaultLocId.isEmpty ||
+        defaultLocId == '0' ||
+        defaultLocId == 'all' ||
+        defaultLocNameLower.contains("route l'alg") ||
+        defaultLocNameLower.contains("toute l'alg") ||
+        defaultLocNameLower == 'all' ||
+        defaultLocNameLower == 'all locations';
+    _itemEntryProvider.itemLocationId =
+        isSyntheticDefault ? '' : valueHolder!.locationId;
+    _itemEntryProvider.locationName = isSyntheticDefault ? '' : defaultLocName;
 
     _itemEntryProvider.phoneNumList[0].countryCodeController.text =
         valueHolder!.defaulPhoneCountryCode;

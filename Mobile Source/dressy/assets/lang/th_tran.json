@@ -536,7 +536,7 @@
   "item_entry__sold_out": "ขายหมดแล้ว",
   "item_entry__not_set": "ไม่ได้ตั้งค่า",
   "item_entry__remark": "สังเกต",
-  "item_entry__location": "ที่ตั้ง",
+  "item_entry__location": "ตำแหน่งสินค้า",
   "item_entry__location_township": "เขตการปกครอง",
   "item_entry__pin_shop_location": "สถานที่ร้านพิน",
   "item_entry__latitude": "ละติจูด",

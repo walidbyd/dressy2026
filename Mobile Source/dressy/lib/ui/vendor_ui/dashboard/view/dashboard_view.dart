@@ -561,7 +561,8 @@ class _HomeViewState extends State<DashboardView>
                       updateSelectedIndexWithAnimation,
                   deleteTaskProvider: deleteTaskProvider,
                 ),
-                appBar: Utils.showChatListView(_currentIndex)
+                appBar: (Utils.showChatListView(_currentIndex) ||
+                        Utils.showProfileView(_currentIndex, psValueHolder!))
                     ? null
                     : CustomDashboardAppBar(
                         currentIndex: _currentIndex,

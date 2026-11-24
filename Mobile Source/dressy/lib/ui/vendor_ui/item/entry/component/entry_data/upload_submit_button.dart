@@ -194,9 +194,11 @@ class UploadSubmitButtonState extends State<UploadSubmitButton> {
       return false;
     }
 
-    if (itemEntryFieldProvider.cityCoreField.isVisible &&
-        itemEntryFieldProvider.cityCoreField.isMandatory &&
-        itemEntryProvider.itemLocationId!.isEmpty) {
+    final String selectedLocationId =
+        (itemEntryProvider.itemLocationId ?? '').trim().toLowerCase();
+    if (selectedLocationId.isEmpty ||
+        selectedLocationId == '0' ||
+        selectedLocationId == 'all') {
       showMandatoryAlert('item_entry_need_location_id'.tr);
       return false;
     }

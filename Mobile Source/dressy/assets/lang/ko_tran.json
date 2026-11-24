@@ -536,7 +536,7 @@
   "item_entry__sold_out": "매진",
   "item_entry__not_set": "설정되지 않았습니다",
   "item_entry__remark": "주목",
-  "item_entry__location": "위치",
+  "item_entry__location": "상품 위치",
   "item_entry__location_township": "타운십",
   "item_entry__pin_shop_location": "핀 샵 위치",
   "item_entry__latitude": "위도",

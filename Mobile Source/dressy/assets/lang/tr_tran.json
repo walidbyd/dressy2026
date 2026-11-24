@@ -536,7 +536,7 @@
   "item_entry__sold_out": "Hepsi satıldı",
   "item_entry__not_set": "Ayarlanmamış",
   "item_entry__remark": "Söz",
-  "item_entry__location": "Konum",
+  "item_entry__location": "Ürün konumu",
   "item_entry__location_township": "Kasaba",
   "item_entry__pin_shop_location": "Pin Mağazası Konumu",
   "item_entry__latitude": "Enlem",

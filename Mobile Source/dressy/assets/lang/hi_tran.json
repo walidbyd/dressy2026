@@ -536,7 +536,7 @@
   "item_entry__sold_out": "बिक गया",
   "item_entry__not_set": "सेट नहीं",
   "item_entry__remark": "टिप्पणी",
-  "item_entry__location": "स्थान",
+  "item_entry__location": "आइटम का स्थान",
   "item_entry__location_township": "बस्ती",
   "item_entry__pin_shop_location": "पिन दुकान स्थान",
   "item_entry__latitude": "अक्षांश",

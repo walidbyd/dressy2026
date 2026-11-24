@@ -314,7 +314,8 @@ class _ChatViewState extends State<ChatView>
       _insertSenderAndReceiverToFireBase(sessionId, widget.itemId, otherUserId,
           psValueHolder.loginUserId!, psValueHolder.loginUserName);
     }
-    _chatRef.child(otherUserId!).onValue.listen((DatabaseEvent event) {
+    if (otherUserId != null && otherUserId!.isNotEmpty) {
+      _chatRef.child(otherUserId!).onValue.listen((DatabaseEvent event) {
       if (event.snapshot.value == null) {
         if (isActive == null || isActive != ChatUserStatus.offline && mounted) {
           setState(() {
@@ -347,7 +348,8 @@ class _ChatViewState extends State<ChatView>
           }
         }
       }
-    });
+      });
+    }
 
     final Widget _chatHeaderImageAndText = Padding(
       padding: Directionality.of(context) == TextDirection.rtl

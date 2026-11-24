@@ -25,7 +25,7 @@ class ChooseCityDropDownWidget extends StatelessWidget {
         title: 'item_entry__location'.tr,
         hintText: 'item_entry__select_location'.tr,
         textEditingController: cityController,
-        isStar: isMandatory,
+        isStar: true,
         onTap: () async {
           FocusScope.of(context).requestFocus(FocusNode());
           final ItemEntryProvider provider =

@@ -536,7 +536,7 @@
   "item_entry__sold_out": "Venduto",
   "item_entry__not_set": "Non impostato",
   "item_entry__remark": "Osservazione",
-  "item_entry__location": "Posizione",
+  "item_entry__location": "Posizione dell'articolo",
   "item_entry__location_township": "Comune",
   "item_entry__pin_shop_location": "Posizione del negozio di perni",
   "item_entry__latitude": "Latitudine",

@@ -536,7 +536,7 @@
   "item_entry__sold_out": "Ausverkauft",
   "item_entry__not_set": "Nicht festgelegt",
   "item_entry__remark": "Anmerkung",
-  "item_entry__location": "Ort",
+  "item_entry__location": "Artikelstandort",
   "item_entry__location_township": "Gemeinde",
   "item_entry__pin_shop_location": "Pin Shop Location",
   "item_entry__latitude": "Breite",

@@ -536,7 +536,7 @@
   "item_entry__sold_out": "Распроданный",
   "item_entry__not_set": "Не установлен",
   "item_entry__remark": "Примечание",
-  "item_entry__location": "Расположение",
+  "item_entry__location": "Местоположение товара",
   "item_entry__location_township": "Город",
   "item_entry__pin_shop_location": "PIN -магазин",
   "item_entry__latitude": "Широта",

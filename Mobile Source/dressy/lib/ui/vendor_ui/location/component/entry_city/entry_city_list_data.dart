@@ -46,25 +46,45 @@ class _EntryCityListDataState extends State<EntryCityListData> {
     _itemLocationProvider = Provider.of<ItemLocationProvider>(context);
     final bool isLoading =
         _itemLocationProvider.currentStatus == PsStatus.BLOCK_LOADING;
+    final List<ItemLocation> filteredLocations = isLoading
+        ? <ItemLocation>[]
+        : List<ItemLocation>.generate(
+            _itemLocationProvider.dataLength,
+            (int index) => _itemLocationProvider.getListIndexOf(index),
+          ).where((ItemLocation loc) {
+            final String id = loc.id.trim().toLowerCase();
+            final String name = (loc.name ?? '').trim().toLowerCase();
+            if (id == '0' || id == 'all') {
+              return false;
+            }
+            if (name.contains("route l'alg") ||
+                name.contains("toute l'alg") ||
+                name == 'all' ||
+                name == 'all locations' ||
+                name == "l'algérie" ||
+                name == 'algeria') {
+              return false;
+            }
+            return true;
+          }).toList();
     final int count = isLoading
         ? valueHolder.loadingShimmerItemCount!
-        : _itemLocationProvider.dataLength;
+        : filteredLocations.length;
     return ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: count,
         itemBuilder: (BuildContext context, int index) {
+          final ItemLocation currentLocation =
+              isLoading ? ItemLocation() : filteredLocations[index];
           return CustomEntryCityListItem(
-            itemLocation: isLoading
-                ? ItemLocation()
-                : _itemLocationProvider.getListIndexOf(index),
+            itemLocation: currentLocation,
             animationController: widget.animationController,
             animation: curveAnimation(widget.animationController,
                 count: count, index: index),
             isLoading: isLoading,
-            isSelected: !isLoading &&
-                widget.selectedCityName ==
-                    _itemLocationProvider.getListIndexOf(index).name,
+            isSelected:
+                !isLoading && widget.selectedCityName == currentLocation.name,
           );
         });
   }

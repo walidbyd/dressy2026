@@ -539,7 +539,7 @@
   "item_entry__sold_out": "Vendu",
   "item_entry__not_set": "Pas encore défini",
   "item_entry__remark": "Remarque",
-  "item_entry__location": "Wilaya",
+  "item_entry__location": "Localisation de l'article",
   "item_entry__location_township": "Canton",
   "item_entry__pin_shop_location": "Emplacement de la boutique d'épingle",
   "item_entry__latitude": "Latitude",

@@ -536,7 +536,7 @@
   "item_entry__sold_out": "Vendido",
   "item_entry__not_set": "Não configurado",
   "item_entry__remark": "Observação",
-  "item_entry__location": "Localização",
+  "item_entry__location": "Localização do item",
   "item_entry__location_township": "Município",
   "item_entry__pin_shop_location": "Localização da loja de pinos",
   "item_entry__latitude": "Latitude",

@@ -536,7 +536,7 @@
   "item_entry__sold_out": "卖光了",
   "item_entry__not_set": "没有设置",
   "item_entry__remark": "评论",
-  "item_entry__location": "地点",
+  "item_entry__location": "商品位置",
   "item_entry__location_township": "乡",
   "item_entry__pin_shop_location": "PIN商店位置",
   "item_entry__latitude": "纬度",

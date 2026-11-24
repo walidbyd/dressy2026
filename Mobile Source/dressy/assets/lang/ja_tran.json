@@ -536,7 +536,7 @@
   "item_entry__sold_out": "完売",
   "item_entry__not_set": "設定されていません",
   "item_entry__remark": "述べる",
-  "item_entry__location": "位置",
+  "item_entry__location": "商品の所在地",
   "item_entry__location_township": "タウンシップ",
   "item_entry__pin_shop_location": "ピンショップの場所",
   "item_entry__latitude": "緯度",

@@ -157,6 +157,7 @@ class ShippingApiController extends Controller
             $refresh
         );
 
-        return response()->json($quote);
+        $statusCode = (($quote['status'] ?? '') === 'error') ? 502 : 200;
+        return response()->json($quote, $statusCode);
     }
 }

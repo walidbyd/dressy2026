@@ -66,24 +66,39 @@ class Message extends PsObject<Message?> {
 
   @override
   Message? fromMap(dynamic dynamicData) {
-    if (dynamicData != null) {
+    if (dynamicData != null && dynamicData is Map) {
+      final dynamic rawAdded = dynamicData['addedDate'];
+      final int parsedTimestamp = rawAdded is int
+          ? rawAdded
+          : (rawAdded is num
+              ? rawAdded.toInt()
+              : int.tryParse(rawAdded?.toString() ?? '') ??
+                  DateTime.now().millisecondsSinceEpoch);
+      final dynamic rawOffer = dynamicData['offerStatus'];
+      final dynamic rawType = dynamicData['type'];
       return Message(
         //addedDate: dynamicData['added_date'],
-        addedDateTimeStamp: dynamicData['addedDate'],
-        id: dynamicData['id'],
-        isSold: dynamicData['isSold'],
-        isUserBought: dynamicData['isUserBought'],
-        isBlocked: dynamicData['is_blocked'],
-        itemId: dynamicData['itemId'],
-        message: dynamicData['message'],
-        offerStatus: dynamicData['offerStatus'],
-        sendByUserId: dynamicData['sendByUserId'],
-        sessionId: dynamicData['sessionId'],
-        type: dynamicData['type'],
-        messageType: dynamicData['messageType'] ?? dynamicData['message_type'],
+        addedDateTimeStamp: parsedTimestamp,
+        id: dynamicData['id']?.toString(),
+        isSold: dynamicData['isSold'] is bool ? dynamicData['isSold'] as bool : null,
+        isUserBought: dynamicData['isUserBought'] is bool
+            ? dynamicData['isUserBought'] as bool
+            : null,
+        isBlocked: dynamicData['is_blocked'] is bool
+            ? dynamicData['is_blocked'] as bool
+            : null,
+        itemId: dynamicData['itemId']?.toString(),
+        message: dynamicData['message']?.toString(),
+        offerStatus: rawOffer is int
+            ? rawOffer
+            : int.tryParse(rawOffer?.toString() ?? ''),
+        sendByUserId: dynamicData['sendByUserId']?.toString(),
+        sessionId: dynamicData['sessionId']?.toString(),
+        type: rawType is int ? rawType : int.tryParse(rawType?.toString() ?? ''),
+        messageType: (dynamicData['messageType'] ?? dynamicData['message_type'])?.toString(),
         orderId: dynamicData['orderId'] != null ? dynamicData['orderId'].toString() : (dynamicData['order_id'] != null ? dynamicData['order_id'].toString() : null),
         orderCode: dynamicData['orderCode'] != null ? dynamicData['orderCode'].toString() : (dynamicData['order_code'] != null ? dynamicData['order_code'].toString() : null),
-        actionStatus: dynamicData['actionStatus'] ?? dynamicData['action_status'],
+        actionStatus: (dynamicData['actionStatus'] ?? dynamicData['action_status'])?.toString(),
       );
     } else {
       return null;

@@ -170,8 +170,10 @@ class _CheckoutViewState extends State<CheckoutView>
 
   int _fromWilayaCode = 16;
   String _fromWilayaName = 'Alger';
-  double _stopDeskFeeDzd = 300.0;
-  double _homeFeeDzd = 400.0;
+  double _stopDeskFeeDzd = 0.0;
+  double _homeFeeDzd = 0.0;
+  bool _hasLiveQuote = false;
+  String? _quoteError;
   int _estimatedDays = 2;
 
   bool _isLoadingWilayas = false;
@@ -761,24 +763,35 @@ class _CheckoutViewState extends State<CheckoutView>
 
       if (response.statusCode == 200) {
         final dynamic decoded = json.decode(response.body);
-        if (decoded is Map<String, dynamic>) {
+        if (decoded is Map<String, dynamic> && decoded['status'] != 'error') {
           final Map<String, dynamic>? stopDeskMap =
               decoded['stop_desk'] as Map<String, dynamic>?;
           final Map<String, dynamic>? homeMap =
               decoded['home_delivery'] as Map<String, dynamic>?;
 
-          final double deskPrice = double.tryParse(
-                  (stopDeskMap?['price_dzd'] ?? decoded['desk_fee'] ?? '400')
-                      .toString()) ??
-              400.0;
-          final double homePrice = double.tryParse(
-                  (homeMap?['price_dzd'] ?? decoded['home_fee'] ?? '650')
-                      .toString()) ??
-              650.0;
+          final double? deskPrice = double.tryParse(
+              (stopDeskMap?['price_dzd'] ?? decoded['desk_fee'] ?? '')
+                  .toString());
+          final double? homePrice = double.tryParse(
+              (homeMap?['price_dzd'] ?? decoded['home_fee'] ?? '').toString());
+
+          if (deskPrice == null ||
+              deskPrice <= 0 ||
+              homePrice == null ||
+              homePrice <= 0) {
+            setState(() {
+              _hasLiveQuote = false;
+              _quoteError = decoded['message']?.toString() ??
+                  'Tarif Yalidine indisponible';
+            });
+            return;
+          }
+
           final int fromW = int.tryParse(
                   decoded['from_wilaya_code']?.toString() ?? '') ??
               16;
-          final String fromWName = (decoded['from_wilaya_name'] ?? 'Alger').toString();
+          final String fromWName =
+              (decoded['from_wilaya_name'] ?? 'Alger').toString();
           final int estDays = int.tryParse(
                   (stopDeskMap?['estimated_days'] ??
                           homeMap?['estimated_days'] ??
@@ -814,6 +827,8 @@ class _CheckoutViewState extends State<CheckoutView>
             _fromWilayaName = fromWName;
             _stopDeskFeeDzd = deskPrice;
             _homeFeeDzd = homePrice;
+            _hasLiveQuote = true;
+            _quoteError = null;
             _estimatedDays = estDays;
           });
 
@@ -824,28 +839,25 @@ class _CheckoutViewState extends State<CheckoutView>
           return;
         }
       }
+      if (mounted && reqSeq == _quoteRequestSeq) {
+        setState(() {
+          _hasLiveQuote = false;
+          _quoteError = 'Impossible de récupérer le tarif Yalidine en direct.';
+        });
+      }
     } catch (_) {
-      // Fall back to deterministic offline quote below
+      if (mounted && reqSeq == _quoteRequestSeq) {
+        setState(() {
+          _hasLiveQuote = false;
+          _quoteError = 'Erreur réseau lors du calcul du tarif Yalidine.';
+        });
+      }
     } finally {
       if (mounted && reqSeq == _quoteRequestSeq) {
         setState(() {
           _isLoadingQuote = false;
         });
       }
-    }
-
-    // Offline fallback quote for fees
-    if (mounted && reqSeq == _quoteRequestSeq) {
-      const List<int> southWilayas = <int>[
-        1, 8, 11, 30, 33, 37, 39, 47, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58
-      ];
-      final bool isSouth = southWilayas.contains(_selectedWilayaCode);
-      setState(() {
-        _stopDeskFeeDzd =
-            _selectedWilayaCode == 16 ? 300.0 : (isSouth ? 650.0 : 450.0);
-        _homeFeeDzd =
-            _selectedWilayaCode == 16 ? 400.0 : (isSouth ? 1000.0 : 650.0);
-      });
     }
   }
 
@@ -1742,6 +1754,32 @@ class _CheckoutViewState extends State<CheckoutView>
               padding: EdgeInsets.only(bottom: 10),
               child: LinearProgressIndicator(minHeight: 2),
             ),
+          if (!_isLoadingQuote && !_hasLiveQuote && _quoteError != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: <Widget>[
+                  const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _quoteError!,
+                      style: const TextStyle(fontSize: 12, color: Colors.red),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _fetchYalidineQuote,
+                    child: const Text('Réessayer'),
+                  ),
+                ],
+              ),
+            ),
 
           // Route display: Expédié depuis : [Item Wilaya] → [Buyer Wilaya]
           Container(
@@ -1848,7 +1886,9 @@ class _CheckoutViewState extends State<CheckoutView>
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '${_stopDeskFeeDzd.toStringAsFixed(0)} DA',
+                          _hasLiveQuote
+                              ? '${_stopDeskFeeDzd.toStringAsFixed(0)} DA'
+                              : '...',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
@@ -2369,7 +2409,9 @@ class _CheckoutViewState extends State<CheckoutView>
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '${_homeFeeDzd.toStringAsFixed(0)} DA',
+                      _hasLiveQuote
+                          ? '${_homeFeeDzd.toStringAsFixed(0)} DA'
+                          : '...',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
