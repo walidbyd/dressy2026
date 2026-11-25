@@ -135,6 +135,9 @@ class YalidineWebhookController extends Controller
                 // Map statuses according to Dressy business rules
                 if (self::isDeliveredStatus($cleanStatus)) {
                     $lockedOrder->order_status_id = Constants::orderDeliveredStatus;
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'delivered_at') && empty($lockedOrder->delivered_at)) {
+                        $lockedOrder->delivered_at = now();
+                    }
                     $lockedOrder->save();
 
                     // Idempotent wallet credit

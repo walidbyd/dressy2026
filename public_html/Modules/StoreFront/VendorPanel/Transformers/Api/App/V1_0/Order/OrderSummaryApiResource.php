@@ -134,6 +134,28 @@ class OrderSummaryApiResource extends JsonResource
         $orderSummaryObj->is_reviewed = (string) ($this->is_reviewed ?? '0');
         $orderSummaryObj->review_rating = (string) ($this->review_rating ?? '');
 
+        try {
+            $disputeService = app(\App\Services\DisputeService::class);
+            $eligibility = $disputeService->getEligibility($this->resource);
+            $orderSummaryObj->delivered_at = (string) ($eligibility['delivered_at'] ?? '');
+            $orderSummaryObj->dispute_eligible = !empty($eligibility['eligible']) ? '1' : '0';
+            $orderSummaryObj->dispute_days_remaining = (string) ($eligibility['days_remaining'] ?? 0);
+            $dispute = $eligibility['dispute'] ?? null;
+            $orderSummaryObj->dispute = $dispute ? [
+                'id' => (string) $dispute->id,
+                'dispute_type' => (string) $dispute->dispute_type,
+                'description' => (string) $dispute->description,
+                'status' => (string) $dispute->status,
+                'admin_note' => (string) ($dispute->admin_note ?? ''),
+                'created_at' => (string) ($dispute->created_at?->toIso8601String() ?? ''),
+            ] : null;
+        } catch (\Throwable $e) {
+            $orderSummaryObj->delivered_at = '';
+            $orderSummaryObj->dispute_eligible = '0';
+            $orderSummaryObj->dispute_days_remaining = '0';
+            $orderSummaryObj->dispute = null;
+        }
+
         return [
             'order_summary' => $orderSummaryObj,
         ];

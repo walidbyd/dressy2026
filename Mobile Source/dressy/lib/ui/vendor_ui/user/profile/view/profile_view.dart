@@ -107,16 +107,8 @@ class _ProfilePageState extends State<ProfileView>
             requestBodyHolder: userUnreadMessageHolder);
       }
       
-      if (widget.isJustLogined && psValueHolder!.isUserNameNeeded &&
-          !psValueHolder!.isAppleLoginUser) {
+      if (widget.isJustLogined) {
         widget.changeIsJustLoginToFalse();
-        showDialog<dynamic>(
-            context: context,
-            builder: (BuildContext contet) {
-              return SetUserNameAndPwdDialog(
-                userId: psValueHolder!.loginUserId!,
-              );
-            });
       }
     });
     super.initState();

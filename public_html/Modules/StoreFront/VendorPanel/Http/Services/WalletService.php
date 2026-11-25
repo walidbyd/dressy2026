@@ -160,6 +160,9 @@ class WalletService
             $lockedOrder->order_status_id = \Modules\Core\Constants\Constants::orderDeliveredStatus;
             $lockedOrder->is_wallet_credited = 1;
             $lockedOrder->wallet_credited_at = now();
+            if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'delivered_at') && empty($lockedOrder->delivered_at)) {
+                $lockedOrder->delivered_at = now();
+            }
             if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'payment_status')) {
                 $lockedOrder->payment_status = 'paid';
             }

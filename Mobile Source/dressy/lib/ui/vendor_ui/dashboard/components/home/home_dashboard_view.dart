@@ -80,22 +80,6 @@ class _HomeDashboardViewWidgetState extends State<HomeDashboardViewWidget> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (valueHolder!.isUserNameNeeded &&
-          valueHolder!.setUserNameAttemptCount! >= 5) {
-        showDialog<dynamic>(
-            context: context,
-            builder: (BuildContext contet) {
-              return SetUserNameAndPwdDialog(
-                userId: valueHolder!.loginUserId!,
-              );
-            });
-      }
-      {
-         if(valueHolder!.isUserNameNeeded == true){
-             userRepository.replaceSetUserNameAttemptCount(
-            valueHolder!.setUserNameAttemptCount! + 1);
-        }
-      }
       initPlugin();
     });
     if (Platform.isAndroid) {

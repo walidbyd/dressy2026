@@ -1,8 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:http/http.dart' as http;
 import 'package:nested/nested.dart';
 import 'package:provider/provider.dart';
+
+import '../../../../config/ps_config.dart';
 
 import '../../../../../../core/vendor/api/common/ps_resource.dart';
 import '../../../../../../core/vendor/api/common/ps_status.dart';
@@ -597,11 +602,43 @@ class _OrderDetailViewState extends State<OrderDetailView> {
                                 sellerUserId: sellerId,
                                 userName:
                                     orderSummaryDetail?.vendorName ?? 'Vendeur',
+                                orderId: orderSummaryDetail?.id ?? widget.orderId,
+                                orderCode: orderSummaryDetail?.orderCode,
                               ),
                             );
                           },
                         ),
                       )),
+                      if (orderSummaryDetail?.dispute != null)
+                        _buildDisputeStatusCard(orderSummaryDetail!.dispute!)
+                      else if (orderSummaryDetail?.disputeEligible == '1')
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: PsDimens.space16,
+                              vertical: PsDimens.space6),
+                          child: SizedBox(
+                            height: 48,
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showOpenDisputeSheet(
+                                  context, orderSummaryDetail!),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red.shade700,
+                                side: BorderSide(color: Colors.red.shade400),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              icon: const Icon(Icons.report_problem_outlined,
+                                  size: 20),
+                              label: Text(
+                                '${'dispute__open_btn'.tr} (${orderSummaryDetail?.disputeDaysRemaining ?? '7'}j)',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: PsDimens.space24),
                     ],
                   ),
@@ -611,6 +648,257 @@ class _OrderDetailViewState extends State<OrderDetailView> {
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildDisputeStatusCard(Map<String, dynamic> dispute) {
+    final String status = (dispute['status'] ?? 'open').toString();
+    final String type = (dispute['dispute_type'] ?? 'other').toString();
+    final String desc = (dispute['description'] ?? '').toString();
+    final String adminNote = (dispute['admin_note'] ?? '').toString();
+
+    final String statusLabel = switch (status) {
+      'under_review' => 'dispute__status_review'.tr,
+      'resolved_buyer' => 'dispute__status_resolved_buyer'.tr,
+      'resolved_vendor' => 'dispute__status_resolved_vendor'.tr,
+      'closed' => 'dispute__status_closed'.tr,
+      _ => 'dispute__status_open'.tr,
+    };
+
+    return Container(
+      margin: const EdgeInsets.symmetric(
+          horizontal: PsDimens.space16, vertical: PsDimens.space6),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Text(
+                'dispute__card_title'.tr,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade800,
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text('${'dispute__type_label'.tr}: ${'dispute__type_$type'.tr}',
+              style:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          if (desc.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(desc, style: const TextStyle(fontSize: 12)),
+          ],
+          if (adminNote.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 6),
+            Text('${'dispute__admin_note'.tr}: $adminNote',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: PsColors.primary600)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showOpenDisputeSheet(
+      BuildContext context, OrderSummaryDetail orderSummaryDetail) {
+    String selectedType = 'not_as_described';
+    final TextEditingController descController = TextEditingController();
+    bool isSubmitting = false;
+
+    const List<String> types = <String>[
+      'not_as_described',
+      'damaged_defective',
+      'wrong_item',
+      'missing_item',
+      'return_request',
+      'other',
+    ];
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext sheetCtx, StateSetter setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'dispute__modal_title'.tr,
+                      style: Theme.of(sheetCtx)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'dispute__modal_subtitle'.tr,
+                      style: Theme.of(sheetCtx).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedType,
+                      decoration: InputDecoration(
+                        labelText: 'dispute__type_label'.tr,
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: types
+                          .map((String t) => DropdownMenuItem<String>(
+                                value: t,
+                                child: Text('dispute__type_$t'.tr),
+                              ))
+                          .toList(),
+                      onChanged: (String? val) {
+                        if (val != null) {
+                          setSheetState(() => selectedType = val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: descController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        labelText: 'dispute__desc_label'.tr,
+                        hintText: 'dispute__desc_hint'.tr,
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: ElevatedButton(
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                final String text = descController.text.trim();
+                                if (text.length < 5) {
+                                  Fluttertoast.showToast(
+                                      msg: 'dispute__desc_required'.tr);
+                                  return;
+                                }
+                                setSheetState(() => isSubmitting = true);
+                                try {
+                                  final String loginUserId =
+                                      Utils.checkUserLoginId(valueHolder);
+                                  final Uri uri = Uri.parse(
+                                      '${PsConfig.ps_app_url}orders/${orderSummaryDetail.id ?? widget.orderId}/dispute');
+                                  final http.Response res = await http
+                                      .post(
+                                        uri,
+                                        headers: <String, String>{
+                                          'Content-Type': 'application/json',
+                                          'Accept': 'application/json',
+                                          'Authorization':
+                                              PsConfig.ps_bearer_token,
+                                          'header-token':
+                                              valueHolder?.headerToken ?? '',
+                                        },
+                                        body: json.encode(<String, dynamic>{
+                                          'dispute_type': selectedType,
+                                          'description': text,
+                                          'login_user_id': loginUserId,
+                                        }),
+                                      )
+                                      .timeout(const Duration(seconds: 15));
+                                  final dynamic decoded =
+                                      json.decode(res.body);
+                                  if (res.statusCode == 200 &&
+                                      decoded is Map<String, dynamic> &&
+                                      decoded['status'] == 'success') {
+                                    if (sheetCtx.mounted) {
+                                      Navigator.pop(sheetCtx);
+                                    }
+                                    Fluttertoast.showToast(
+                                        msg: decoded['message']?.toString() ??
+                                            'dispute__submitted'.tr);
+                                    orderDetailProvider?.loadData(
+                                      dataConfig: DataConfiguration(
+                                          dataSourceType:
+                                              DataSourceType.SERVER_DIRECT),
+                                      requestPathHolder: RequestPathHolder(
+                                        loginUserId: loginUserId,
+                                        languageCode: langProvider
+                                            .currentLocale.languageCode,
+                                        orderId: widget.orderId,
+                                      ),
+                                    );
+                                  } else {
+                                    setSheetState(() => isSubmitting = false);
+                                    Fluttertoast.showToast(
+                                      msg: (decoded is Map<String, dynamic>
+                                              ? decoded['message']?.toString()
+                                              : null) ??
+                                          'dispute__error'.tr,
+                                    );
+                                  }
+                                } catch (_) {
+                                  setSheetState(() => isSubmitting = false);
+                                  Fluttertoast.showToast(
+                                      msg: 'dispute__error'.tr);
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade700,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : Text('dispute__submit_btn'.tr),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

@@ -300,6 +300,7 @@ Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])-
     });
 
     Route::post('orders/{order_id}/seller-action', [OrderApiController::class, 'sellerAction']);
+    Route::post('orders/{order_id}/dispute', [\App\Http\Controllers\Api\V1_0\DisputeApiController::class, 'store']);
     Route::post('order/submit-review', [OrderApiController::class, 'submitReview']);
     Route::match(['get', 'post'], 'seller/transactions', [OrderApiController::class, 'getSellerSalesTransactions']);
 
@@ -316,6 +317,9 @@ Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])-
         Route::get('my', 'myDashboard');
         Route::post('validate', 'validateCode');
     });
+
+    // Chat RTDB fallback
+    Route::get('chat/messages', [\App\Http\Controllers\Api\V1_0\ChatMessagesApiController::class, 'index']);
 
     Route::prefix('vendor')->controller(VendorInfoApiController::class)->group(function () {
         Route::get('info', 'getVendorInfo');

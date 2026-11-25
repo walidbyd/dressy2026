@@ -345,12 +345,17 @@ class _WalletViewState extends State<WalletView> {
     final String source = (item.source ?? '').toLowerCase();
     final bool isReversal = source == 'sale_reversal';
     final bool isRefund = source == 'order_refund';
+    final bool isAffiliation = source == 'affiliation_reward';
 
     Color iconBgColor = isCredit ? PsColors.success50 : PsColors.error50;
     Color iconColor = isCredit ? PsColors.success500 : PsColors.error500;
     IconData txIcon = isCredit ? Icons.arrow_downward : Icons.arrow_upward;
 
-    if (isReversal) {
+    if (isAffiliation) {
+      iconBgColor = const Color(0xFFF3E8FF);
+      iconColor = const Color(0xFF7C3AED);
+      txIcon = Icons.card_giftcard;
+    } else if (isReversal) {
       iconBgColor = const Color(0xFFFEF2F2);
       iconColor = const Color(0xFFDC2626);
       txIcon = Icons.replay;
@@ -361,7 +366,13 @@ class _WalletViewState extends State<WalletView> {
     }
 
     String txTitle;
-    if (isReversal) {
+    if (isAffiliation) {
+      txTitle = (item.description != null && item.description!.trim().isNotEmpty)
+          ? item.description!.trim()
+          : ((item.orderCode != null && item.orderCode!.isNotEmpty)
+              ? '${'affiliation__wallet_tx_title'.tr} #${item.orderCode}'
+              : 'affiliation__wallet_tx_title'.tr);
+    } else if (isReversal) {
       txTitle = (item.orderCode != null && item.orderCode!.isNotEmpty)
           ? 'Annulation / Retour #${item.orderCode}'
           : (item.description ?? item.note ?? 'Débit annulation');
@@ -434,6 +445,16 @@ class _WalletViewState extends State<WalletView> {
                     'Brut: ${Utils.getPriceFormat(item.grossAmount!, '#,##0')} $currency • Commission: -${Utils.getPriceFormat(item.commissionAmount ?? '0', '#,##0')} $currency • Net débité: -${Utils.getPriceFormat(item.amount ?? '0', '#,##0')} $currency',
                     style: const TextStyle(
                       color: Color(0xFFDC2626),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 11,
+                    ),
+                  ),
+                ] else if (isAffiliation) ...<Widget>[
+                  const SizedBox(height: 3),
+                  Text(
+                    'affiliation__wallet_tx_badge'.tr,
+                    style: const TextStyle(
+                      color: Color(0xFF7C3AED),
                       fontWeight: FontWeight.w500,
                       fontSize: 11,
                     ),

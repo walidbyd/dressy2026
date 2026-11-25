@@ -194,13 +194,9 @@ class _CheckoutViewState extends State<CheckoutView>
   String? _couponMessage;
   bool _couponIsValid = false;
 
-  // Affiliation / Referral state
-  final TextEditingController _affiliationController = TextEditingController();
+  // Affiliation / Referral state (populated automatically when Promo Code matches a referral code)
   String? _appliedAffiliationCode;
   double _affiliationDiscountDzd = 0.0;
-  bool _isValidatingAffiliation = false;
-  String? _affiliationMessage;
-  bool _affiliationIsValid = false;
 
   Future<void> _applyCouponCode(double subtotal) async {
     final String code = _couponController.text.trim().toUpperCase();
@@ -217,17 +213,18 @@ class _CheckoutViewState extends State<CheckoutView>
     });
     try {
       final String userId = Utils.checkUserLoginId(psValueHolder);
-      final Uri uri =
-          Uri.parse('${PsConfig.ps_app_url}coupons/validate');
+      final Map<String, String> headers = <String, String>{
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': PsConfig.ps_bearer_token,
+        'header-token': psValueHolder?.headerToken ?? '',
+      };
+
+      // 1. Check Coupons first
       final http.Response res = await http
           .post(
-            uri,
-            headers: <String, String>{
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': PsConfig.ps_bearer_token,
-              'header-token': psValueHolder?.headerToken ?? '',
-            },
+            Uri.parse('${PsConfig.ps_app_url}coupons/validate'),
+            headers: headers,
             body: json.encode(<String, dynamic>{
               'code': code,
               'subtotal': subtotal,
@@ -251,20 +248,71 @@ class _CheckoutViewState extends State<CheckoutView>
           _couponIsValid = true;
           _appliedCouponCode = code;
           _couponDiscountDzd = discount;
-          _couponMessage = decoded['message']?.toString() ?? 'coupon__applied'.tr;
+          _appliedAffiliationCode = null;
+          _affiliationDiscountDzd = 0.0;
+          _couponMessage =
+              '${'promo__type_coupon'.tr}: ${decoded['message']?.toString() ?? 'coupon__applied'.tr}';
         });
-      } else {
+        return;
+      }
+
+      // 2. Fallback to Affiliation / Referral code validation
+      final http.Response affRes = await http
+          .post(
+            Uri.parse('${PsConfig.ps_app_url}affiliation/validate'),
+            headers: headers,
+            body: json.encode(<String, dynamic>{
+              'code': code,
+              'subtotal': subtotal,
+              'login_user_id': userId,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (!mounted) {
+        return;
+      }
+      final dynamic affDecoded = json.decode(affRes.body);
+      if (affRes.statusCode == 200 &&
+          affDecoded is Map<String, dynamic> &&
+          affDecoded['valid'] == true) {
+        final double discount = double.tryParse(
+                affDecoded['discount_amount']?.toString() ?? '0') ??
+            0.0;
         setState(() {
           _isValidatingCoupon = false;
-          _couponIsValid = false;
+          _couponIsValid = true;
           _appliedCouponCode = null;
           _couponDiscountDzd = 0.0;
-          _couponMessage = (decoded is Map<String, dynamic>
-                  ? decoded['message']?.toString()
-                  : null) ??
-              'coupon__invalid'.tr;
+          _appliedAffiliationCode = code;
+          _affiliationDiscountDzd = discount;
+          _couponMessage =
+              '${'promo__type_referral'.tr}: ${affDecoded['message']?.toString() ?? 'coupon__applied'.tr}';
         });
+        return;
       }
+
+      final String couponErr = (decoded is Map<String, dynamic>
+              ? decoded['message']?.toString()
+              : null) ??
+          '';
+      final String affErr = (affDecoded is Map<String, dynamic>
+              ? affDecoded['message']?.toString()
+              : null) ??
+          '';
+      final bool useAffErr =
+          affErr.isNotEmpty && !affErr.toLowerCase().contains('introuvable');
+      setState(() {
+        _isValidatingCoupon = false;
+        _couponIsValid = false;
+        _appliedCouponCode = null;
+        _couponDiscountDzd = 0.0;
+        _appliedAffiliationCode = null;
+        _affiliationDiscountDzd = 0.0;
+        _couponMessage = useAffErr
+            ? affErr
+            : (couponErr.isNotEmpty ? couponErr : 'coupon__invalid'.tr);
+      });
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -272,6 +320,8 @@ class _CheckoutViewState extends State<CheckoutView>
           _couponIsValid = false;
           _appliedCouponCode = null;
           _couponDiscountDzd = 0.0;
+          _appliedAffiliationCode = null;
+          _affiliationDiscountDzd = 0.0;
           _couponMessage = 'coupon__invalid'.tr;
         });
       }
@@ -285,95 +335,12 @@ class _CheckoutViewState extends State<CheckoutView>
       _couponDiscountDzd = 0.0;
       _couponIsValid = false;
       _couponMessage = null;
-    });
-  }
-
-  Future<void> _applyAffiliationCode(double subtotal) async {
-    final String code = _affiliationController.text.trim().toUpperCase();
-    if (code.isEmpty) {
-      setState(() {
-        _affiliationIsValid = false;
-        _affiliationMessage = 'affiliation__enter_code'.tr;
-      });
-      return;
-    }
-    setState(() {
-      _isValidatingAffiliation = true;
-      _affiliationMessage = null;
-    });
-    try {
-      final String userId = Utils.checkUserLoginId(psValueHolder);
-      final Uri uri =
-          Uri.parse('${PsConfig.ps_app_url}affiliation/validate');
-      final http.Response res = await http
-          .post(
-            uri,
-            headers: <String, String>{
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': PsConfig.ps_bearer_token,
-              'header-token': psValueHolder?.headerToken ?? '',
-            },
-            body: json.encode(<String, dynamic>{
-              'code': code,
-              'subtotal': subtotal,
-              'login_user_id': userId,
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
-
-      if (!mounted) {
-        return;
-      }
-      final dynamic decoded = json.decode(res.body);
-      if (res.statusCode == 200 &&
-          decoded is Map<String, dynamic> &&
-          decoded['valid'] == true) {
-        final double discount =
-            double.tryParse(decoded['discount_amount']?.toString() ?? '0') ??
-                0.0;
-        setState(() {
-          _isValidatingAffiliation = false;
-          _affiliationIsValid = true;
-          _appliedAffiliationCode = code;
-          _affiliationDiscountDzd = discount;
-          _affiliationMessage =
-              decoded['message']?.toString() ?? 'coupon__applied'.tr;
-        });
-      } else {
-        setState(() {
-          _isValidatingAffiliation = false;
-          _affiliationIsValid = false;
-          _appliedAffiliationCode = null;
-          _affiliationDiscountDzd = 0.0;
-          _affiliationMessage = (decoded is Map<String, dynamic>
-                  ? decoded['message']?.toString()
-                  : null) ??
-              'affiliation__invalid'.tr;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _isValidatingAffiliation = false;
-          _affiliationIsValid = false;
-          _appliedAffiliationCode = null;
-          _affiliationDiscountDzd = 0.0;
-          _affiliationMessage = 'affiliation__invalid'.tr;
-        });
-      }
-    }
-  }
-
-  void _removeAffiliation() {
-    setState(() {
-      _affiliationController.clear();
       _appliedAffiliationCode = null;
       _affiliationDiscountDzd = 0.0;
-      _affiliationIsValid = false;
-      _affiliationMessage = null;
     });
   }
+
+  // (Affiliation controller removed; unified into _couponController above)
 
   static const List<_WilayaOption> _fallbackWilayas = <_WilayaOption>[
     _WilayaOption(code: 1, nameFr: 'Adrar', nameAr: 'أدرار'),
@@ -3013,7 +2980,8 @@ class _CheckoutViewState extends State<CheckoutView>
                                       controller: _couponController,
                                       textCapitalization:
                                           TextCapitalization.characters,
-                                      enabled: _appliedCouponCode == null,
+                                      enabled: _appliedCouponCode == null &&
+                                          _appliedAffiliationCode == null,
                                       decoration: InputDecoration(
                                         hintText: 'coupon__enter_code'.tr,
                                         isDense: true,
@@ -3031,7 +2999,8 @@ class _CheckoutViewState extends State<CheckoutView>
                                   ElevatedButton(
                                     onPressed: _isValidatingCoupon
                                         ? null
-                                        : (_appliedCouponCode != null
+                                        : ((_appliedCouponCode != null ||
+                                                _appliedAffiliationCode != null)
                                             ? _removeCoupon
                                             : () {
                                                 final double sub = widget
@@ -3051,7 +3020,9 @@ class _CheckoutViewState extends State<CheckoutView>
                                               }),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor:
-                                          _appliedCouponCode != null
+                                          (_appliedCouponCode != null ||
+                                                  _appliedAffiliationCode !=
+                                                      null)
                                               ? Colors.grey.shade700
                                               : PsColors.primary500,
                                       foregroundColor: Colors.white,
@@ -3070,7 +3041,8 @@ class _CheckoutViewState extends State<CheckoutView>
                                               color: Colors.white,
                                             ),
                                           )
-                                        : Text(_appliedCouponCode != null
+                                        : Text((_appliedCouponCode != null ||
+                                                _appliedAffiliationCode != null)
                                             ? 'coupon__remove'.tr
                                             : 'coupon__apply'.tr),
                                   ),
@@ -3078,117 +3050,23 @@ class _CheckoutViewState extends State<CheckoutView>
                               ),
                               if (_couponMessage != null) ...<Widget>[
                                 const SizedBox(height: 6),
-                                Text(
-                                  _couponIsValid
-                                      ? '$_couponMessage (-${_couponDiscountDzd.toStringAsFixed(0)} DA)'
-                                      : _couponMessage!,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: _couponIsValid
-                                        ? Colors.green[700]
-                                        : Colors.red[700],
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 12),
-                              Text(
-                                'affiliation__code_label'.tr,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleSmall
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: <Widget>[
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _affiliationController,
-                                      textCapitalization:
-                                          TextCapitalization.characters,
-                                      enabled: _appliedAffiliationCode == null,
-                                      decoration: InputDecoration(
-                                        hintText: 'affiliation__enter_code'.tr,
-                                        isDense: true,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 12, vertical: 10),
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                      ),
+                                Builder(builder: (BuildContext ctx) {
+                                  final double activeDisc = _couponDiscountDzd > 0
+                                      ? _couponDiscountDzd
+                                      : _affiliationDiscountDzd;
+                                  return Text(
+                                    _couponIsValid
+                                        ? '$_couponMessage (-${activeDisc.toStringAsFixed(0)} DA)'
+                                        : _couponMessage!,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: _couponIsValid
+                                          ? Colors.green[700]
+                                          : Colors.red[700],
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton(
-                                    onPressed: _isValidatingAffiliation
-                                        ? null
-                                        : (_appliedAffiliationCode != null
-                                            ? _removeAffiliation
-                                            : () {
-                                                final double sub = widget
-                                                        .isSingleItemCheckout
-                                                    ? ((currentPrice ?? 0.0) *
-                                                        (availableShoppingCartList
-                                                                .isNotEmpty
-                                                            ? (double.tryParse(
-                                                                    availableShoppingCartList[0]
-                                                                        .quantity
-                                                                        .toString()) ??
-                                                                1.0)
-                                                            : 1.0))
-                                                    : (basketSubtotal -
-                                                        basketDiscount);
-                                                _applyAffiliationCode(
-                                                    (sub - _couponDiscountDzd) >
-                                                            0
-                                                        ? (sub -
-                                                            _couponDiscountDzd)
-                                                        : 0.0);
-                                              }),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          _appliedAffiliationCode != null
-                                              ? Colors.grey.shade700
-                                              : PsColors.primary500,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                    child: _isValidatingAffiliation
-                                        ? const SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Text(_appliedAffiliationCode != null
-                                            ? 'coupon__remove'.tr
-                                            : 'coupon__apply'.tr),
-                                  ),
-                                ],
-                              ),
-                              if (_affiliationMessage != null) ...<Widget>[
-                                const SizedBox(height: 6),
-                                Text(
-                                  _affiliationIsValid
-                                      ? '$_affiliationMessage (-${_affiliationDiscountDzd.toStringAsFixed(0)} DA)'
-                                      : _affiliationMessage!,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: _affiliationIsValid
-                                        ? Colors.green[700]
-                                        : Colors.red[700],
-                                  ),
-                                ),
+                                  );
+                                }),
                               ],
                             ],
                           ),

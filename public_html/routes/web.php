@@ -1111,6 +1111,11 @@ Route::middleware(['isInstall'])->group(function () {
             Route::post('/codes/{id}/toggle', 'toggleCode')->name('admin.affiliation.toggle');
         });
 
+        Route::prefix('disputes')->controller(\App\Http\Controllers\Backend\AdminDisputeController::class)->group(function () {
+            Route::get('/', 'index')->name('admin.disputes.index');
+            Route::post('/{id}/status', 'updateStatus')->name('admin.disputes.updateStatus');
+        });
+
         Route::prefix('wallets')->controller(\Modules\StoreFront\VendorPanel\Http\Controllers\Backend\Controllers\Finance\AdminWalletController::class)->group(function () {
             Route::get('/', 'index')->name('admin.wallets.index');
             Route::post('/adjust', 'adjust')->name('admin.wallets.adjust');

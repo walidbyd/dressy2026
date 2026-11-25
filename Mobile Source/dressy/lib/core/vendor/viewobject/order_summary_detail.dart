@@ -59,7 +59,11 @@ class OrderSummaryDetail extends PsObject<OrderSummaryDetail> {
       this.isReviewed,
       this.reviewRating,
       this.isDeliveredAndPaid,
-      this.deliveredAndPaidLabel});
+      this.deliveredAndPaidLabel,
+      this.deliveredAt,
+      this.disputeEligible,
+      this.disputeDaysRemaining,
+      this.dispute});
   String? id;
   String? orderStatusId;
   String? orderStatus;
@@ -82,6 +86,10 @@ class OrderSummaryDetail extends PsObject<OrderSummaryDetail> {
   String? reviewRating;
   String? isDeliveredAndPaid;
   String? deliveredAndPaidLabel;
+  String? deliveredAt;
+  String? disputeEligible;
+  String? disputeDaysRemaining;
+  Map<String, dynamic>? dispute;
   String? shippingFirstName;
   String? shippingLastName;
   String? shippingEmail;
@@ -196,6 +204,12 @@ class OrderSummaryDetail extends PsObject<OrderSummaryDetail> {
         reviewRating: dynamicData['review_rating']?.toString(),
         isDeliveredAndPaid: dynamicData['is_delivered_and_paid']?.toString(),
         deliveredAndPaidLabel: dynamicData['delivered_and_paid_label']?.toString(),
+        deliveredAt: dynamicData['delivered_at']?.toString(),
+        disputeEligible: dynamicData['dispute_eligible']?.toString(),
+        disputeDaysRemaining: dynamicData['dispute_days_remaining']?.toString(),
+        dispute: dynamicData['dispute'] is Map<String, dynamic>
+            ? dynamicData['dispute'] as Map<String, dynamic>
+            : null,
       );
     }
     return OrderSummaryDetail();
@@ -220,6 +234,10 @@ class OrderSummaryDetail extends PsObject<OrderSummaryDetail> {
       data['fulfillment_deadline_at'] = object.fulfillmentDeadlineAt;
       data['is_reviewed'] = object.isReviewed;
       data['review_rating'] = object.reviewRating;
+    data['delivered_at'] = object.deliveredAt;
+    data['dispute_eligible'] = object.disputeEligible;
+    data['dispute_days_remaining'] = object.disputeDaysRemaining;
+    data['dispute'] = object.dispute;
       data['shipping_first_name'] = object.shippingFirstName;
       data['shipping_last_name'] = object.shippingLastName;
       data['shipping_email'] = object.shippingEmail;
