@@ -239,12 +239,14 @@ class ChatBuyerListItem extends StatelessWidget {
     await Navigator.pushNamed(context, RoutePaths.chatView,
         arguments: ChatHistoryIntentHolder(
             chatFlag: PsConst.CHAT_FROM_BUYER,
-            itemId: chatHistory.item!.id,
+            itemId: chatHistory.item?.id ?? chatHistory.itemId,
             buyerUserId: chatHistory.buyerUserId,
             sellerUserId: chatHistory.sellerUserId,
-            userCoverPhoto: chatHistory.buyer!.userCoverPhoto,
-            userName: chatHistory.buyer!.name,
-            itemDetail: chatHistory.item));
+            userCoverPhoto: chatHistory.buyer?.userCoverPhoto,
+            userName: chatHistory.buyer?.name,
+            itemDetail: chatHistory.item,
+            orderId: chatHistory.orderId,
+            orderCode: chatHistory.orderCode));
     _provider.loadDataList(reset: true);
   }
 

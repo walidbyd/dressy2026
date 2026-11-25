@@ -136,6 +136,7 @@
                             <th class="px-5 py-3">Commande Min</th>
                             <th class="px-5 py-3">Utilisations</th>
                             <th class="px-5 py-3">Source</th>
+                            <th class="px-5 py-3">Cible</th>
                             <th class="px-5 py-3">Validité</th>
                             <th class="px-5 py-3 text-center">Statut</th>
                             <th class="px-5 py-3 text-right">Actions</th>
@@ -143,7 +144,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-secondary-700">
                         <tr v-if="!coupons.data || coupons.data.length === 0">
-                            <td colspan="8" class="px-5 py-8 text-center text-secondary-400">
+                            <td colspan="9" class="px-5 py-8 text-center text-secondary-400">
                                 Aucun coupon trouvé. Cliquez sur "Créer un Coupon" pour en ajouter un.
                             </td>
                         </tr>
@@ -199,6 +200,13 @@
                                 </span>
                                 <span v-else class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                                     Admin
+                                </span>
+                            </td>
+
+                            <!-- Target -->
+                            <td class="px-5 py-3 text-xs">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-gray-100 dark:bg-secondary-700 text-secondary-700 dark:text-secondary-200">
+                                    {{ targetLabel(coupon) }}
                                 </span>
                             </td>
 
@@ -373,6 +381,62 @@
                         </div>
                     </div>
 
+                    <!-- Target Visibility -->
+                    <div class="p-3 rounded-lg border border-gray-200 dark:border-secondary-700 bg-gray-50/70 dark:bg-secondary-900/50 space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold text-secondary-700 dark:text-secondary-200 uppercase mb-1">
+                                Visibilité & Ciblage (Tableau de bord App)
+                            </label>
+                            <select v-model="form.target_type"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-900 text-secondary-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                <option value="none">Code uniquement (masqué du tableau de bord)</option>
+                                <option value="user">Utilisateur spécifique</option>
+                                <option value="group">Groupe d'utilisateurs</option>
+                            </select>
+                        </div>
+
+                        <div v-if="form.target_type === 'user'">
+                            <label class="block text-xs font-bold text-secondary-700 dark:text-secondary-200 uppercase mb-1">
+                                Sélectionner l'utilisateur
+                            </label>
+                            <select v-model.number="form.user_id" required
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-900 text-secondary-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                <option :value="null" disabled>-- Choisir un utilisateur --</option>
+                                <option v-for="u in users" :key="u.id" :value="u.id">
+                                    #{{ u.id }} - {{ u.name }} ({{ u.email }})
+                                </option>
+                            </select>
+                        </div>
+
+                        <div v-if="form.target_type === 'group'" class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold text-secondary-700 dark:text-secondary-200 uppercase mb-1">
+                                    Groupe cible
+                                </label>
+                                <select v-model="form.target_group"
+                                    class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-900 text-secondary-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    <option value="all">Tous les utilisateurs connectés</option>
+                                    <option value="buyers">Acheteurs uniquement</option>
+                                    <option value="vendors">Vendeurs uniquement</option>
+                                    <option value="selected">Utilisateurs sélectionnés</option>
+                                </select>
+                            </div>
+
+                            <div v-if="form.target_group === 'selected'">
+                                <label class="block text-xs font-bold text-secondary-700 dark:text-secondary-200 uppercase mb-1">
+                                    Utilisateurs sélectionnés ({{ form.target_user_ids.length }})
+                                </label>
+                                <div class="max-h-36 overflow-y-auto rounded-lg border border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-900 p-2 space-y-1">
+                                    <label v-for="u in users" :key="u.id" class="flex items-center gap-2 text-xs text-secondary-700 dark:text-secondary-200 cursor-pointer py-0.5">
+                                        <input type="checkbox" :value="u.id" v-model="form.target_user_ids"
+                                            class="w-3.5 h-3.5 text-primary-600 rounded border-gray-300" />
+                                        <span>#{{ u.id }} {{ u.name }} ({{ u.email }})</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Expiration Date -->
                     <div>
                         <label class="block text-xs font-bold text-secondary-700 dark:text-secondary-200 uppercase mb-1">
@@ -432,6 +496,7 @@ export default defineComponent({
     layout: PsLayout,
     props: {
         coupons: Object,
+        users: Array,
         filters: Object,
         stats: Object,
     },
@@ -449,6 +514,10 @@ export default defineComponent({
             min_order_amount: null,
             max_uses: null,
             max_uses_per_user: 1,
+            target_type: 'none',
+            user_id: null,
+            target_group: 'all',
+            target_user_ids: [],
             expires_at: '',
             is_active: true,
         });
@@ -461,6 +530,10 @@ export default defineComponent({
                 min_order_amount: null,
                 max_uses: null,
                 max_uses_per_user: 1,
+                target_type: 'none',
+                user_id: null,
+                target_group: 'all',
+                target_user_ids: [],
                 expires_at: '',
                 is_active: true,
             };
@@ -489,6 +562,10 @@ export default defineComponent({
                 min_order_amount: coupon.min_order_amount,
                 max_uses: coupon.max_uses,
                 max_uses_per_user: coupon.max_uses_per_user || 1,
+                target_type: coupon.target_type || (coupon.user_id ? 'user' : 'none'),
+                user_id: coupon.user_id || null,
+                target_group: coupon.target_group || 'all',
+                target_user_ids: Array.isArray(coupon.target_user_ids) ? coupon.target_user_ids : [],
                 expires_at: formattedExpiry,
                 is_active: Boolean(coupon.is_active),
             };
@@ -600,6 +677,24 @@ export default defineComponent({
             return new Date(dateStr).getTime() < Date.now();
         };
 
+        const targetLabel = (coupon) => {
+            const type = coupon.target_type || (coupon.user_id ? 'user' : 'none');
+            if (type === 'user') {
+                return 'Utilisateur #' + (coupon.user_id || '?');
+            }
+            if (type === 'group') {
+                const g = coupon.target_group || 'all';
+                if (g === 'all') return 'Groupe: Tous';
+                if (g === 'buyers') return 'Groupe: Acheteurs';
+                if (g === 'vendors') return 'Groupe: Vendeurs';
+                if (g === 'selected') {
+                    const count = Array.isArray(coupon.target_user_ids) ? coupon.target_user_ids.length : 0;
+                    return `Sélection (${count})`;
+                }
+            }
+            return 'Code seul';
+        };
+
         return {
             searchQuery,
             showModal,
@@ -620,6 +715,7 @@ export default defineComponent({
             formatNumber,
             formatDate,
             isExpired,
+            targetLabel,
         };
     }
 });

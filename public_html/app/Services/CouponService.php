@@ -39,8 +39,9 @@ class CouponService
             return ['valid' => false, 'message' => 'Ce code promo a expiré.', 'discount_amount' => 0.0];
         }
 
-        if ($coupon->user_id !== null && (int) $coupon->user_id !== (int) $userId) {
-            return ['valid' => false, 'message' => 'Ce code promo est réservé à un autre utilisateur.', 'discount_amount' => 0.0];
+        $targetType = $coupon->target_type ?: ($coupon->user_id !== null ? 'user' : 'none');
+        if ($targetType !== 'none' && !$this->isUserEligibleForCoupon($coupon, $userId)) {
+            return ['valid' => false, 'message' => 'Ce code promo n\'est pas disponible pour votre compte.', 'discount_amount' => 0.0];
         }
 
         if ($coupon->max_uses !== null && (int) $coupon->used_count >= (int) $coupon->max_uses) {
@@ -94,8 +95,48 @@ class CouponService
         Coupon::where('id', $couponId)->increment('used_count');
     }
 
+    public function isUserEligibleForCoupon(Coupon $coupon, ?int $userId): bool
+    {
+        $targetType = $coupon->target_type ?: ($coupon->user_id !== null ? 'user' : 'none');
+
+        if ($targetType === 'none') {
+            return false;
+        }
+
+        if ($userId === null || $userId <= 0) {
+            return false;
+        }
+
+        if ($targetType === 'user') {
+            return (int) $coupon->user_id === $userId;
+        }
+
+        if ($targetType === 'group') {
+            $group = $coupon->target_group ?? 'all';
+            if ($group === 'all') {
+                return true;
+            }
+            if ($group === 'vendors') {
+                return DB::table('psx_vendors')->where('owner_user_id', $userId)->exists();
+            }
+            if ($group === 'buyers') {
+                return !DB::table('psx_vendors')->where('owner_user_id', $userId)->exists();
+            }
+            if ($group === 'selected') {
+                $ids = array_map('intval', (array) ($coupon->target_user_ids ?? []));
+                return in_array($userId, $ids, true);
+            }
+        }
+
+        return false;
+    }
+
     public function getUserAvailableCoupons(?int $userId): array
     {
+        if (!$userId) {
+            return [];
+        }
+
         $now = Carbon::now();
 
         $coupons = Coupon::where('is_active', true)
@@ -103,10 +144,14 @@ class CouponService
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', $now);
             })
             ->where(function ($q) use ($userId) {
-                $q->whereNull('user_id');
-                if ($userId) {
-                    $q->orWhere('user_id', $userId);
-                }
+                $q->where(function ($sub) use ($userId) {
+                    $sub->where('target_type', 'user')->where('user_id', $userId);
+                })
+                ->orWhere('target_type', 'group')
+                ->orWhere(function ($sub) use ($userId) {
+                    // Backward compatibility for existing roulette coupons created before target_type existed
+                    $sub->whereNull('target_type')->where('user_id', $userId);
+                });
             })
             ->where(function ($q) {
                 $q->whereNull('max_uses')->orWhereColumn('used_count', '<', 'max_uses');
@@ -116,7 +161,10 @@ class CouponService
 
         $result = [];
         foreach ($coupons as $coupon) {
-            if ($userId && $coupon->max_uses_per_user !== null) {
+            if (!$this->isUserEligibleForCoupon($coupon, $userId)) {
+                continue;
+            }
+            if ($coupon->max_uses_per_user !== null) {
                 $usedByUser = CouponUsage::where('coupon_id', $coupon->id)
                     ->where('user_id', $userId)
                     ->count();
@@ -188,6 +236,7 @@ class CouponService
                 'used_count' => 0,
                 'max_uses_per_user' => 1,
                 'user_id' => $userId,
+                'target_type' => 'user',
                 'source' => 'roulette',
                 'is_active' => true,
                 'expires_at' => $expiresAt,
@@ -219,6 +268,8 @@ class CouponService
             'max_uses' => $coupon->max_uses,
             'used_count' => (int) $coupon->used_count,
             'max_uses_per_user' => $coupon->max_uses_per_user,
+            'target_type' => $coupon->target_type ?? ($coupon->user_id ? 'user' : 'none'),
+            'target_group' => $coupon->target_group,
             'source' => $coupon->source ?? 'admin',
             'is_active' => (bool) $coupon->is_active,
             'expires_at' => $coupon->expires_at ? Carbon::parse($coupon->expires_at)->toIso8601String() : null,

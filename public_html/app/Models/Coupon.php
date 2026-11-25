@@ -17,6 +17,9 @@ class Coupon extends Model
         'used_count',
         'max_uses_per_user',
         'user_id',
+        'target_type',
+        'target_group',
+        'target_user_ids',
         'source',
         'is_active',
         'expires_at',
@@ -29,6 +32,7 @@ class Coupon extends Model
         'used_count' => 'integer',
         'max_uses_per_user' => 'integer',
         'user_id' => 'integer',
+        'target_user_ids' => 'array',
         'is_active' => 'boolean',
         'expires_at' => 'datetime',
     ];

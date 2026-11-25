@@ -28,6 +28,7 @@ class _SpinRouletteDialogState extends State<SpinRouletteDialog>
   late AnimationController _controller;
   Animation<double>? _spinAnimation;
   double _currentAngle = 0.0;
+  int _lastTickSegment = -1;
   bool _isSpinning = false;
   int? _rewardPercent;
   String? _couponCode;
@@ -41,7 +42,7 @@ class _SpinRouletteDialogState extends State<SpinRouletteDialog>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3000),
+      duration: const Duration(milliseconds: 4200),
     );
   }
 
@@ -94,24 +95,32 @@ class _SpinRouletteDialogState extends State<SpinRouletteDialog>
         const double segAngle = (2 * math.pi) / 6;
         // Pointer is at top (-pi/2); align center of targetIdx under top pointer
         final double targetCenterAngle = -(targetIdx * segAngle) - (segAngle / 2);
-        const double fullTurns = 6 * 2 * math.pi;
+        const double fullTurns = 8 * 2 * math.pi;
         final double endAngle = fullTurns + targetCenterAngle;
+        _lastTickSegment = (_currentAngle / segAngle).floor();
 
         _spinAnimation = Tween<double>(
           begin: _currentAngle,
           end: endAngle,
         ).animate(
-          CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+          CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart),
         )..addListener(() {
             if (mounted) {
+              final double val = _spinAnimation!.value;
+              final int segNow = (val / segAngle).floor();
+              if (segNow != _lastTickSegment) {
+                _lastTickSegment = segNow;
+                HapticFeedback.selectionClick();
+              }
               setState(() {
-                _currentAngle = _spinAnimation!.value;
+                _currentAngle = val;
               });
             }
           });
 
         _controller.reset();
         await _controller.forward();
+        HapticFeedback.heavyImpact();
 
         if (mounted) {
           setState(() {
@@ -201,10 +210,26 @@ class _SpinRouletteDialogState extends State<SpinRouletteDialog>
               alignment: Alignment.topCenter,
               children: <Widget>[
                 Padding(
-                  padding: const EdgeInsets.only(top: 14),
-                  child: SizedBox(
-                    width: 230,
-                    height: 230,
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Container(
+                    width: 244,
+                    height: 244,
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: <Color>[Color(0xFFFFE082), Color(0xFFFFB703), Color(0xFFD97706)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: <BoxShadow>[
+                        BoxShadow(
+                          color: const Color(0xFFFFB703).withValues(alpha: 0.35),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
                     child: Transform.rotate(
                       angle: _currentAngle,
                       child: CustomPaint(
@@ -213,10 +238,31 @@ class _SpinRouletteDialogState extends State<SpinRouletteDialog>
                     ),
                   ),
                 ),
-                const Icon(
-                  Icons.arrow_drop_down,
-                  size: 42,
-                  color: Color(0xFFFFD166),
+                // Top Pointer
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFD166),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2.5),
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 16,
+                        color: Color(0xFF1F1635),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -338,7 +384,7 @@ class _RouletteWheelPainter extends CustomPainter {
     for (int i = 0; i < segments.length; i++) {
       final double startAngle = -math.pi / 2 + i * sweep;
       final Paint slicePaint = Paint()
-        ..color = i.isEven ? const Color(0xFFED7768) : const Color(0xFFFFB703)
+        ..color = i.isEven ? const Color(0xFFE63946) : const Color(0xFFFFB703)
         ..style = PaintingStyle.fill;
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
@@ -349,9 +395,9 @@ class _RouletteWheelPainter extends CustomPainter {
       );
 
       final Paint borderPaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.85)
+        ..color = Colors.white.withValues(alpha: 0.9)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
+        ..strokeWidth = 2.2;
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
         startAngle,
@@ -367,11 +413,19 @@ class _RouletteWheelPainter extends CustomPainter {
       );
       final TextPainter tp = TextPainter(
         text: TextSpan(
-          text: '${segments[i]}%',
+          text: '-${segments[i]}%',
           style: TextStyle(
             color: i.isEven ? Colors.white : const Color(0xFF1F1635),
             fontSize: 20,
             fontWeight: FontWeight.w900,
+            shadows: i.isEven
+                ? <Shadow>[
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 3,
+                    ),
+                  ]
+                : null,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -379,14 +433,33 @@ class _RouletteWheelPainter extends CustomPainter {
       tp.paint(canvas, textPos - Offset(tp.width / 2, tp.height / 2));
     }
 
+    // Outer rim indicator dots
+    for (int j = 0; j < 12; j++) {
+      final double dotAngle = (2 * math.pi / 12) * j;
+      final Offset dotPos = Offset(
+        center.dx + (radius - 6) * math.cos(dotAngle),
+        center.dy + (radius - 6) * math.sin(dotAngle),
+      );
+      canvas.drawCircle(
+        dotPos,
+        2.5,
+        Paint()..color = Colors.white.withValues(alpha: 0.92),
+      );
+    }
+
     canvas.drawCircle(
       center,
-      20,
+      22,
       Paint()..color = Colors.white,
     );
     canvas.drawCircle(
       center,
-      14,
+      16,
+      Paint()..color = const Color(0xFFFFB703),
+    );
+    canvas.drawCircle(
+      center,
+      8,
       Paint()..color = const Color(0xFF1F1635),
     );
   }

@@ -233,12 +233,14 @@ class ChatSellerListItem extends StatelessWidget {
       RoutePaths.chatView,
       arguments: ChatHistoryIntentHolder(
           chatFlag: PsConst.CHAT_FROM_SELLER,
-          itemId: chatHistory.item!.id,
+          itemId: chatHistory.item?.id ?? chatHistory.itemId,
           buyerUserId: chatHistory.buyerUserId,
           sellerUserId: chatHistory.sellerUserId,
-          userCoverPhoto: chatHistory.seller!.userCoverPhoto,
-          userName: chatHistory.seller!.name,
-          itemDetail: chatHistory.item),
+          userCoverPhoto: chatHistory.seller?.userCoverPhoto,
+          userName: chatHistory.seller?.name,
+          itemDetail: chatHistory.item,
+          orderId: chatHistory.orderId,
+          orderCode: chatHistory.orderCode),
     );
     _provider.loadDataList(reset: true);
   }

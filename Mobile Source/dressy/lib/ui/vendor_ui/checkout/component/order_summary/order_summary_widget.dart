@@ -15,7 +15,10 @@ class OrderSummaryWidget extends StatelessWidget {
       required this.discount,
       required this.deliveryCharges,
       required this.currency,
-      this.walletAmountUsed})
+      this.walletAmountUsed,
+      this.couponDiscount,
+      this.couponCode,
+      this.totalPayable})
       : super(key: key);
 
   final String subTotal;
@@ -23,8 +26,13 @@ class OrderSummaryWidget extends StatelessWidget {
   final String deliveryCharges;
   final String currency;
   final String? walletAmountUsed;
+  final String? couponDiscount;
+  final String? couponCode;
+  final String? totalPayable;
   @override
   Widget build(BuildContext context) {
+    final double parsedCouponDiscount =
+        double.tryParse(couponDiscount ?? '') ?? 0.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -45,6 +53,15 @@ class OrderSummaryWidget extends StatelessWidget {
           currency: currency,
           isDiscount: true,
         ),
+        if (parsedCouponDiscount > 0)
+          OrderSummaryDataWidget(
+            title: (couponCode != null && couponCode!.isNotEmpty)
+                ? '${'coupon__discount_label'.tr} ($couponCode)'
+                : 'coupon__discount_label'.tr,
+            value: couponDiscount!,
+            currency: currency,
+            isDiscount: true,
+          ),
         OrderSummaryDataWidget(
             title: 'delivery_charges'.tr,
             value: deliveryCharges,
@@ -56,6 +73,15 @@ class OrderSummaryWidget extends StatelessWidget {
             value: walletAmountUsed!,
             currency: currency,
             isDiscount: true,
+          ),
+        if (totalPayable != null && totalPayable!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: PsDimens.space8),
+            child: OrderSummaryDataWidget(
+              title: 'checkout__total_payable'.tr,
+              value: totalPayable!,
+              currency: currency,
+            ),
           ),
         Container(
           width: double.maxFinite,

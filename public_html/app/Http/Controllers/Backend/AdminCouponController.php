@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\PsController;
 use App\Models\Coupon;
 use App\Models\CouponUsage;
+use App\Models\User;
 use App\Services\CouponService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -46,8 +47,14 @@ class AdminCouponController extends PsController
             'roulette' => Coupon::where('source', 'roulette')->count(),
         ];
 
+        $users = User::select('id', 'name', 'email')
+            ->orderBy('name')
+            ->limit(500)
+            ->get();
+
         return renderView('admin/coupons/Index', [
             'coupons' => $coupons,
+            'users' => $users,
             'filters' => [
                 'search' => $request->input('search', ''),
                 'source' => $request->input('source', 'all'),
@@ -77,9 +84,21 @@ class AdminCouponController extends PsController
             'min_order_amount' => 'nullable|numeric|min:0',
             'max_uses' => 'nullable|integer|min:1',
             'max_uses_per_user' => 'nullable|integer|min:1',
+            'target_type' => 'nullable|in:none,user,group',
+            'user_id' => 'nullable|integer|exists:users,id',
+            'target_group' => 'nullable|in:all,buyers,vendors,selected',
+            'target_user_ids' => 'nullable|array',
+            'target_user_ids.*' => 'integer|exists:users,id',
             'expires_at' => 'nullable|date',
             'is_active' => 'nullable|boolean',
         ]);
+
+        $targetType = $validated['target_type'] ?? 'none';
+        $targetUserId = $targetType === 'user' ? ($validated['user_id'] ?? null) : null;
+        $targetGroup = $targetType === 'group' ? ($validated['target_group'] ?? 'all') : null;
+        $targetUserIds = ($targetType === 'group' && $targetGroup === 'selected')
+            ? array_values(array_unique(array_map('intval', $validated['target_user_ids'] ?? [])))
+            : null;
 
         Coupon::create([
             'code' => strtoupper(trim($validated['code'])),
@@ -88,6 +107,10 @@ class AdminCouponController extends PsController
             'min_order_amount' => $validated['min_order_amount'] !== null && $validated['min_order_amount'] !== '' ? (float) $validated['min_order_amount'] : null,
             'max_uses' => $validated['max_uses'] ?: null,
             'max_uses_per_user' => $validated['max_uses_per_user'] ?: 1,
+            'user_id' => $targetUserId,
+            'target_type' => $targetType,
+            'target_group' => $targetGroup,
+            'target_user_ids' => $targetUserIds,
             'source' => 'admin',
             'is_active' => $request->boolean('is_active', true),
             'expires_at' => !empty($validated['expires_at']) ? Carbon::parse($validated['expires_at']) : null,
@@ -110,9 +133,21 @@ class AdminCouponController extends PsController
             'min_order_amount' => 'nullable|numeric|min:0',
             'max_uses' => 'nullable|integer|min:1',
             'max_uses_per_user' => 'nullable|integer|min:1',
+            'target_type' => 'nullable|in:none,user,group',
+            'user_id' => 'nullable|integer|exists:users,id',
+            'target_group' => 'nullable|in:all,buyers,vendors,selected',
+            'target_user_ids' => 'nullable|array',
+            'target_user_ids.*' => 'integer|exists:users,id',
             'expires_at' => 'nullable|date',
             'is_active' => 'nullable|boolean',
         ]);
+
+        $targetType = $validated['target_type'] ?? ($coupon->target_type ?? 'none');
+        $targetUserId = $targetType === 'user' ? ($validated['user_id'] ?? null) : null;
+        $targetGroup = $targetType === 'group' ? ($validated['target_group'] ?? 'all') : null;
+        $targetUserIds = ($targetType === 'group' && $targetGroup === 'selected')
+            ? array_values(array_unique(array_map('intval', $validated['target_user_ids'] ?? [])))
+            : null;
 
         $coupon->update([
             'code' => strtoupper(trim($validated['code'])),
@@ -121,6 +156,10 @@ class AdminCouponController extends PsController
             'min_order_amount' => $validated['min_order_amount'] !== null && $validated['min_order_amount'] !== '' ? (float) $validated['min_order_amount'] : null,
             'max_uses' => $validated['max_uses'] ?: null,
             'max_uses_per_user' => $validated['max_uses_per_user'] ?: 1,
+            'user_id' => $targetUserId,
+            'target_type' => $targetType,
+            'target_group' => $targetGroup,
+            'target_user_ids' => $targetUserIds,
             'is_active' => $request->boolean('is_active', false),
             'expires_at' => !empty($validated['expires_at']) ? Carbon::parse($validated['expires_at']) : null,
         ]);

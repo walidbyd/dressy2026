@@ -3192,6 +3192,11 @@ class _CheckoutViewState extends State<CheckoutView>
                           walletAmountUsed: walletAmountUsed > 0
                               ? walletAmountUsed.toStringAsFixed(0)
                               : null,
+                          couponDiscount: _couponDiscountDzd > 0
+                              ? _couponDiscountDzd.toStringAsFixed(0)
+                              : null,
+                          couponCode: _appliedCouponCode,
+                          totalPayable: remainingToPay.toStringAsFixed(0),
                         ),
 
                         const SizedBox(height: 92)

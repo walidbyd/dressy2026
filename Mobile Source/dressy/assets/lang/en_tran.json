@@ -1194,5 +1194,7 @@
   "roulette__spinning": "Spinning...",
   "roulette__won_prefix": "Congratulations! You won",
   "roulette__valid_24h": "Valid for 24 hours • Single use on your account",
-  "roulette__unavailable": "Spin unavailable right now. Try again later."
+  "roulette__unavailable": "Spin unavailable right now. Try again later.",
+  "coupon__discount_label": "Promo Code Discount",
+  "checkout__total_payable": "Total Payable"
 }

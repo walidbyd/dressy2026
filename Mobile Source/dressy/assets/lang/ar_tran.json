@@ -1194,5 +1194,7 @@
   "roulette__spinning": "جاري الدوران...",
   "roulette__won_prefix": "مبروك! لقد ربحت خصم",
   "roulette__valid_24h": "صالح لمدة 24 ساعة • استخدام واحد لحسابك",
-  "roulette__unavailable": "العجلة غير متاحة حالياً."
+  "roulette__unavailable": "العجلة غير متاحة حالياً.",
+  "coupon__discount_label": "خصم كود الترويج",
+  "checkout__total_payable": "المبلغ الإجمالي للدفع"
 }

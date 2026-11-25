@@ -83,8 +83,8 @@ class _ChatViewState extends State<ChatView>
   late DatabaseReference _messagesRef;
   late DatabaseReference _chatRef;
   late DatabaseReference _userPresence;
-  // StreamSubscription<Event> _counterSubscription;
-  // StreamSubscription<Event> _messagesSubscription;
+  StreamSubscription<DatabaseEvent>? _chatStatusSubscription;
+  String? _subscribedOtherUserId;
 
   FirebaseApp? firebaseApp;
   late PsValueHolder psValueHolder;
@@ -223,6 +223,7 @@ class _ChatViewState extends State<ChatView>
 
   @override
   void dispose() {
+    _chatStatusSubscription?.cancel();
     super.dispose();
 
     if (mounted) {
@@ -315,40 +316,48 @@ class _ChatViewState extends State<ChatView>
       _insertSenderAndReceiverToFireBase(sessionId, widget.itemId, otherUserId,
           psValueHolder.loginUserId!, psValueHolder.loginUserName);
     }
-    if (otherUserId != null && otherUserId!.isNotEmpty) {
-      _chatRef.child(otherUserId!).onValue.listen((DatabaseEvent event) {
-      if (event.snapshot.value == null) {
-        if (isActive == null || isActive != ChatUserStatus.offline && mounted) {
-          setState(() {
-            status = 'chat_view__status_offline'.tr;
-            isActive = ChatUserStatus.offline;
-          });
+    if (otherUserId != null &&
+        otherUserId!.isNotEmpty &&
+        _subscribedOtherUserId != otherUserId) {
+      _subscribedOtherUserId = otherUserId;
+      _chatStatusSubscription?.cancel();
+      _chatStatusSubscription =
+          _chatRef.child(otherUserId!).onValue.listen((DatabaseEvent event) {
+        if (!mounted) {
+          return;
         }
-      } else {
-        final Chat? chat =
-            Chat().fromMap(event.snapshot.value as Map<Object?, Object?>);
-
-        itemId = chat?.itemId;
-
-        final String? _receiverId = chat?.receiverId;
-
-        if (_receiverId == psValueHolder.loginUserId &&
-            itemId == widget.itemId) {
-          if (isActive != ChatUserStatus.active && mounted) {
+        if (event.snapshot.value == null) {
+          if (isActive == null || isActive != ChatUserStatus.offline) {
             setState(() {
-              status = 'chat_view__status_active'.tr;
-              isActive = ChatUserStatus.active;
+              status = 'chat_view__status_offline'.tr;
+              isActive = ChatUserStatus.offline;
             });
           }
-        } else {
-          if (isActive != ChatUserStatus.in_active) {
-            setState(() {
-              status = 'chat_view__status_inactive'.tr;
-              isActive = ChatUserStatus.in_active;
-            });
+        } else if (event.snapshot.value is Map) {
+          final Chat? chat =
+              Chat().fromMap(event.snapshot.value as Map<Object?, Object?>);
+
+          itemId = chat?.itemId;
+
+          final String? _receiverId = chat?.receiverId;
+
+          if (_receiverId == psValueHolder.loginUserId &&
+              itemId == widget.itemId) {
+            if (isActive != ChatUserStatus.active) {
+              setState(() {
+                status = 'chat_view__status_active'.tr;
+                isActive = ChatUserStatus.active;
+              });
+            }
+          } else {
+            if (isActive != ChatUserStatus.in_active) {
+              setState(() {
+                status = 'chat_view__status_inactive'.tr;
+                isActive = ChatUserStatus.in_active;
+              });
+            }
           }
         }
-      }
       });
     }
 

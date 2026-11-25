@@ -1194,5 +1194,7 @@
   "roulette__spinning": "Rotation en cours...",
   "roulette__won_prefix": "Félicitations ! Vous avez gagné",
   "roulette__valid_24h": "Valide 24 heures • Usage unique sur votre compte",
-  "roulette__unavailable": "Roulette indisponible pour le moment."
+  "roulette__unavailable": "Roulette indisponible pour le moment.",
+  "coupon__discount_label": "Réduction Code Promo",
+  "checkout__total_payable": "Total à payer"
 }
