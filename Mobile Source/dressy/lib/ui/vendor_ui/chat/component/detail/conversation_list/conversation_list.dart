@@ -48,7 +48,7 @@ class ConversationList extends StatelessWidget {
     int _totalCount = 0;
 
     if (sessionId == null || sessionId!.isEmpty) {
-      return const Flexible(child: SizedBox());
+      return const Expanded(child: SizedBox());
     }
 
     final bool isOrderScopedSession = sessionId!.contains('_order_');
@@ -75,7 +75,7 @@ class ConversationList extends StatelessWidget {
       _getTotalChildrenCount(effectiveItemId);
     });
 
-    return Flexible(
+    return Expanded(
       child: Container(
         margin: const EdgeInsets.only(top: PsDimens.space16),
         child: FirebaseAnimatedList(

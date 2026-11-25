@@ -84,7 +84,8 @@ class ConversationListItem extends StatelessWidget {
 
     if (psValueHolder.loginUserId == messageObj.sendByUserId) {
       // sender
-      if (messageObj.type == PsConst.CHAT_TYPE_TEXT) {
+      if (messageObj.type == PsConst.CHAT_TYPE_TEXT ||
+          (messageObj.type == null && (messageObj.message ?? '').isNotEmpty)) {
         if (messageObj.offerStatus == PsConst.CHAT_STATUS_OFFER ||
             messageObj.offerStatus == PsConst.CHAT_STATUS_ACCEPT ||
             messageObj.offerStatus == PsConst.CHAT_STATUS_REJECT) {
@@ -153,7 +154,8 @@ class ConversationListItem extends StatelessWidget {
       }
     } else {
       //receiver
-      if (messageObj.type == PsConst.CHAT_TYPE_TEXT) {
+      if (messageObj.type == PsConst.CHAT_TYPE_TEXT ||
+          (messageObj.type == null && (messageObj.message ?? '').isNotEmpty)) {
         if (messageObj.offerStatus == PsConst.CHAT_STATUS_OFFER ||
             messageObj.offerStatus == PsConst.CHAT_STATUS_ACCEPT ||
             messageObj.offerStatus == PsConst.CHAT_STATUS_REJECT) {

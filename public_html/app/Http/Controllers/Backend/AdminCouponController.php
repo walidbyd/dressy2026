@@ -66,6 +66,10 @@ class AdminCouponController extends PsController
 
     public function store(Request $request)
     {
+        $request->merge([
+            'code' => strtoupper(trim((string) $request->input('code'))),
+        ]);
+
         $validated = $request->validate([
             'code' => 'required|string|max:64|unique:psx_coupons,code',
             'discount_type' => 'required|in:percentage,fixed_amount',

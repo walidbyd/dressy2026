@@ -193,12 +193,13 @@ class _ChatViewState extends State<ChatView>
 
     final FirebaseDatabase database =
         FirebaseDatabase.instance; // (app: Utils.firebaseApp!);
+    try {
+      database.setPersistenceEnabled(true);
+      database.setPersistenceCacheSizeBytes(10000000);
+    } catch (_) {}
     _messagesRef = database.ref().child('Message');
     _chatRef = database.ref().child('Current_Chat_With');
     _userPresence = database.ref().child('User_Presence');
-
-    database.setPersistenceEnabled(true);
-    database.setPersistenceCacheSizeBytes(10000000);
     animationController =
         AnimationController(duration: PsConfig.animation_duration, vsync: this);
     WidgetsBinding.instance.addObserver(this);
@@ -292,12 +293,12 @@ class _ChatViewState extends State<ChatView>
         Provider.of<UserUnreadMessageRepository>(context);
     if (psValueHolder.loginUserId != null) {
       if (psValueHolder.loginUserId == widget.buyerUserId) {
-        sessionId =
-            Utils.sortingUserId(widget.sellerUserId!, widget.buyerUserId!);
+        sessionId = Utils.sortingUserId(
+            widget.sellerUserId ?? '', widget.buyerUserId ?? '');
         otherUserId = widget.sellerUserId;
       } else if (psValueHolder.loginUserId == widget.sellerUserId) {
-        sessionId =
-            Utils.sortingUserId(widget.buyerUserId!, widget.sellerUserId!);
+        sessionId = Utils.sortingUserId(
+            widget.buyerUserId ?? '', widget.sellerUserId ?? '');
         otherUserId = widget.buyerUserId;
       } else {
         sessionId = Utils.sortingUserId(

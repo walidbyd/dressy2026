@@ -210,14 +210,15 @@ class _CheckoutViewState extends State<CheckoutView>
     try {
       final String userId = Utils.checkUserLoginId(psValueHolder);
       final Uri uri =
-          Uri.parse('${PsConfig.ps_app_url}rest/coupons/validate');
+          Uri.parse('${PsConfig.ps_app_url}coupons/validate');
       final http.Response res = await http
           .post(
             uri,
             headers: <String, String>{
               'Content-Type': 'application/json',
               'Accept': 'application/json',
-              'Authorization': 'Bearer ${psValueHolder?.headerToken ?? ''}',
+              'Authorization': PsConfig.ps_bearer_token,
+              'header-token': psValueHolder?.headerToken ?? '',
             },
             body: json.encode(<String, dynamic>{
               'code': code,

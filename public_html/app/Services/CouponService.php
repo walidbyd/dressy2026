@@ -26,7 +26,7 @@ class CouponService
             return ['valid' => false, 'message' => 'Veuillez saisir un code promo.', 'discount_amount' => 0.0];
         }
 
-        $coupon = Coupon::where('code', $code)->first();
+        $coupon = Coupon::whereRaw('UPPER(TRIM(code)) = ?', [$code])->first();
         if (!$coupon) {
             return ['valid' => false, 'message' => 'Code promo invalide ou introuvable.', 'discount_amount' => 0.0];
         }

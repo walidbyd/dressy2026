@@ -115,6 +115,12 @@ class _HomeViewState extends State<DashboardView>
 
       if (index == PsConst.REQUEST_CODE__DASHBOARD_MESSAGE_FRAGMENT) {
         _refreshMessagesList();
+      } else if (index == PsConst.REQUEST_CODE__MENU_HOME_FRAGMENT) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _checkAndShowSpinRoulette();
+          }
+        });
       }
     });
   }
@@ -127,6 +133,12 @@ class _HomeViewState extends State<DashboardView>
 
     if (index == PsConst.REQUEST_CODE__DASHBOARD_MESSAGE_FRAGMENT) {
       _refreshMessagesList();
+    } else if (index == PsConst.REQUEST_CODE__MENU_HOME_FRAGMENT) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _checkAndShowSpinRoulette();
+        }
+      });
     }
   }
 
@@ -155,28 +167,32 @@ class _HomeViewState extends State<DashboardView>
   }
 
   bool _checkedRouletteThisSession = false;
+  String? _checkedRouletteUserId;
 
   Future<void> _checkAndShowSpinRoulette() async {
-    if (_checkedRouletteThisSession ||
-        psValueHolder == null ||
-        Utils.isLoginUserEmpty(psValueHolder)) {
+    if (psValueHolder == null || Utils.isLoginUserEmpty(psValueHolder)) {
       return;
     }
-    _checkedRouletteThisSession = true;
     final String userId = Utils.checkUserLoginId(psValueHolder);
     if (userId.isEmpty || userId == 'nologinuser') {
       return;
     }
+    if (_checkedRouletteThisSession && _checkedRouletteUserId == userId) {
+      return;
+    }
+    _checkedRouletteThisSession = true;
+    _checkedRouletteUserId = userId;
 
     try {
       final Uri uri = Uri.parse(
-        '${PsConfig.ps_app_url}rest/coupons/roulette-status?login_user_id=$userId',
+        '${PsConfig.ps_app_url}coupons/roulette-status?login_user_id=$userId',
       );
       final http.Response res = await http.get(
         uri,
         headers: <String, String>{
           'Accept': 'application/json',
-          'Authorization': 'Bearer ${psValueHolder?.headerToken ?? ''}',
+          'Authorization': PsConfig.ps_bearer_token,
+          'header-token': psValueHolder?.headerToken ?? '',
         },
       ).timeout(const Duration(seconds: 10));
 
@@ -417,10 +433,19 @@ class _HomeViewState extends State<DashboardView>
       setState(() {
         _currentIndex = index;
       });
+      if (index == PsConst.REQUEST_CODE__MENU_HOME_FRAGMENT) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _checkAndShowSpinRoulette();
+          }
+        });
+      }
     }
 
     dynamic callLogout(UserProvider provider,
         DeleteTaskProvider deleteTaskProvider, int index) async {
+      _checkedRouletteThisSession = false;
+      _checkedRouletteUserId = null;
       if (PsProgressDialog.isShowing()) {
         await PsProgressDialog.dismissDialog();
       }

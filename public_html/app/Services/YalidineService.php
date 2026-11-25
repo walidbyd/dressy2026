@@ -711,10 +711,12 @@ class YalidineService
         }
         $couponDiscount = (float) ($order->coupon_discount ?? 0.0);
         $orderDeliveryFee = (float) ($order->delivery_fee ?? 0.0);
+        $walletUsed = (float) ($order->wallet_amount_used ?? 0.0);
         $recomputedCod = max(0.0, round($itemsSubtotal - $couponDiscount, 2)) + $orderDeliveryFee;
-        $codAmount = ($order->total_price !== null && (float) $order->total_price > 0)
+        $baseTotal = ($order->total_price !== null && (float) $order->total_price > 0)
             ? (float) $order->total_price
             : $recomputedCod;
+        $codAmount = max(0.0, round($baseTotal - $walletUsed, 2));
 
         $firstName = $shipping?->shipping_first_name ?: ($order->user?->name ?: 'Client');
         $lastName = trim((string) ($shipping?->shipping_last_name ?? '')) ?: $firstName;

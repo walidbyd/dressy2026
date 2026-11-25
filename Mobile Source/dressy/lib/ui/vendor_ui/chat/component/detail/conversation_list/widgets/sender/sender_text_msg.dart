@@ -23,6 +23,9 @@ class SenderTextMsg extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     late dynamic _tapPosition;
+    if ((messageObj.message ?? '').isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Container(
       margin: const EdgeInsets.only(
           left: PsDimens.space16,
