@@ -142,9 +142,14 @@ class StoryApiResource extends JsonResource
         }
 
         $isOwner = (!empty($loginUserId) && (string)$loginUserId !== 'nologinuser' && (string)$loginUserId === (string)$this->user_id);
+        $isBoosted = (bool) ($this->is_boosted ?? false)
+            && !empty($this->boost_expires_at)
+            && Carbon::parse($this->boost_expires_at)->gt(Carbon::now());
 
         return [
             'id' => (string) $this->id,
+            'is_boosted' => $isBoosted,
+            'boost_expires_at' => $isBoosted ? Carbon::parse($this->boost_expires_at)->toIso8601String() : '',
             'user_id' => (string) $this->user_id,
             'vendor_id' => $this->vendor_id ? (string) $this->vendor_id : '',
             'vendor_name' => $vendorName,

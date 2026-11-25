@@ -140,6 +140,7 @@ import '../../ui/custom_ui/user/profile/component/my_vendor/my_vendor_vertical_l
 import '../../ui/custom_ui/user/register/view/register_container_view.dart';
 import '../../ui/vendor_ui/coupon/view/my_coupons_view.dart';
 import '../../ui/vendor_ui/affiliation/view/invite_friend_view.dart';
+import '../../ui/vendor_ui/ads/view/publicite_view.dart';
 import '../../ui/custom_ui/user/search_user/view/search_user_container_view.dart';
 import '../../ui/custom_ui/user/top_seller/view/top_seller_vertical_list_view.dart';
 import '../../ui/custom_ui/user/user_detail/view/user_detail_view.dart';
@@ -612,6 +613,10 @@ Route<dynamic> generateRoute(RouteSettings settings) {
     case '${RoutePaths.inviteFriend}':
       return MaterialPageRoute<dynamic>(builder: (BuildContext context) {
         return const InviteFriendView();
+      });
+    case '${RoutePaths.publicite}':
+      return MaterialPageRoute<dynamic>(builder: (BuildContext context) {
+        return const PubliciteView();
       });
 
     // case '${RoutePaths.orderDetail}':

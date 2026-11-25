@@ -1,5 +1,14 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
+
+// Public Silk Pay Webhook at /api/v1/wallet/silkpay/webhook
+Route::post('v1/wallet/silkpay/webhook', [\App\Http\Controllers\Api\V1_0\SilkpayApiController::class, 'webhook']);
+Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])->prefix('v1/wallet')->group(function () {
+    Route::get('topup-packs', [\App\Http\Controllers\Api\V1_0\SilkpayApiController::class, 'topupPacks']);
+    Route::post('topup/initiate', [\App\Http\Controllers\Api\V1_0\SilkpayApiController::class, 'initiate']);
+});
+
 // use Illuminate\Support\Facades\Route;
 // use Modules\BlockUser\Http\Controllers\Backend\Rests\BlockUserApiController;
 // use Modules\FollowUser\Http\Controllers\Backend\Rests\FollowUserApiController;

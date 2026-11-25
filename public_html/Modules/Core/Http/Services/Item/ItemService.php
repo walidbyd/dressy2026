@@ -331,7 +331,10 @@ class ItemService extends PsService implements ItemServiceInterface
                     ->complaintItemNotInFilter($filterNotIn)
                     ->notInFilterByFields($filterNotIn);
 
-                // Order
+                // Order: prioritize active boosted (Sponsorisé) items at the top
+                if (\Illuminate\Support\Facades\Schema::hasColumn('psx_items', 'is_boosted')) {
+                    $query->orderByRaw('(psx_items.is_boosted = 1 AND psx_items.boost_expires_at > NOW()) DESC');
+                }
                 $query->orderByCategoryName($sorting)
                     ->orderBySubCategoryName($sorting)
                     ->orderByCurrencyName($sorting)

@@ -107,8 +107,16 @@ class StoryApiController extends Controller
                         'has_unseen' => true,
                         'latest_story_at' => '',
                         'has_active_stories' => true,
+                        'has_boosted_story' => false,
                         'stories' => [],
                     ];
+                }
+
+                $storyIsBoosted = (bool) ($story->is_boosted ?? false)
+                    && !empty($story->boost_expires_at)
+                    && Carbon::parse($story->boost_expires_at)->gt($now);
+                if ($storyIsBoosted) {
+                    $vendorsMap[$groupKey]['has_boosted_story'] = true;
                 }
 
                 $vendorsMap[$groupKey]['stories'][] = new StoryApiResource($story);
@@ -118,8 +126,13 @@ class StoryApiController extends Controller
                 }
             }
 
-            // Order vendors so that latest stories appear first
+            // Order vendors: active boosted stories FIRST, then latest stories
             uasort($vendorsMap, function ($a, $b) {
+                $boostA = !empty($a['has_boosted_story']) ? 1 : 0;
+                $boostB = !empty($b['has_boosted_story']) ? 1 : 0;
+                if ($boostA !== $boostB) {
+                    return $boostB <=> $boostA;
+                }
                 return strcmp($b['latest_story_at'] ?? '', $a['latest_story_at'] ?? '');
             });
 

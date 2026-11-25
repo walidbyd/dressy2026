@@ -61,7 +61,9 @@ class Product extends PsObject<Product> {
       this.productRelation,
       this.discountRate,
       this.phoneNumList,
-      this.vendorUser});
+      this.vendorUser,
+      this.isBoosted,
+      this.boostExpiresAt});
 
   String? id;
   String? title;
@@ -109,6 +111,8 @@ class Product extends PsObject<Product> {
   String? discountRate;
   String? phoneNumList;
   VendorUser? vendorUser;
+  String? isBoosted;
+  String? boostExpiresAt;
 
   @override
   bool operator ==(dynamic other) => other is Product && id == other.id;
@@ -174,6 +178,8 @@ class Product extends PsObject<Product> {
       discountRate: dynamicData['percent'],
       phoneNumList: dynamicData['phone'],
       vendorUser: VendorUser().fromMap(dynamicData['vendor']),
+      isBoosted: dynamicData['is_boosted']?.toString(),
+      boostExpiresAt: dynamicData['boost_expires_at']?.toString(),
       // itemTypeId: dynamicData['item_type_id'],
       // itemPriceTypeId: dynamicData['item_price_type_id'],
       // conditionOfItemId: dynamicData['condition_of_item_id'],
@@ -247,6 +253,8 @@ class Product extends PsObject<Product> {
       data['percent'] = object.discountRate;
       data['phone'] = object.phoneNumList;
       data['vendor'] = VendorUser().toMap(object.vendorUser);
+      data['is_boosted'] = object.isBoosted;
+      data['boost_expires_at'] = object.boostExpiresAt;
       // data['item_type_id'] = object.itemTypeId;
       // data['item_price_type_id'] = object.itemPriceTypeId;
       // data['condition_of_item_id'] = object.conditionOfItemId;
@@ -351,6 +359,10 @@ class Product extends PsObject<Product> {
 
   bool get isSoldOutItem {
     return isSoldOut == PsConst.ONE;
+  }
+
+  bool get isSponsoredItem {
+    return isBoosted == PsConst.ONE;
   }
 
   bool get isFavorite {

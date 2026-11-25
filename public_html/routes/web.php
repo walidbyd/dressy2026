@@ -1116,6 +1116,22 @@ Route::middleware(['isInstall'])->group(function () {
             Route::post('/{id}/status', 'updateStatus')->name('admin.disputes.updateStatus');
         });
 
+        Route::prefix('silkpay')->controller(\App\Http\Controllers\Backend\AdminSilkpayController::class)->group(function () {
+            Route::get('/', 'index')->name('admin.silkpay.index');
+            Route::post('/settings', 'updateSettings')->name('admin.silkpay.settings');
+            Route::put('/packs/{id}', 'updatePack')->name('admin.silkpay.packs.update');
+            Route::post('/packs/{id}/toggle', 'togglePack')->name('admin.silkpay.packs.toggle');
+            Route::post('/transactions/{id}/credit', 'markCredited')->name('admin.silkpay.tx.credit');
+            Route::post('/transactions/{id}/cancel', 'cancelTransaction')->name('admin.silkpay.tx.cancel');
+        });
+
+        Route::prefix('ads')->controller(\App\Http\Controllers\Backend\AdminAdController::class)->group(function () {
+            Route::get('/', 'index')->name('admin.ads.index');
+            Route::post('/settings', 'updateSettings')->name('admin.ads.settings');
+            Route::put('/plans/{id}', 'updatePlan')->name('admin.ads.plans.update');
+            Route::post('/plans/{id}/toggle', 'togglePlan')->name('admin.ads.plans.toggle');
+        });
+
         Route::prefix('wallets')->controller(\Modules\StoreFront\VendorPanel\Http\Controllers\Backend\Controllers\Finance\AdminWalletController::class)->group(function () {
             Route::get('/', 'index')->name('admin.wallets.index');
             Route::post('/adjust', 'adjust')->name('admin.wallets.adjust');

@@ -328,9 +328,10 @@ class VendorService extends PsService
             $query->where(VendorBranch::tableName.'.'.VendorBranch::addedUserId, $conds['added_user_id']);
         }
 
-        // order by
+        // order by: boosted active stories first, then active stories, then recency
         if (isset($conds['story_first']) && $conds['story_first']) {
-            $query->orderByRaw("(COALESCE((SELECT MAX(s.created_at) FROM psx_vendor_stories s WHERE s.vendor_id = " . Vendor::tableName . "." . Vendor::id . " AND s.expires_at > NOW()), '') != '') DESC")
+            $query->orderByRaw("(EXISTS(SELECT 1 FROM psx_vendor_stories sb WHERE sb.vendor_id = " . Vendor::tableName . "." . Vendor::id . " AND sb.expires_at > NOW() AND sb.is_boosted = 1 AND sb.boost_expires_at > NOW())) DESC")
+                  ->orderByRaw("(COALESCE((SELECT MAX(s.created_at) FROM psx_vendor_stories s WHERE s.vendor_id = " . Vendor::tableName . "." . Vendor::id . " AND s.expires_at > NOW()), '') != '') DESC")
                   ->orderByRaw("COALESCE((SELECT MAX(s.created_at) FROM psx_vendor_stories s WHERE s.vendor_id = " . Vendor::tableName . "." . Vendor::id . " AND s.expires_at > NOW()), '') DESC");
         }
         if (isset($conds['order_by']) && isset($conds['order_type']) && $conds['order_by'] && $conds['order_type']) {
@@ -533,9 +534,10 @@ class VendorService extends PsService
                 }
             }
         }
-        // order by
+        // order by: boosted active stories first, then active stories, then recency
         if (isset($conds['story_first']) && $conds['story_first']) {
-            $query->orderByRaw("(COALESCE((SELECT MAX(s.created_at) FROM psx_vendor_stories s WHERE s.vendor_id = " . Vendor::tableName . "." . Vendor::id . " AND s.expires_at > NOW()), '') != '') DESC")
+            $query->orderByRaw("(EXISTS(SELECT 1 FROM psx_vendor_stories sb WHERE sb.vendor_id = " . Vendor::tableName . "." . Vendor::id . " AND sb.expires_at > NOW() AND sb.is_boosted = 1 AND sb.boost_expires_at > NOW())) DESC")
+                  ->orderByRaw("(COALESCE((SELECT MAX(s.created_at) FROM psx_vendor_stories s WHERE s.vendor_id = " . Vendor::tableName . "." . Vendor::id . " AND s.expires_at > NOW()), '') != '') DESC")
                   ->orderByRaw("COALESCE((SELECT MAX(s.created_at) FROM psx_vendor_stories s WHERE s.vendor_id = " . Vendor::tableName . "." . Vendor::id . " AND s.expires_at > NOW()), '') DESC");
         }
         if (isset($conds['order_by']) && isset($conds['order_type']) && $conds['order_by'] && $conds['order_type']) {

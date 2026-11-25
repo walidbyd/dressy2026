@@ -26,12 +26,16 @@ class VendorStory extends Model
         'views_count',
         'duration',
         'expires_at',
+        'is_boosted',
+        'boost_expires_at',
         'added_date',
         'added_user_id',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
+        'boost_expires_at' => 'datetime',
+        'is_boosted' => 'boolean',
         'added_date' => 'datetime',
         'views_count' => 'integer',
         'duration' => 'integer',

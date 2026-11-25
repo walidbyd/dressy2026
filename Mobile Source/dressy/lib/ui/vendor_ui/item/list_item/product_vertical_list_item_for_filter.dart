@@ -206,6 +206,30 @@ class _ProductVerticalListItemForFilterState
                                     ],
                                   ),
                                 ),
+                              )
+                            else if (widget.product.isSponsoredItem)
+                              Positioned(
+                                top: 8,
+                                left: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1F1635)
+                                        .withValues(alpha: 0.88),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: const Color(0xFFFFD166), width: 1),
+                                  ),
+                                  child: Text(
+                                    'ads__sponsored_badge'.tr,
+                                    style: const TextStyle(
+                                      color: Color(0xFFFFD166),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
                               ),
                             // Floating circular frosted favourite heart button top-right inside photo
                             if (!Utils.isOwnerItem(valueHolder, widget.product))

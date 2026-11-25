@@ -534,8 +534,20 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
             }
           }
 
-          // Sort vendors: active stories first (sorted by latestStoryAt DESC), then vendors without stories
+          // Sort vendors: boosted stories first, then active stories (sorted by latestStoryAt DESC), then vendors without stories
           mergedVendors.sort((VendorUser a, VendorUser b) {
+            final bool aBoosted =
+                (a.stories ?? <VendorStory>[]).any((VendorStory s) => s.isBoosted);
+            final bool bBoosted =
+                (b.stories ?? <VendorStory>[]).any((VendorStory s) => s.isBoosted);
+
+            if (aBoosted && !bBoosted) {
+              return -1;
+            }
+            if (!aBoosted && bBoosted) {
+              return 1;
+            }
+
             final bool aHasStory = a.hasActiveStory == true ||
                 a.hasActiveStories == true ||
                 (a.latestStoryAt != null && a.latestStoryAt!.isNotEmpty);

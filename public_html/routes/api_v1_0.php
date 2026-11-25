@@ -321,6 +321,20 @@ Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])-
     // Chat RTDB fallback
     Route::get('chat/messages', [\App\Http\Controllers\Api\V1_0\ChatMessagesApiController::class, 'index']);
 
+    // Silk Pay Wallet Top-Up
+    Route::prefix('wallet')->controller(\App\Http\Controllers\Api\V1_0\SilkpayApiController::class)->group(function () {
+        Route::get('topup-packs', 'topupPacks');
+        Route::post('topup/initiate', 'initiate');
+    });
+
+    // Ads / Publicite (Story Boost & Article Vitrine Boost)
+    Route::prefix('ads')->controller(\App\Http\Controllers\Api\V1_0\AdBoostApiController::class)->group(function () {
+        Route::get('config', 'config');
+        Route::get('my-items', 'myItems');
+        Route::post('boost-story', 'boostStory');
+        Route::post('boost-item', 'boostItem');
+    });
+
     Route::prefix('vendor')->controller(VendorInfoApiController::class)->group(function () {
         Route::get('info', 'getVendorInfo');
     });
@@ -485,6 +499,9 @@ Route::prefix('shipping')->controller(\App\Http\Controllers\Api\V1_0\ShippingApi
 // Yalidine Automated Delivery Webhook (syncs parcel delivery / return / cancellation)
 Route::post('delivery/yalidine/webhook', [\App\Http\Controllers\Api\YalidineWebhookController::class, 'handle'])->name('delivery.yalidine.webhook');
 Route::post('yalidine/webhook', [\App\Http\Controllers\Api\YalidineWebhookController::class, 'handle'])->name('delivery.yalidine.webhook.alias');
+
+// Silk Pay Wallet Top-Up Webhook (public callback)
+Route::post('wallet/silkpay/webhook', [\App\Http\Controllers\Api\V1_0\SilkpayApiController::class, 'webhook'])->name('wallet.silkpay.webhook');
 
 // Chabit AI Assistant & Order Quick-Reply Endpoints (strictly per-user authenticated)
 Route::prefix('chabit')->controller(\App\Http\Controllers\Api\V1_0\ChabitApiController::class)->group(function () {

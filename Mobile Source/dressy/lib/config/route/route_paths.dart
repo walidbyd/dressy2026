@@ -183,4 +183,5 @@ class RoutePaths {
   static const String storyViewer = '/storyViewer';
   static const String myCoupons = '/myCoupons';
   static const String inviteFriend = '/inviteFriend';
+  static const String publicite = '/publicite';
 }

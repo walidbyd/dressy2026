@@ -20,6 +20,7 @@ import '../../../../core/vendor/viewobject/holder/product_parameter_holder.dart'
 import '../../../../core/vendor/viewobject/product.dart';
 import '../../../../core/vendor/viewobject/vendor_story.dart';
 import '../common/dialog/warning_dialog_view.dart';
+import '../ads/widgets/story_boost_helper.dart';
 
 class StoryComposerView extends StatefulWidget {
   const StoryComposerView({
@@ -342,7 +343,14 @@ class _StoryComposerViewState extends State<StoryComposerView> {
               behavior: SnackBarBehavior.floating,
             ),
           );
-          Navigator.pop(context, true);
+          await StoryBoostHelper.showBoostSheet(
+            context,
+            storyId: result.data!.id ?? '',
+            isAfterPublish: true,
+          );
+          if (mounted) {
+            Navigator.pop(context, true);
+          }
         }
       } else {
         if (mounted) {

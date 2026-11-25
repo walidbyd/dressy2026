@@ -17,6 +17,7 @@ import '../../../../../../core/vendor/viewobject/user.dart';
 import '../../../../../../core/vendor/viewobject/vendor_story.dart';
 import '../../../../common/bluemark_icon.dart';
 import '../../../../common/ps_ui_widget.dart';
+import '../../../../ads/widgets/story_boost_helper.dart';
 
 class ProfileDetailWidget extends StatefulWidget {
   const ProfileDetailWidget(
@@ -726,6 +727,73 @@ class __ProfileDetailWidgetState extends State<ProfileDetailWidget> {
                   );
                 },
               ),
+            ),
+            const SizedBox(height: 8),
+            Builder(
+              builder: (BuildContext bCtx) {
+                final bool hasBoosted = myStories.any((VendorStory s) => s.isBoosted);
+                if (hasBoosted) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1F1635),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFFD166), width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Icon(Icons.bolt_rounded, color: Color(0xFFFFD166), size: 15),
+                        const SizedBox(width: 5),
+                        Text(
+                          'ads__story_boosted_badge'.tr,
+                          style: const TextStyle(
+                            color: Color(0xFFFFD166),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return InkWell(
+                  onTap: () async {
+                    final bool boosted = await StoryBoostHelper.showBoostSheet(
+                      context,
+                      storyId: myStories.first.id ?? '',
+                    );
+                    if (boosted && mounted) {
+                      storyProvider.loadFeed();
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: <Color>[Color(0xFF1F1635), Color(0xFF3E1C59)],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Icon(Icons.bolt_rounded, color: Color(0xFFFFD166), size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'ads__profile_boost_story'.tr,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),

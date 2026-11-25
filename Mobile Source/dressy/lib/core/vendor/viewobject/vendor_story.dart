@@ -87,6 +87,8 @@ class VendorStory extends PsObject<VendorStory> {
     this.remainingHours,
     this.timeAgo,
     this.isOwner = false,
+    this.isBoosted = false,
+    this.boostExpiresAt,
   });
 
   String? id;
@@ -120,6 +122,8 @@ class VendorStory extends PsObject<VendorStory> {
   int? remainingHours;
   String? timeAgo;
   bool isOwner;
+  bool isBoosted;
+  String? boostExpiresAt;
 
   @override
   bool operator ==(dynamic other) => other is VendorStory && id == other.id;
@@ -178,6 +182,8 @@ class VendorStory extends PsObject<VendorStory> {
         remainingHours: int.tryParse(dynamicData['remaining_hours']?.toString() ?? '24') ?? 24,
         timeAgo: dynamicData['time_ago']?.toString(),
         isOwner: dynamicData['is_owner'] == true || dynamicData['is_owner'] == '1',
+        isBoosted: dynamicData['is_boosted'] == true || dynamicData['is_boosted'] == '1' || dynamicData['is_boosted'] == 1,
+        boostExpiresAt: dynamicData['boost_expires_at']?.toString(),
       );
     }
     return VendorStory();
@@ -217,6 +223,8 @@ class VendorStory extends PsObject<VendorStory> {
       'remaining_hours': object.remainingHours,
       'time_ago': object.timeAgo,
       'is_owner': object.isOwner,
+      'is_boosted': object.isBoosted,
+      'boost_expires_at': object.boostExpiresAt,
     };
   }
 
