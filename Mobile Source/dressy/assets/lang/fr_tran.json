@@ -1268,5 +1268,6 @@
   "wallet__topup_section_title": "Créditer le portefeuille (CIB / Edahabia)",
   "wallet__topup_section_subtitle": "Choisissez un pack pour recharger votre solde en toute sécurité via Silk Pay.",
   "wallet__topup_btn": "Créditer",
-  "wallet__topup_error": "Impossible de lancer le paiement Silk Pay."
+  "wallet__topup_error": "Impossible de lancer le paiement Silk Pay.",
+  "ads__story_viewer_boost_btn": "Booster la story"
 }

@@ -1268,5 +1268,6 @@
   "wallet__topup_section_title": "شحن المحفظة (CIB / الذهبية)",
   "wallet__topup_section_subtitle": "اختر باقة لشحن محفظتك بأمان عبر Silk Pay.",
   "wallet__topup_btn": "شحن",
-  "wallet__topup_error": "تعذر بدء الدفع عبر Silk Pay."
+  "wallet__topup_error": "تعذر بدء الدفع عبر Silk Pay.",
+  "ads__story_viewer_boost_btn": "ترويج القصة"
 }

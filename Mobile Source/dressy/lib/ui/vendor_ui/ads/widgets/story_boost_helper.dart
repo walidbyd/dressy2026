@@ -8,19 +8,28 @@ import 'package:provider/provider.dart';
 import '../../../../config/ps_colors.dart';
 import '../../../../config/ps_config.dart';
 import '../../../../config/route/route_paths.dart';
+import '../../../../core/vendor/api/common/ps_resource.dart';
+import '../../../../core/vendor/api/ps_api_service.dart';
 import '../../../../core/vendor/provider/language/app_localization_provider.dart';
 import '../../../../core/vendor/utils/utils.dart';
 import '../../../../core/vendor/viewobject/common/ps_value_holder.dart';
+import '../../../../core/vendor/viewobject/wallet.dart';
 
 class StoryBoostHelper {
-  static Future<Map<String, dynamic>?> fetchAdsConfig() async {
+  static Future<Map<String, dynamic>?> fetchAdsConfig(
+      BuildContext context) async {
     try {
-      final Uri uri = Uri.parse('${PsConfig.ps_app_url}ads/config');
+      final PsValueHolder vh =
+          Provider.of<PsValueHolder>(context, listen: false);
+      final String userId = Utils.checkUserLoginId(vh);
+      final Uri uri =
+          Uri.parse('${PsConfig.ps_app_url}ads/config?login_user_id=$userId');
       final http.Response res = await http.get(
         uri,
         headers: <String, String>{
           'Accept': 'application/json',
           'Authorization': PsConfig.ps_bearer_token,
+          'header-token': vh.headerToken ?? '',
         },
       ).timeout(const Duration(seconds: 10));
 
@@ -35,13 +44,43 @@ class StoryBoostHelper {
     return null;
   }
 
+  static Future<double?> fetchWalletBalance(BuildContext context) async {
+    try {
+      final PsApiService apiService =
+          Provider.of<PsApiService>(context, listen: false);
+      final PsValueHolder vh =
+          Provider.of<PsValueHolder>(context, listen: false);
+      final AppLocalization lang =
+          Provider.of<AppLocalization>(context, listen: false);
+      final String userId = Utils.checkUserLoginId(vh);
+      final PsResource<Wallet> res = await apiService.getWalletBalance(
+        userId,
+        lang.currentLocale.languageCode,
+      );
+      return double.tryParse((res.data?.balance ?? '0').toString());
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<bool> showBoostSheet(
     BuildContext context, {
     required String storyId,
     bool isAfterPublish = false,
   }) async {
-    final Map<String, dynamic>? config = await fetchAdsConfig();
-    if (!context.mounted || config == null) {
+    final List<dynamic> loaded = await Future.wait<dynamic>(<Future<dynamic>>[
+      fetchAdsConfig(context),
+      fetchWalletBalance(context),
+    ]);
+    if (!context.mounted) {
+      return false;
+    }
+    final Map<String, dynamic>? config = loaded[0] as Map<String, dynamic>?;
+    final double? walletBalance = loaded[1] as double?;
+    if (config == null) {
+      if (!isAfterPublish) {
+        Fluttertoast.showToast(msg: 'ads__boost_error'.tr);
+      }
       return false;
     }
 
@@ -49,6 +88,9 @@ class StoryBoostHelper {
     final Map<String, dynamic>? storyBoost =
         config['story_boost'] as Map<String, dynamic>?;
     if (!isEnabled || storyBoost == null || storyBoost['enabled'] != true) {
+      if (!isAfterPublish) {
+        Fluttertoast.showToast(msg: 'ads__disabled_msg'.tr);
+      }
       return false;
     }
 
@@ -130,6 +172,15 @@ class StoryBoostHelper {
                       ),
                     ),
                   ),
+                  if (walletBalance != null) ...<Widget>[
+                    const SizedBox(height: 8),
+                    Text(
+                      '${'ads__current_balance'.tr}: ${walletBalance.toStringAsFixed(0)} DA',
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   SizedBox(
                     width: double.infinity,

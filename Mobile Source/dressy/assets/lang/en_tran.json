@@ -1268,5 +1268,6 @@
   "wallet__topup_section_title": "Top Up Wallet (CIB / Edahabia)",
   "wallet__topup_section_subtitle": "Choose a pack to credit your wallet securely via Silk Pay.",
   "wallet__topup_btn": "Top Up",
-  "wallet__topup_error": "Unable to initiate Silk Pay payment."
+  "wallet__topup_error": "Unable to initiate Silk Pay payment.",
+  "ads__story_viewer_boost_btn": "Boost Story"
 }

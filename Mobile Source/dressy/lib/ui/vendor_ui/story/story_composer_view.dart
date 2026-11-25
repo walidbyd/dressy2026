@@ -184,8 +184,7 @@ class _StoryComposerViewState extends State<StoryComposerView> {
                         final PsResource<List<Product>> myItemsRes =
                             await apiService.getStoryMyItems(loginUserId, langCode);
                         if (myItemsRes.status == PsStatus.SUCCESS &&
-                            myItemsRes.data != null &&
-                            myItemsRes.data!.isNotEmpty) {
+                            myItemsRes.data != null) {
                           return myItemsRes;
                         }
                       } catch (_) {}
@@ -194,13 +193,27 @@ class _StoryComposerViewState extends State<StoryComposerView> {
                         ProductParameterHolder().getLatestParameterHolder();
                     holder.addedUserId = loginUserId;
                     holder.status = '1';
-                    return apiService.getProductList(
+                    final PsResource<List<Product>> res =
+                        await apiService.getProductList(
                       holder.toMap(),
                       loginUserId,
                       langCode,
                       30,
                       0,
                     );
+                    if (res.data != null && loginUserId.isNotEmpty) {
+                      final List<Product> ownOnly = res.data!
+                          .where((Product p) =>
+                              p.addedUserId == loginUserId ||
+                              p.user?.userId == loginUserId)
+                          .toList();
+                      return PsResource<List<Product>>(
+                        res.status,
+                        res.message,
+                        ownOnly,
+                      );
+                    }
+                    return res;
                   }(),
                   builder: (BuildContext context,
                       AsyncSnapshot<PsResource<List<Product>>> snapshot) {

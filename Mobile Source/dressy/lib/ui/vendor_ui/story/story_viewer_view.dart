@@ -24,6 +24,7 @@ import '../../../../core/vendor/viewobject/holder/user_report_item_parameter_hol
 import '../../../../core/vendor/viewobject/vendor_story.dart';
 import '../common/dialog/confirm_dialog_view.dart';
 import '../common/ps_ui_widget.dart';
+import '../ads/widgets/story_boost_helper.dart';
 
 class StoryViewerView extends StatefulWidget {
   const StoryViewerView({
@@ -891,41 +892,132 @@ class _StoryViewerVieState extends State<StoryViewerView>
               ),
             ),
 
-            // 5. Views Counter (Bottom-Left) on Seller's Own Slide
+            // 5. Views Counter & Owner Boost Story Action (Bottom) on Seller's Own Slide
             if (isOwner)
               Positioned(
                 left: 16,
+                right: 16,
                 bottom: currentStory.item != null ? 100 : 36,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          const Icon(Icons.visibility_outlined,
-                              color: Colors.white70, size: 14),
-                          const SizedBox(width: 5),
-                          Text(
-                            '${currentStory.viewsCount ?? 0} ${'story__views_count'.tr}',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.black45,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white24),
                           ),
-                        ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              const Icon(Icons.visibility_outlined,
+                                  color: Colors.white70, size: 14),
+                              const SizedBox(width: 5),
+                              Text(
+                                '${currentStory.viewsCount ?? 0} ${'story__views_count'.tr}',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    if (currentStory.isBoosted)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1F1635).withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                              color: const Color(0xFFFFD166), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            const Icon(Icons.bolt_rounded,
+                                color: Color(0xFFFFD166), size: 15),
+                            const SizedBox(width: 4),
+                            Text(
+                              'ads__story_boosted_badge'.tr,
+                              style: const TextStyle(
+                                color: Color(0xFFFFD166),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      InkWell(
+                        onTap: () async {
+                          _pauseStory();
+                          final bool boosted =
+                              await StoryBoostHelper.showBoostSheet(
+                            context,
+                            storyId: currentStory.id ?? '',
+                          );
+                          if (boosted && mounted) {
+                            setState(() {
+                              currentStory.isBoosted = true;
+                            });
+                            Provider.of<StoryProvider>(context, listen: false)
+                                .loadFeed();
+                          }
+                          if (mounted) {
+                            _resumeStory();
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: <Color>[
+                                Color(0xFFED7768),
+                                Color(0xFFF4A261),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: <BoxShadow>[
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              const Icon(Icons.bolt_rounded,
+                                  color: Colors.white, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                'ads__story_viewer_boost_btn'.tr,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
 

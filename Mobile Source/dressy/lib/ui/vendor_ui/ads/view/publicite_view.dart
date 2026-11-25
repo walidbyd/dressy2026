@@ -7,9 +7,13 @@ import 'package:provider/provider.dart';
 
 import '../../../../config/ps_colors.dart';
 import '../../../../config/ps_config.dart';
+import '../../../../config/route/route_paths.dart';
+import '../../../../core/vendor/api/common/ps_resource.dart';
+import '../../../../core/vendor/api/ps_api_service.dart';
 import '../../../../core/vendor/provider/language/app_localization_provider.dart';
 import '../../../../core/vendor/utils/utils.dart';
 import '../../../../core/vendor/viewobject/common/ps_value_holder.dart';
+import '../../../../core/vendor/viewobject/wallet.dart';
 import '../widgets/story_boost_helper.dart';
 
 class PubliciteView extends StatefulWidget {
@@ -25,6 +29,7 @@ class _PubliciteViewState extends State<PubliciteView> {
   String? _selectedItemId;
   String _selectedTier = 'daily';
   bool _submitting = false;
+  double? _walletBalance;
   List<Map<String, dynamic>> _plans = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _items = <Map<String, dynamic>>[];
 
@@ -39,6 +44,10 @@ class _PubliciteViewState extends State<PubliciteView> {
     try {
       final PsValueHolder vh =
           Provider.of<PsValueHolder>(context, listen: false);
+      final PsApiService apiService =
+          Provider.of<PsApiService>(context, listen: false);
+      final AppLocalization lang =
+          Provider.of<AppLocalization>(context, listen: false);
       final String userId = Utils.checkUserLoginId(vh);
       final Map<String, String> headers = <String, String>{
         'Accept': 'application/json',
@@ -46,22 +55,30 @@ class _PubliciteViewState extends State<PubliciteView> {
         'header-token': vh.headerToken ?? '',
       };
 
-      final List<http.Response> responses = await Future.wait<http.Response>(<Future<http.Response>>[
+      final List<dynamic> responses = await Future.wait<dynamic>(<Future<dynamic>>[
         http
-            .get(Uri.parse('${PsConfig.ps_app_url}ads/config'), headers: headers)
+            .get(Uri.parse('${PsConfig.ps_app_url}ads/config?login_user_id=$userId'),
+                headers: headers)
             .timeout(const Duration(seconds: 12)),
         http
             .get(Uri.parse('${PsConfig.ps_app_url}ads/my-items?login_user_id=$userId'),
                 headers: headers)
             .timeout(const Duration(seconds: 12)),
+        apiService.getWalletBalance(userId, lang.currentLocale.languageCode),
       ]);
 
       if (!mounted) {
         return;
       }
 
-      if (responses[0].statusCode == 200) {
-        final dynamic cDec = json.decode(responses[0].body);
+      final http.Response configRes = responses[0] as http.Response;
+      final http.Response itemsRes = responses[1] as http.Response;
+      final PsResource<Wallet> walletRes = responses[2] as PsResource<Wallet>;
+      _walletBalance =
+          double.tryParse((walletRes.data?.balance ?? '0').toString());
+
+      if (configRes.statusCode == 200) {
+        final dynamic cDec = json.decode(configRes.body);
         if (cDec is Map<String, dynamic> &&
             cDec['data'] is Map<String, dynamic>) {
           final Map<String, dynamic> d = cDec['data'] as Map<String, dynamic>;
@@ -72,14 +89,16 @@ class _PubliciteViewState extends State<PubliciteView> {
               .whereType<Map<String, dynamic>>()
               .where((Map<String, dynamic> p) => p['is_active'] == true)
               .toList();
-          if (_plans.isNotEmpty) {
+          if (_plans.isNotEmpty &&
+              !_plans.any((Map<String, dynamic> p) =>
+                  (p['tier'] ?? '').toString() == _selectedTier)) {
             _selectedTier = (_plans.first['tier'] ?? 'daily').toString();
           }
         }
       }
 
-      if (responses[1].statusCode == 200) {
-        final dynamic iDec = json.decode(responses[1].body);
+      if (itemsRes.statusCode == 200) {
+        final dynamic iDec = json.decode(itemsRes.body);
         if (iDec is Map<String, dynamic> && iDec['items'] is List<dynamic>) {
           _items = (iDec['items'] as List<dynamic>)
               .whereType<Map<String, dynamic>>()
@@ -215,6 +234,42 @@ class _PubliciteViewState extends State<PubliciteView> {
                               style: const TextStyle(
                                   color: Colors.white70, fontSize: 13),
                             ),
+                            if (_walletBalance != null) ...<Widget>[
+                              const SizedBox(height: 12),
+                              InkWell(
+                                onTap: () => Navigator.pushNamed(
+                                        context, RoutePaths.wallet)
+                                    .then((_) => _loadData()),
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.14),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      const Icon(
+                                        Icons.account_balance_wallet_outlined,
+                                        color: Color(0xFFFFD166),
+                                        size: 15,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '${'ads__current_balance'.tr}: ${_walletBalance!.toStringAsFixed(0)} DA',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

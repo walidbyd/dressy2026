@@ -82,12 +82,18 @@ class _WalletViewState extends State<WalletView> with WidgetsBindingObserver {
 
       if (res.statusCode == 200 && mounted) {
         final dynamic decoded = json.decode(res.body);
-        if (decoded is Map<String, dynamic> && decoded['data'] is List<dynamic>) {
-          setState(() {
-            _topupPacks = (decoded['data'] as List<dynamic>)
-                .whereType<Map<String, dynamic>>()
-                .toList();
-          });
+        if (decoded is Map<String, dynamic>) {
+          final bool isActive = decoded['is_active'] != false;
+          final dynamic rawPacks = decoded['packs'] ?? decoded['data'];
+          if (isActive && rawPacks is List<dynamic>) {
+            setState(() {
+              _topupPacks = rawPacks
+                  .whereType<Map<String, dynamic>>()
+                  .toList();
+            });
+          } else {
+            setState(() => _topupPacks = <Map<String, dynamic>>[]);
+          }
         }
       }
     } catch (_) {} finally {
@@ -121,26 +127,28 @@ class _WalletViewState extends State<WalletView> with WidgetsBindingObserver {
       ).timeout(const Duration(seconds: 15));
 
       final dynamic decoded = json.decode(res.body);
-      if (res.statusCode == 200 &&
-          decoded is Map<String, dynamic> &&
-          decoded['data'] is Map<String, dynamic>) {
-        final String paymentUrl =
-            (decoded['data']['payment_url'] ?? '').toString();
-        if (paymentUrl.isNotEmpty) {
-          _pendingTopupRedirect = true;
-          final bool launched = await launchUrl(
-            Uri.parse(paymentUrl),
-            mode: LaunchMode.externalApplication,
+      final Map<String, dynamic>? txObj = (decoded is Map<String, dynamic>)
+          ? (decoded['transaction'] as Map<String, dynamic>? ??
+              decoded['data'] as Map<String, dynamic>?)
+          : null;
+      final String paymentUrl = (txObj?['payment_url'] ??
+              (decoded is Map<String, dynamic> ? decoded['payment_url'] : null) ??
+              '')
+          .toString();
+      if (res.statusCode == 200 && paymentUrl.isNotEmpty) {
+        _pendingTopupRedirect = true;
+        final bool launched = await launchUrl(
+          Uri.parse(paymentUrl),
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launched && mounted) {
+          _pendingTopupRedirect = false;
+          showDialog<dynamic>(
+            context: context,
+            builder: (_) => ErrorDialog(message: 'wallet__topup_error'.tr),
           );
-          if (!launched && mounted) {
-            _pendingTopupRedirect = false;
-            showDialog<dynamic>(
-              context: context,
-              builder: (_) => ErrorDialog(message: 'wallet__topup_error'.tr),
-            );
-          }
-          return;
         }
+        return;
       }
       if (mounted) {
         final String msg = (decoded is Map<String, dynamic> &&
@@ -732,8 +740,11 @@ class _WalletViewState extends State<WalletView> with WidgetsBindingObserver {
             itemBuilder: (BuildContext ctx, int idx) {
               final Map<String, dynamic> pack = _topupPacks[idx];
               final int packId = int.tryParse((pack['id'] ?? '0').toString()) ?? 0;
-              final int amount = int.tryParse((pack['amount_dzd'] ?? '0').toString()) ?? 0;
-              final String label = (pack['label'] ?? '$amount DA').toString();
+              final int amount =
+                  (double.tryParse((pack['amount_dzd'] ?? '0').toString()) ?? 0)
+                      .round();
+              final String label =
+                  (pack['title'] ?? pack['label'] ?? '$amount DA').toString();
               final bool isBusy = _initiatingPackId == packId;
 
               return InkWell(
