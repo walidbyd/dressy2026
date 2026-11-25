@@ -29,7 +29,8 @@ class CustomPlaceOrderButtonWidget extends StatelessWidget {
       this.stopDeskName,
       this.walletAmountUsed,
       this.isWalletOnly = false,
-      this.couponCode})
+      this.couponCode,
+      this.affiliationCode})
       : super(key: key);
 
   final bool defaultShippingAndBilling;
@@ -55,6 +56,7 @@ class CustomPlaceOrderButtonWidget extends StatelessWidget {
   final String? walletAmountUsed;
   final bool isWalletOnly;
   final String? couponCode;
+  final String? affiliationCode;
   @override
   Widget build(BuildContext context) {
     return PlaceOrderButton(
@@ -81,6 +83,7 @@ class CustomPlaceOrderButtonWidget extends StatelessWidget {
       walletAmountUsed: walletAmountUsed,
       isWalletOnly: isWalletOnly,
       couponCode: couponCode,
+      affiliationCode: affiliationCode,
     );
   }
 }

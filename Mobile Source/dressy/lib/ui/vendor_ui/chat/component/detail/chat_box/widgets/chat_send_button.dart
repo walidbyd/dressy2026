@@ -5,6 +5,7 @@ import '../../../../../../../core/vendor/constant/ps_constants.dart';
 import '../../../../../../../core/vendor/constant/ps_dimens.dart';
 import '../../../../../../../core/vendor/provider/chat/get_chat_history_provider.dart';
 import '../../../../../../../core/vendor/provider/product/product_provider.dart';
+import '../../../../../../../core/vendor/utils/utils.dart';
 import '../../../../../../../core/vendor/viewobject/common/ps_value_holder.dart';
 import '../../../../../../../core/vendor/viewobject/holder/request_path_holder.dart';
 import '../../../../../../../core/vendor/viewobject/holder/sync_chat_history_parameter_holder.dart';
@@ -46,10 +47,13 @@ class ChatSendButton extends StatelessWidget {
           if (messageController.text == '') {
             return;
           }
+          final String safeItemId = (itemData.id ?? '').trim().isNotEmpty
+              ? itemData.id!.trim()
+              : (Utils.activeChatItemId ?? '').trim();
           SyncChatHistoryParameterHolder holder;
           if (chatFlag == PsConst.CHAT_FROM_BUYER) {
             holder = SyncChatHistoryParameterHolder(
-                itemId: itemData.id,
+                itemId: safeItemId,
                 buyerUserId: chatHistoryProvider.buyerId,
                 sellerUserId: chatHistoryProvider.sellerId,
                 type: PsConst.CHAT_TO_BUYER,
@@ -62,13 +66,12 @@ class ChatSendButton extends StatelessWidget {
                     headerToken: psValueHolder.headerToken));
           } else {
             holder = SyncChatHistoryParameterHolder(
-                itemId: itemData.id,
+                itemId: safeItemId,
                 sellerUserId: chatHistoryProvider.sellerId,
                 buyerUserId: chatHistoryProvider.buyerId,
                 type: PsConst.CHAT_TO_SELLER,
                 isUserOnline: isUserOnline,
                 message: messageController.text);
-            print('TOKEN_HEADER::: ${psValueHolder.headerToken}');    
             chatHistoryProvider.postData(
                 requestBodyHolder: holder,
                 requestPathHolder: RequestPathHolder(
@@ -80,10 +83,10 @@ class ChatSendButton extends StatelessWidget {
               false,
               false,
               false,
-              itemData.id,
+              safeItemId,
               messageController.text,
               PsConst.CHAT_STATUS_NULL,
-              psValueHolder.loginUserId!,
+              psValueHolder.loginUserId ?? '',
               sessionId,
               PsConst.CHAT_TYPE_TEXT);
           messageController.clear();

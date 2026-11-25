@@ -1,10 +1,9 @@
 import 'package:firebase_database/firebase_database.dart';
-import 'package:firebase_database/ui/firebase_animated_list.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../../../core/vendor/constant/ps_dimens.dart';
-import '../../../../../../core/vendor/provider/chat/chat_history_list_provider.dart';
+import '../../../../../../core/vendor/provider/language/app_localization_provider.dart';
 import '../../../../../../core/vendor/provider/product/product_provider.dart';
 import '../../../../../../core/vendor/utils/utils.dart';
 import '../../../../../../core/vendor/viewobject/message.dart';
@@ -35,17 +34,51 @@ class ConversationList extends StatelessWidget {
   final String? sellerUserId;
   final String? chatFlag;
 
+  List<Message> _extractMessages(
+      dynamic rawValue, bool isOrderScopedSession, String effectiveItemId) {
+    final List<Message> list = <Message>[];
+    if (rawValue is Map) {
+      rawValue.forEach((dynamic key, dynamic val) {
+        final Message? msg = Message().fromMap(val);
+        if (msg != null) {
+          msg.id ??= key?.toString();
+          list.add(msg);
+        }
+      });
+    } else if (rawValue is List) {
+      for (final dynamic val in rawValue) {
+        final Message? msg = Message().fromMap(val);
+        if (msg != null) {
+          list.add(msg);
+        }
+      }
+    }
+
+    final List<Message> filtered = list.where((Message msg) {
+      if (!isOrderScopedSession &&
+          effectiveItemId.isNotEmpty &&
+          (msg.itemId ?? '').trim().isNotEmpty &&
+          msg.itemId!.trim() != effectiveItemId) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    // Sort newest first because ListView.builder uses reverse: true
+    filtered.sort((Message a, Message b) {
+      final int tsB = b.addedDateTimeStamp ?? 0;
+      final int tsA = a.addedDateTimeStamp ?? 0;
+      return tsB.compareTo(tsA);
+    });
+
+    return filtered;
+  }
+
   @override
   Widget build(BuildContext context) {
-    String? lastTimeStamp;
-    int? lastAddedDateTimeStamp;
-    const bool _anchorToBottom = true;
     final ItemDetailProvider itemDetailProvider =
         Provider.of<ItemDetailProvider>(context);
-    final ChatHistoryListProvider chatHistoryListProvider =
-        Provider.of<ChatHistoryListProvider>(context);
     final Product itemDetail = itemDetailProvider.product;
-    int _totalCount = 0;
 
     if (sessionId == null || sessionId!.isEmpty) {
       return const Expanded(child: SizedBox());
@@ -56,133 +89,96 @@ class ConversationList extends StatelessWidget {
         ? itemDetail.id!.trim()
         : (Utils.activeChatItemId ?? '').trim();
 
-    Future<void> _getTotalChildrenCount(String itemid) async {
-      final Query q = messagesRef.child(sessionId!);
-      final DatabaseEvent event = await q.once();
-
-      final DataSnapshot snapshot = event.snapshot;
-      final Map<dynamic, dynamic>? data =
-          snapshot.value as Map<dynamic, dynamic>?;
-
-      _totalCount = data != null ? data.length : 0;
-      _totalCount--;
-
-      chatHistoryListProvider.setTotalCount(_totalCount);
-    }
-
-    // ignore: always_specify_types
-    Future.delayed(const Duration(milliseconds: 2000)).then((_) {
-      _getTotalChildrenCount(effectiveItemId);
-    });
-
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.only(top: PsDimens.space16),
-        child: FirebaseAnimatedList(
-          key: ValueKey<String>(sessionId ?? 'chat_list'),
-          query: messagesRef.child(sessionId!),
-          reverse: _anchorToBottom,
-          sort: (DataSnapshot a, DataSnapshot b) {
-            final dynamic valB = b.value;
-            final dynamic valA = a.value;
-            final Message? msgB = valB != null ? Message().fromMap(valB) : null;
-            final Message? msgA = valA != null ? Message().fromMap(valA) : null;
-            final int tsB = msgB?.addedDateTimeStamp ?? 0;
-            final int tsA = msgA?.addedDateTimeStamp ?? 0;
-            return tsB.compareTo(tsA);
-          },
-          itemBuilder: (BuildContext context, DataSnapshot snapshot,
-              Animation<double> animation, int index) {
-            // print('- - - - - - -  /nIndex : $index');
-
-            bool isSameDate = false;
-            final Message? parsedMsg = Message().fromMap(snapshot.value);
-            if (parsedMsg == null) {
-              return const SizedBox();
-            }
-            if (!isOrderScopedSession &&
-                effectiveItemId.isNotEmpty &&
-                (parsedMsg.itemId ?? '').trim().isNotEmpty &&
-                parsedMsg.itemId!.trim() != effectiveItemId) {
-              return const SizedBox.shrink();
-            }
-            final Message messages = parsedMsg;
-            final int timeStamp = messages.addedDateTimeStamp ?? 0;
-            final String chatDateString =
-                Utils.convertTimeStampToDate(timeStamp);
-            if (index == 0 || lastTimeStamp == null) {
-              lastTimeStamp = chatDateString;
-              lastAddedDateTimeStamp = timeStamp;
-            }
-            final DateTime msgDate =
-                Utils.getDateOnlyFromTimeStamp(timeStamp > 0 ? timeStamp : DateTime.now().millisecondsSinceEpoch);
-            final int prevTs = lastAddedDateTimeStamp ?? timeStamp;
-            final DateTime lastDate =
-                Utils.getDateOnlyFromTimeStamp(prevTs > 0 ? prevTs : DateTime.now().millisecondsSinceEpoch);
-
-            if (lastTimeStamp == chatDateString ||
-                msgDate.compareTo(lastDate) >= 0) {
-              isSameDate = true;
-            } else {
-              isSameDate = false;
+        margin: const EdgeInsets.only(top: PsDimens.space8),
+        child: StreamBuilder<DatabaseEvent>(
+          key: ValueKey<String>(sessionId!),
+          stream: messagesRef.child(sessionId!).onValue,
+          builder:
+              (BuildContext context, AsyncSnapshot<DatabaseEvent> snapshot) {
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(PsDimens.space16),
+                  child: Text(
+                    'chat_view__load_error'.tr,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+              );
             }
 
-            final Widget conversationListItem = CustomConversationListItem(
-              messageObj: messages,
-              updateDataToFireBase: updateDataToFireBase,
-              insertDataToFireBase: insertDataToFireBase,
-              deleteDataToFireBase: deleteDataToFireBase,
-              index: index,
-              isUserOnline: isUserOnline,
-              otherUserId: otherUserId,
-              buyerUserId: buyerUserId,
-              sellerUserId: sellerUserId,
-              chatFlag: chatFlag,
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final List<Message> messages = _extractMessages(
+              snapshot.data?.snapshot.value,
+              isOrderScopedSession,
+              effectiveItemId,
             );
 
-            Widget _dateWidget = const SizedBox();
-            if (!isSameDate) {
-              _dateWidget =
-                  CustomDateWidget(lastTimeStamp: lastTimeStamp ?? '');
-
-              lastTimeStamp = chatDateString;
-              lastAddedDateTimeStamp = messages.addedDateTimeStamp;
+            if (messages.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(PsDimens.space16),
+                  child: Text(
+                    'chat_view__no_messages'.tr,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              );
             }
 
-            if (msgDate.compareTo(lastDate) >= 0) {
-              lastTimeStamp = chatDateString;
-              lastAddedDateTimeStamp = messages.addedDateTimeStamp;
-            }
+            return ListView.builder(
+              reverse: true,
+              padding: const EdgeInsets.only(
+                top: PsDimens.space8,
+                bottom: PsDimens.space8,
+              ),
+              itemCount: messages.length,
+              itemBuilder: (BuildContext context, int index) {
+                final Message msg = messages[index];
+                final int ts = msg.addedDateTimeStamp ?? 0;
+                final String currentDate = Utils.convertTimeStampToDate(ts);
+                final bool isOldestOrDateChanged;
+                if (index == messages.length - 1) {
+                  isOldestOrDateChanged = true;
+                } else {
+                  final int olderTs =
+                      messages[index + 1].addedDateTimeStamp ?? 0;
+                  final String olderDate =
+                      Utils.convertTimeStampToDate(olderTs);
+                  isOldestOrDateChanged = currentDate != olderDate;
+                }
 
-            return Selector<ChatHistoryListProvider, int>(
-                selector:
-                    (BuildContext context, ChatHistoryListProvider provider) =>
-                        provider.totalCount,
-                builder: (BuildContext context, int totalCount, Widget? child) {
-                  final bool isLastIndex = index == totalCount;
+                final Widget itemWidget = CustomConversationListItem(
+                  messageObj: msg,
+                  updateDataToFireBase: updateDataToFireBase,
+                  insertDataToFireBase: insertDataToFireBase,
+                  deleteDataToFireBase: deleteDataToFireBase,
+                  index: index,
+                  isUserOnline: isUserOnline,
+                  otherUserId: otherUserId,
+                  buyerUserId: buyerUserId,
+                  sellerUserId: sellerUserId,
+                  chatFlag: chatFlag,
+                );
 
-                  return isSameDate
-                      ? Column(
-                          children: <Widget>[
-                            if (isLastIndex) ...<Widget>[
-                              CustomDateWidget(
-                                  lastTimeStamp: lastTimeStamp ?? '')
-                            ],
-                            conversationListItem,
-                          ],
-                        )
-                      : Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            if (isLastIndex) ...<Widget>[
-                              CustomDateWidget(
-                                  lastTimeStamp: lastTimeStamp ?? '')
-                            ],
-                            conversationListItem,
-                            _dateWidget,
-                          ],
-                        );
-                });
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    if (isOldestOrDateChanged && currentDate.isNotEmpty)
+                      CustomDateWidget(lastTimeStamp: currentDate),
+                    itemWidget,
+                  ],
+                );
+              },
+            );
           },
         ),
       ),

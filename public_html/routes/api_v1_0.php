@@ -311,6 +311,12 @@ Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])-
         Route::post('roulette-spin', 'rouletteSpin');
     });
 
+    // Affiliation / Invite a Friend
+    Route::prefix('affiliation')->controller(\App\Http\Controllers\Api\V1_0\AffiliationApiController::class)->group(function () {
+        Route::get('my', 'myDashboard');
+        Route::post('validate', 'validateCode');
+    });
+
     Route::prefix('vendor')->controller(VendorInfoApiController::class)->group(function () {
         Route::get('info', 'getVendorInfo');
     });

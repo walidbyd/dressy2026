@@ -309,8 +309,9 @@ class _ChatViewState extends State<ChatView>
             : widget.sellerUserId;
       }
 
-      if (widget.orderId != null && widget.orderId!.trim().isNotEmpty) {
-        sessionId = '${sessionId}_order_${widget.orderId!.trim()}';
+      final String cleanOrderId = (widget.orderId ?? '').trim();
+      if (cleanOrderId.isNotEmpty && cleanOrderId != '0') {
+        sessionId = '${sessionId}_order_$cleanOrderId';
       }
 
       _insertSenderAndReceiverToFireBase(sessionId, widget.itemId, otherUserId,
@@ -586,11 +587,13 @@ class _ChatViewState extends State<ChatView>
                 return Consumer<ItemDetailProvider>(builder:
                     (BuildContext context,
                         ItemDetailProvider itemDetailProvider, Widget? child) {
-                  return Container(
-                    color: Utils.isLightMode(context)
-                        ? PsColors.achromatic100
-                        : PsColors.achromatic800,
-                    child: Column(
+                  return SafeArea(
+                    top: false,
+                    child: Container(
+                      color: Utils.isLightMode(context)
+                          ? PsColors.achromatic100
+                          : PsColors.achromatic800,
+                      child: Column(
                       children: <Widget>[
                         if (itemDetailProvider.hasData)
                           CustomHeaderItemInfoWidget(
@@ -679,7 +682,8 @@ class _ChatViewState extends State<ChatView>
                           )
                       ],
                     ),
-                  );
+                  ),
+                );
                 });
               }))),
     );

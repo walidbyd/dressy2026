@@ -18,6 +18,8 @@ class OrderSummaryWidget extends StatelessWidget {
       this.walletAmountUsed,
       this.couponDiscount,
       this.couponCode,
+      this.affiliationDiscount,
+      this.affiliationCode,
       this.totalPayable})
       : super(key: key);
 
@@ -28,11 +30,15 @@ class OrderSummaryWidget extends StatelessWidget {
   final String? walletAmountUsed;
   final String? couponDiscount;
   final String? couponCode;
+  final String? affiliationDiscount;
+  final String? affiliationCode;
   final String? totalPayable;
   @override
   Widget build(BuildContext context) {
     final double parsedCouponDiscount =
         double.tryParse(couponDiscount ?? '') ?? 0.0;
+    final double parsedAffDiscount =
+        double.tryParse(affiliationDiscount ?? '') ?? 0.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -59,6 +65,15 @@ class OrderSummaryWidget extends StatelessWidget {
                 ? '${'coupon__discount_label'.tr} ($couponCode)'
                 : 'coupon__discount_label'.tr,
             value: couponDiscount!,
+            currency: currency,
+            isDiscount: true,
+          ),
+        if (parsedAffDiscount > 0)
+          OrderSummaryDataWidget(
+            title: (affiliationCode != null && affiliationCode!.isNotEmpty)
+                ? '${'affiliation__discount_label'.tr} ($affiliationCode)'
+                : 'affiliation__discount_label'.tr,
+            value: affiliationDiscount!,
             currency: currency,
             isDiscount: true,
           ),

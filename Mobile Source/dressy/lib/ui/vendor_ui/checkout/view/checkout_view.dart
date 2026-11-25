@@ -194,6 +194,14 @@ class _CheckoutViewState extends State<CheckoutView>
   String? _couponMessage;
   bool _couponIsValid = false;
 
+  // Affiliation / Referral state
+  final TextEditingController _affiliationController = TextEditingController();
+  String? _appliedAffiliationCode;
+  double _affiliationDiscountDzd = 0.0;
+  bool _isValidatingAffiliation = false;
+  String? _affiliationMessage;
+  bool _affiliationIsValid = false;
+
   Future<void> _applyCouponCode(double subtotal) async {
     final String code = _couponController.text.trim().toUpperCase();
     if (code.isEmpty) {
@@ -277,6 +285,93 @@ class _CheckoutViewState extends State<CheckoutView>
       _couponDiscountDzd = 0.0;
       _couponIsValid = false;
       _couponMessage = null;
+    });
+  }
+
+  Future<void> _applyAffiliationCode(double subtotal) async {
+    final String code = _affiliationController.text.trim().toUpperCase();
+    if (code.isEmpty) {
+      setState(() {
+        _affiliationIsValid = false;
+        _affiliationMessage = 'affiliation__enter_code'.tr;
+      });
+      return;
+    }
+    setState(() {
+      _isValidatingAffiliation = true;
+      _affiliationMessage = null;
+    });
+    try {
+      final String userId = Utils.checkUserLoginId(psValueHolder);
+      final Uri uri =
+          Uri.parse('${PsConfig.ps_app_url}affiliation/validate');
+      final http.Response res = await http
+          .post(
+            uri,
+            headers: <String, String>{
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': PsConfig.ps_bearer_token,
+              'header-token': psValueHolder?.headerToken ?? '',
+            },
+            body: json.encode(<String, dynamic>{
+              'code': code,
+              'subtotal': subtotal,
+              'login_user_id': userId,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (!mounted) {
+        return;
+      }
+      final dynamic decoded = json.decode(res.body);
+      if (res.statusCode == 200 &&
+          decoded is Map<String, dynamic> &&
+          decoded['valid'] == true) {
+        final double discount =
+            double.tryParse(decoded['discount_amount']?.toString() ?? '0') ??
+                0.0;
+        setState(() {
+          _isValidatingAffiliation = false;
+          _affiliationIsValid = true;
+          _appliedAffiliationCode = code;
+          _affiliationDiscountDzd = discount;
+          _affiliationMessage =
+              decoded['message']?.toString() ?? 'coupon__applied'.tr;
+        });
+      } else {
+        setState(() {
+          _isValidatingAffiliation = false;
+          _affiliationIsValid = false;
+          _appliedAffiliationCode = null;
+          _affiliationDiscountDzd = 0.0;
+          _affiliationMessage = (decoded is Map<String, dynamic>
+                  ? decoded['message']?.toString()
+                  : null) ??
+              'affiliation__invalid'.tr;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isValidatingAffiliation = false;
+          _affiliationIsValid = false;
+          _appliedAffiliationCode = null;
+          _affiliationDiscountDzd = 0.0;
+          _affiliationMessage = 'affiliation__invalid'.tr;
+        });
+      }
+    }
+  }
+
+  void _removeAffiliation() {
+    setState(() {
+      _affiliationController.clear();
+      _appliedAffiliationCode = null;
+      _affiliationDiscountDzd = 0.0;
+      _affiliationIsValid = false;
+      _affiliationMessage = null;
     });
   }
 
@@ -2756,9 +2851,13 @@ class _CheckoutViewState extends State<CheckoutView>
                   discountPrice =
                       ((originalPrice - currentPrice) * qty).toStringAsFixed(0);
                   final double itemSub = currentPrice * qty;
-                  final double afterCoupon = (itemSub - _couponDiscountDzd) > 0
-                      ? (itemSub - _couponDiscountDzd)
-                      : 0.0;
+                  final double afterCoupon =
+                      (itemSub - _couponDiscountDzd - _affiliationDiscountDzd) >
+                              0
+                          ? (itemSub -
+                              _couponDiscountDzd -
+                              _affiliationDiscountDzd)
+                          : 0.0;
                   singleItemTotalPrice =
                       (afterCoupon + selectedYalidineFee).toStringAsFixed(0);
                   currencySymbol = cart.vendorCurrencySymbol ?? 'DA';
@@ -2771,8 +2870,15 @@ class _CheckoutViewState extends State<CheckoutView>
                         addToCartProvider.shoppingCart.data?.totalDiscount ??
                             '0') ??
                     0.0;
-                final double basketNet = (basketSubtotal - basketDiscount - _couponDiscountDzd) > 0
-                    ? (basketSubtotal - basketDiscount - _couponDiscountDzd)
+                final double basketNet = (basketSubtotal -
+                            basketDiscount -
+                            _couponDiscountDzd -
+                            _affiliationDiscountDzd) >
+                        0
+                    ? (basketSubtotal -
+                        basketDiscount -
+                        _couponDiscountDzd -
+                        _affiliationDiscountDzd)
                     : 0.0;
                 final String finalBasketTotalPrice =
                     (basketNet + selectedYalidineFee).toStringAsFixed(0);
@@ -2980,6 +3086,105 @@ class _CheckoutViewState extends State<CheckoutView>
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: _couponIsValid
+                                        ? Colors.green[700]
+                                        : Colors.red[700],
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 12),
+                              Text(
+                                'affiliation__code_label'.tr,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _affiliationController,
+                                      textCapitalization:
+                                          TextCapitalization.characters,
+                                      enabled: _appliedAffiliationCode == null,
+                                      decoration: InputDecoration(
+                                        hintText: 'affiliation__enter_code'.tr,
+                                        isDense: true,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 10),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: _isValidatingAffiliation
+                                        ? null
+                                        : (_appliedAffiliationCode != null
+                                            ? _removeAffiliation
+                                            : () {
+                                                final double sub = widget
+                                                        .isSingleItemCheckout
+                                                    ? ((currentPrice ?? 0.0) *
+                                                        (availableShoppingCartList
+                                                                .isNotEmpty
+                                                            ? (double.tryParse(
+                                                                    availableShoppingCartList[0]
+                                                                        .quantity
+                                                                        .toString()) ??
+                                                                1.0)
+                                                            : 1.0))
+                                                    : (basketSubtotal -
+                                                        basketDiscount);
+                                                _applyAffiliationCode(
+                                                    (sub - _couponDiscountDzd) >
+                                                            0
+                                                        ? (sub -
+                                                            _couponDiscountDzd)
+                                                        : 0.0);
+                                              }),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          _appliedAffiliationCode != null
+                                              ? Colors.grey.shade700
+                                              : PsColors.primary500,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: _isValidatingAffiliation
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Text(_appliedAffiliationCode != null
+                                            ? 'coupon__remove'.tr
+                                            : 'coupon__apply'.tr),
+                                  ),
+                                ],
+                              ),
+                              if (_affiliationMessage != null) ...<Widget>[
+                                const SizedBox(height: 6),
+                                Text(
+                                  _affiliationIsValid
+                                      ? '$_affiliationMessage (-${_affiliationDiscountDzd.toStringAsFixed(0)} DA)'
+                                      : _affiliationMessage!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _affiliationIsValid
                                         ? Colors.green[700]
                                         : Colors.red[700],
                                   ),
@@ -3196,6 +3401,10 @@ class _CheckoutViewState extends State<CheckoutView>
                               ? _couponDiscountDzd.toStringAsFixed(0)
                               : null,
                           couponCode: _appliedCouponCode,
+                          affiliationDiscount: _affiliationDiscountDzd > 0
+                              ? _affiliationDiscountDzd.toStringAsFixed(0)
+                              : null,
+                          affiliationCode: _appliedAffiliationCode,
                           totalPayable: remainingToPay.toStringAsFixed(0),
                         ),
 
@@ -3251,7 +3460,8 @@ class _CheckoutViewState extends State<CheckoutView>
                           ? walletAmountUsed.toStringAsFixed(0)
                           : '0',
                       isWalletOnly: isWalletOnly,
-                      couponCode: _appliedCouponCode),
+                      couponCode: _appliedCouponCode,
+                      affiliationCode: _appliedAffiliationCode),
                 ]);
               }))),
     );

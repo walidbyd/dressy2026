@@ -104,6 +104,13 @@
                             {{ $t('dressy_coupons_module') || 'Coupons Management' }}
                         </span>
                     </Link>
+                    <Link :href="route('admin.affiliation.index')" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-secondary-700 dark:text-secondary-300 hover:bg-primary-100 dark:hover:bg-secondary-800"
+                        :class="{ 'bg-primary-500 !text-white font-semibold shadow-sm': route().current('admin.affiliation.*') }">
+                        <ps-icon name="users" w="18" h="18" />
+                        <span :class="{ 'inline': sideMenuStore.isFullSideMenu, 'hidden xl:hidden': !sideMenuStore.isFullSideMenu }">
+                            {{ $t('dressy_affiliation_module') || 'Affiliation' }}
+                        </span>
+                    </Link>
                     <Link :href="route('admin.wallets.index')" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-secondary-700 dark:text-secondary-300 hover:bg-primary-100 dark:hover:bg-secondary-800"
                         :class="{ 'bg-primary-500 !text-white font-semibold shadow-sm': route().current('admin.wallets.*') }">
                         <ps-icon name="chart-line" w="18" h="18" />

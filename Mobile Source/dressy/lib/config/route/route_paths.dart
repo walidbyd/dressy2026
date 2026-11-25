@@ -182,4 +182,5 @@ class RoutePaths {
   static const String storyComposer = '/storyComposer';
   static const String storyViewer = '/storyViewer';
   static const String myCoupons = '/myCoupons';
+  static const String inviteFriend = '/inviteFriend';
 }

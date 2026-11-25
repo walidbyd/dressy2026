@@ -62,7 +62,8 @@ class PlaceOrderButton extends StatefulWidget {
       this.stopDeskName,
       this.walletAmountUsed,
       this.isWalletOnly = false,
-      this.couponCode})
+      this.couponCode,
+      this.affiliationCode})
       : super(key: key);
 
   final List<ShoppingCartItem> shoppingCartList;
@@ -88,6 +89,7 @@ class PlaceOrderButton extends StatefulWidget {
   final String? walletAmountUsed;
   final bool isWalletOnly;
   final String? couponCode;
+  final String? affiliationCode;
   @override
   State<PlaceOrderButton> createState() => _PlaceOrderButtonState();
 }
@@ -416,6 +418,7 @@ class _PlaceOrderButtonState extends State<PlaceOrderButton> {
               toWilayaId: wilayaCodeStr,
               fromWilayaId: widget.fromWilayaId,
               couponCode: widget.couponCode,
+              affiliationCode: widget.affiliationCode,
               toCommuneName: communeName,
               yalidineStopDeskId:
                   isStopDesk ? widget.yalidineStopDeskId : null,

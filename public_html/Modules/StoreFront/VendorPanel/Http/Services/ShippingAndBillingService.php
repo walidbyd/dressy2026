@@ -246,8 +246,34 @@ class ShippingAndBillingService extends PsService
                 $couponDiscount = (float) ($couponCheck['discount_amount'] ?? 0.0);
             }
 
-            // Single source of truth: final_total = max(0, subtotal - valid_coupon_discount) + real_yalidine_delivery_fee
-            $computedTotalPrice = max(0.0, round($itemsSubtotal - $couponDiscount, 2)) + $deliveryFee;
+            // Validate & apply affiliation/referral code if provided
+            $affiliationCodeId = null;
+            $affiliationIssuerId = null;
+            $affiliationCode = null;
+            $affiliationDiscount = 0.0;
+            $affiliationReceiverPct = 0.0;
+            $affiliationIssuerPct = 0.0;
+            $rawAffiliationCode = trim((string) ($request->affiliation_code ?? ''));
+            if ($rawAffiliationCode !== '') {
+                $affiliationService = app(\App\Services\AffiliationService::class);
+                $affCheck = $affiliationService->validateCode($rawAffiliationCode, (int) $userId, max(0.0, round($itemsSubtotal - $couponDiscount, 2)));
+                if (empty($affCheck['valid'])) {
+                    DB::rollBack();
+                    return responseMsgApi(
+                        $affCheck['message'] ?? 'Code de parrainage invalide.',
+                        Constants::badRequestStatusCode
+                    );
+                }
+                $affiliationCodeId = $affCheck['affiliation_code_id'] ?? null;
+                $affiliationIssuerId = $affCheck['issuer_user_id'] ?? null;
+                $affiliationCode = $affCheck['code'] ?? strtoupper($rawAffiliationCode);
+                $affiliationDiscount = (float) ($affCheck['discount_amount'] ?? 0.0);
+                $affiliationReceiverPct = (float) ($affCheck['receiver_percentage'] ?? 10.0);
+                $affiliationIssuerPct = (float) ($affCheck['issuer_percentage'] ?? 10.0);
+            }
+
+            // Single source of truth: final_total = max(0, subtotal - valid_coupon_discount - affiliation_discount) + real_yalidine_delivery_fee
+            $computedTotalPrice = max(0.0, round($itemsSubtotal - $couponDiscount - $affiliationDiscount, 2)) + $deliveryFee;
 
             // Resolve recipient name, phone, email, and auto-composed address (no street address required)
             $buyerUser = DB::table('users')->select('id', 'name', 'email', 'user_phone')->where('id', $userId)->first();
@@ -314,8 +340,29 @@ class ShippingAndBillingService extends PsService
                     $order->coupon_code = $couponCode;
                     $order->coupon_discount = $couponDiscount;
                 }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'affiliation_code')) {
+                    $order->affiliation_code = $affiliationCode;
+                    $order->affiliation_discount = $affiliationDiscount;
+                }
             } catch (\Throwable $e) {}
             $order->save();
+
+            if ($affiliationCodeId !== null && $affiliationIssuerId !== null) {
+                try {
+                    app(\App\Services\AffiliationService::class)->recordReferral(
+                        (int) $affiliationCodeId,
+                        (int) $affiliationIssuerId,
+                        (int) $userId,
+                        (int) $order->id,
+                        (string) $order->order_code,
+                        $affiliationReceiverPct,
+                        $affiliationDiscount,
+                        $affiliationIssuerPct
+                    );
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Affiliation referral recording failed: ' . $e->getMessage());
+                }
+            }
 
             if ($couponId !== null) {
                 try {

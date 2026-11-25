@@ -134,6 +134,25 @@ class DrawerWidgetState<T extends DrawerWidgetList>
                   Navigator.pushNamed(context, RoutePaths.myCoupons);
                 },
               ),
+              ListTile(
+                leading: Icon(Icons.card_giftcard_outlined,
+                    size: 22,
+                    color: Utils.isLightMode(context)
+                        ? PsColors.achromatic800
+                        : PsColors.achromatic50),
+                minLeadingWidth: 0,
+                title: Text(
+                  'affiliation__menu_title'.tr,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall!
+                      .copyWith(fontWeight: FontWeight.w400),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, RoutePaths.inviteFriend);
+                },
+              ),
             ],
             if (!Utils.isLoginUserEmpty(valueHolder))
               CustomActivityLogMenuWidget(

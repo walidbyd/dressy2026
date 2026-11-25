@@ -1105,6 +1105,12 @@ Route::middleware(['isInstall'])->group(function () {
             Route::delete('/{id}', 'destroy')->name('admin.coupons.destroy');
         });
 
+        Route::prefix('affiliation')->controller(\App\Http\Controllers\Backend\AdminAffiliationController::class)->group(function () {
+            Route::get('/', 'index')->name('admin.affiliation.index');
+            Route::post('/settings', 'updateSettings')->name('admin.affiliation.settings');
+            Route::post('/codes/{id}/toggle', 'toggleCode')->name('admin.affiliation.toggle');
+        });
+
         Route::prefix('wallets')->controller(\Modules\StoreFront\VendorPanel\Http\Controllers\Backend\Controllers\Finance\AdminWalletController::class)->group(function () {
             Route::get('/', 'index')->name('admin.wallets.index');
             Route::post('/adjust', 'adjust')->name('admin.wallets.adjust');

@@ -49,6 +49,11 @@ class WalletService
     {
         // Pre-check for idempotency before locking
         if ((int) $order->is_wallet_credited === 1 || ! empty($order->wallet_credited_at)) {
+            try {
+                app(\App\Services\AffiliationService::class)->creditIssuerForDeliveredOrder($order);
+            } catch (\Throwable $e) {
+                Log::warning('Affiliation credit on already-credited order failed: ' . $e->getMessage());
+            }
             return [
                 'success' => true,
                 'already_credited' => true,
@@ -164,6 +169,13 @@ class WalletService
             if ($lockedOrder->vendorTransaction) {
                 $lockedOrder->vendorTransaction->vendor_payment_status_id = 2; // Paid
                 $lockedOrder->vendorTransaction->save();
+            }
+
+            // Credit affiliation issuer wallet if this order used a referral code (idempotent)
+            try {
+                app(\App\Services\AffiliationService::class)->creditIssuerForDeliveredOrder($lockedOrder);
+            } catch (\Throwable $e) {
+                Log::warning('Affiliation credit on delivered order failed: ' . $e->getMessage());
             }
 
             Log::info('Wallet credited for order:', [
