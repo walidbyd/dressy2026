@@ -1,0 +1,1 @@
+import{_ as r}from"./plugin-vue_export-helper.21dcd24c.js";import{o as e,e as o}from"./app.a41711b8.js";const s={},t={class:"border-b border-fePrimary-500 mx-0 sm:mx-0"};function a(c,n,_,m,d,p){return e(),o("div",t)}var l=r(s,[["render",a]]);export{l as default};

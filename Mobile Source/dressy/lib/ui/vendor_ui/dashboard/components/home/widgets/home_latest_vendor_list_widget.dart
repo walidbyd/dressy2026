@@ -11,7 +11,6 @@ import '../../../../../../core/vendor/provider/vendor/search_vendor_provider.dar
 import '../../../../../../core/vendor/repository/vendor_search_repository.dart';
 import '../../../../../../core/vendor/utils/utils.dart';
 import '../../../../../../core/vendor/viewobject/common/ps_value_holder.dart';
-import '../../../../../../core/vendor/viewobject/default_photo.dart';
 import '../../../../../../core/vendor/viewobject/holder/intent_holder/vendor_user_intent_holder.dart';
 import '../../../../../../core/vendor/viewobject/holder/request_path_holder.dart';
 import '../../../../../../core/vendor/viewobject/holder/vendor_search_parameter_holder.dart';
@@ -510,40 +509,28 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
           final bool isStoryLoading = storyProvider.isLoading;
           final bool isVendorLoading = vendorSearchProvider.isLoading;
 
-          // Merge vendors from VendorSearchProvider and StoryProvider
+          // Vendors from VendorSearchProvider (vendors with items, story-first order)
           final List<VendorUser> mergedVendors = <VendorUser>[];
-          final Set<String> seenVendorIds = <String>{};
-          final Set<String> seenOwnerIds = <String>{};
 
           if (vendorSearchProvider.vendorList.data != null) {
             for (final VendorUser v in vendorSearchProvider.vendorList.data!) {
-              mergedVendors.add(v);
-              if (v.id != null && v.id!.isNotEmpty) {
-                seenVendorIds.add(v.id!);
-              }
-              if (v.ownerUserId != null && v.ownerUserId!.isNotEmpty) {
-                seenOwnerIds.add(v.ownerUserId!);
-              }
-            }
-          }
-
-          // Add any active story groups from StoryProvider not yet in mergedVendors
-          for (final VendorStoriesGroup g in storyProvider.storiesByVendor) {
-            final bool alreadyExists = (g.vendorId != null && seenVendorIds.contains(g.vendorId)) ||
-                (g.vendorUserId != null && seenOwnerIds.contains(g.vendorUserId));
-            if (!alreadyExists && g.stories.isNotEmpty) {
-              mergedVendors.add(
-                VendorUser(
-                  id: g.vendorId ?? '',
-                  ownerUserId: g.vendorUserId ?? '',
-                  name: g.vendorName ?? 'Vendeur',
-                  logo: DefaultPhoto(imgPath: g.avatarPath),
-                  hasActiveStory: true,
-                  hasActiveStories: true,
-                  latestStoryAt: g.latestStoryAt,
-                  stories: g.stories,
-                ),
+              // Attach active story group from StoryProvider if present
+              final VendorStoriesGroup? matchingStory = storyProvider.storiesByVendor.cast<VendorStoriesGroup?>().firstWhere(
+                (VendorStoriesGroup? g) =>
+                    g != null &&
+                    ((v.id != null && v.id!.isNotEmpty && g.vendorId == v.id) ||
+                     (v.ownerUserId != null && v.ownerUserId!.isNotEmpty && g.vendorUserId == v.ownerUserId)),
+                orElse: () => null,
               );
+
+              if (matchingStory != null && matchingStory.stories.isNotEmpty) {
+                v.hasActiveStory = true;
+                v.hasActiveStories = true;
+                v.latestStoryAt = matchingStory.latestStoryAt ?? v.latestStoryAt;
+                v.stories = matchingStory.stories;
+              }
+
+              mergedVendors.add(v);
             }
           }
 
@@ -551,17 +538,11 @@ class _LatestVendorListWidgetState extends State<LatestVendorListWidget> {
           mergedVendors.sort((VendorUser a, VendorUser b) {
             final bool aHasStory = a.hasActiveStory == true ||
                 a.hasActiveStories == true ||
-                (a.latestStoryAt != null && a.latestStoryAt!.isNotEmpty) ||
-                storyProvider.storiesByVendor.any((VendorStoriesGroup g) =>
-                    (a.id != null && a.id!.isNotEmpty && g.vendorId == a.id) ||
-                    (a.ownerUserId != null && a.ownerUserId!.isNotEmpty && g.vendorUserId == a.ownerUserId));
+                (a.latestStoryAt != null && a.latestStoryAt!.isNotEmpty);
 
             final bool bHasStory = b.hasActiveStory == true ||
                 b.hasActiveStories == true ||
-                (b.latestStoryAt != null && b.latestStoryAt!.isNotEmpty) ||
-                storyProvider.storiesByVendor.any((VendorStoriesGroup g) =>
-                    (b.id != null && b.id!.isNotEmpty && g.vendorId == b.id) ||
-                    (b.ownerUserId != null && b.ownerUserId!.isNotEmpty && g.vendorUserId == b.ownerUserId));
+                (b.latestStoryAt != null && b.latestStoryAt!.isNotEmpty);
 
             if (aHasStory && !bHasStory) {
               return -1;

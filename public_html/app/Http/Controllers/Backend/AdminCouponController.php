@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers\Backend;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\PsController;
 use App\Models\Coupon;
+use App\Models\CouponUsage;
 use App\Services\CouponService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
-class AdminCouponController extends Controller
+class AdminCouponController extends PsController
 {
     public function __construct(protected CouponService $couponService)
     {
+        parent::__construct();
     }
 
     public function index(Request $request)
@@ -27,12 +29,31 @@ class AdminCouponController extends Controller
             $query->where('source', $request->input('source'));
         }
 
+        if ($request->filled('status')) {
+            if ($request->input('status') === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->input('status') === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
         $coupons = $query->paginate(20)->withQueryString();
 
-        return view('admin.coupons.index', [
+        $stats = [
+            'total' => Coupon::count(),
+            'active' => Coupon::where('is_active', true)->count(),
+            'total_usages' => CouponUsage::count(),
+            'roulette' => Coupon::where('source', 'roulette')->count(),
+        ];
+
+        return renderView('admin/coupons/Index', [
             'coupons' => $coupons,
-            'search' => $request->input('search', ''),
-            'sourceFilter' => $request->input('source', ''),
+            'filters' => [
+                'search' => $request->input('search', ''),
+                'source' => $request->input('source', 'all'),
+                'status' => $request->input('status', 'all'),
+            ],
+            'stats' => $stats,
         ]);
     }
 
@@ -68,7 +89,10 @@ class AdminCouponController extends Controller
             'expires_at' => !empty($validated['expires_at']) ? Carbon::parse($validated['expires_at']) : null,
         ]);
 
-        return redirect()->route('admin.coupons.index')->with('success', 'Coupon created successfully.');
+        return redirect()->route('admin.coupons.index')->with('status', [
+            'flag' => 'success',
+            'msg' => 'Coupon créé avec succès !',
+        ]);
     }
 
     public function update(Request $request, int $id)
@@ -97,7 +121,10 @@ class AdminCouponController extends Controller
             'expires_at' => !empty($validated['expires_at']) ? Carbon::parse($validated['expires_at']) : null,
         ]);
 
-        return redirect()->route('admin.coupons.index')->with('success', 'Coupon updated successfully.');
+        return redirect()->route('admin.coupons.index')->with('status', [
+            'flag' => 'success',
+            'msg' => 'Coupon mis à jour avec succès !',
+        ]);
     }
 
     public function toggle(int $id)
@@ -106,7 +133,10 @@ class AdminCouponController extends Controller
         $coupon->is_active = !$coupon->is_active;
         $coupon->save();
 
-        return redirect()->route('admin.coupons.index')->with('success', 'Coupon status updated.');
+        return redirect()->route('admin.coupons.index')->with('status', [
+            'flag' => 'success',
+            'msg' => 'Statut du coupon mis à jour.',
+        ]);
     }
 
     public function destroy(int $id)
@@ -114,6 +144,9 @@ class AdminCouponController extends Controller
         $coupon = Coupon::findOrFail($id);
         $coupon->delete();
 
-        return redirect()->route('admin.coupons.index')->with('success', 'Coupon deleted.');
+        return redirect()->route('admin.coupons.index')->with('status', [
+            'flag' => 'success',
+            'msg' => 'Coupon supprimé avec succès.',
+        ]);
     }
 }

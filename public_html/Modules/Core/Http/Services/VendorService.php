@@ -235,7 +235,11 @@ class VendorService extends PsService
                     $sub->select(\Illuminate\Support\Facades\DB::raw(1))
                         ->from('psx_items')
                         ->whereColumn('psx_items.vendor_id', Vendor::tableName . '.' . Vendor::id)
-                        ->where('psx_items.status', 1);
+                        ->where('psx_items.status', 1)
+                        ->where(function ($subQ) {
+                            $subQ->where('psx_items.is_sold_out', 0)
+                                 ->orWhereNull('psx_items.is_sold_out');
+                        });
                 });
             })
             ->when(isset($conds['order_by']) && $conds['order_by'], function ($q) use ($conds) {

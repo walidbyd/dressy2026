@@ -559,33 +559,82 @@ class YalidineService
                     $data = $response->json();
                     if (is_array($data)) {
                         $extractFees = function (array $node): array {
-                            $h = $node['home_fee'] ?? $node['express_home'] ?? $node['economic_home'] ?? null;
-                            $d = $node['desk_fee'] ?? $node['stopdesk_fee'] ?? $node['express_desk'] ?? $node['economic_desk'] ?? null;
+                            $h = $node['home_fee'] ?? $node['express_home'] ?? $node['economic_home'] ?? $node['domicile'] ?? $node['home'] ?? null;
+                            $d = $node['desk_fee'] ?? $node['stopdesk_fee'] ?? $node['express_desk'] ?? $node['economic_desk'] ?? $node['stopdesk'] ?? $node['bureau'] ?? null;
                             return [
-                                $h !== null ? (float) $h : null,
-                                $d !== null ? (float) $d : null,
+                                ($h !== null && is_numeric($h)) ? (float) $h : null,
+                                ($d !== null && is_numeric($d)) ? (float) $d : null,
                             ];
                         };
 
-                        if (isset($data['home_fee']) || isset($data['express_home'])) {
-                            [$liveHomeFee, $liveDeskFee] = $extractFees($data);
-                        } elseif (isset($data['per_commune']) && is_array($data['per_commune'])) {
-                            foreach ($data['per_commune'] as $communeFees) {
-                                if (is_array($communeFees)) {
-                                    [$h, $d] = $extractFees($communeFees);
-                                    if ($h !== null && $h > 0 && $d !== null && $d > 0) {
-                                        $liveHomeFee = $h;
-                                        $liveDeskFee = $d;
-                                        break;
+                        // 1. Direct fields at root
+                        [$h, $d] = $extractFees($data);
+                        if ($h !== null && $d !== null) {
+                            $liveHomeFee = $h;
+                            $liveDeskFee = $d;
+                        }
+
+                        // 2. Keyed by wilaya ID or wilaya name
+                        if (($liveHomeFee === null || $liveDeskFee === null) && isset($data[(string) $toId]) && is_array($data[(string) $toId])) {
+                            [$h, $d] = $extractFees($data[(string) $toId]);
+                            if ($h !== null && $d !== null) {
+                                $liveHomeFee = $h;
+                                $liveDeskFee = $d;
+                            }
+                        }
+
+                        $toName = $this->getWilayaNameById($toId);
+                        if (($liveHomeFee === null || $liveDeskFee === null) && $toName && isset($data[$toName]) && is_array($data[$toName])) {
+                            [$h, $d] = $extractFees($data[$toName]);
+                            if ($h !== null && $d !== null) {
+                                $liveHomeFee = $h;
+                                $liveDeskFee = $d;
+                            }
+                        }
+
+                        // 3. Nested under 'data', 'fees', or 'per_commune'
+                        $subList = $data['data'] ?? $data['fees'] ?? $data['per_commune'] ?? null;
+                        if (($liveHomeFee === null || $liveDeskFee === null) && is_array($subList)) {
+                            [$h, $d] = $extractFees($subList);
+                            if ($h !== null && $d !== null) {
+                                $liveHomeFee = $h;
+                                $liveDeskFee = $d;
+                            } else {
+                                foreach ($subList as $key => $subNode) {
+                                    if (is_array($subNode)) {
+                                        $nodeWilayaId = $subNode['to_wilaya_id'] ?? $subNode['wilaya_id'] ?? $key;
+                                        if ((string) $nodeWilayaId === (string) $toId || (string) $key === (string) $toId) {
+                                            [$h, $d] = $extractFees($subNode);
+                                            if ($h !== null && $d !== null) {
+                                                $liveHomeFee = $h;
+                                                $liveDeskFee = $d;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                if ($liveHomeFee === null || $liveDeskFee === null) {
+                                    foreach ($subList as $subNode) {
+                                        if (is_array($subNode)) {
+                                            [$h, $d] = $extractFees($subNode);
+                                            if ($h !== null && $d !== null && $h > 0 && $d > 0) {
+                                                $liveHomeFee = $h;
+                                                $liveDeskFee = $d;
+                                                break;
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        } elseif (isset($data[(string) $toId]) && is_array($data[(string) $toId])) {
-                            [$liveHomeFee, $liveDeskFee] = $extractFees($data[(string) $toId]);
-                        } elseif (isset($data[0]) && is_array($data[0])) {
-                            [$liveHomeFee, $liveDeskFee] = $extractFees($data[0]);
-                        } elseif (isset($data['data']) && is_array($data['data'])) {
-                            [$liveHomeFee, $liveDeskFee] = $extractFees($data['data']);
+                        }
+
+                        // 4. Numeric indexed array [ {...} ]
+                        if (($liveHomeFee === null || $liveDeskFee === null) && isset($data[0]) && is_array($data[0])) {
+                            [$h, $d] = $extractFees($data[0]);
+                            if ($h !== null && $d !== null) {
+                                $liveHomeFee = $h;
+                                $liveDeskFee = $d;
+                            }
                         }
                     }
                 } else {
