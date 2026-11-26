@@ -127,6 +127,8 @@ flutter:
     - assets/images/buy_package.svg
     - assets/images/onboard_language.svg
     - assets/images/chat_list_empty_photo.svg
+    - assets/images/cib_logo.svg
+    - assets/images/edahabia_logo.svg
     - assets/images/demo_alert.png
     - assets/images/google_logo.png
     - assets/images/buy_package_background.png

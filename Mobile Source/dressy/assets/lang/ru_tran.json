@@ -1051,8 +1051,19 @@
   "ads__topup_prompt": "Top up your wallet with CIB or Edahabia to activate this boost.",
   "ads__go_topup_btn": "Top Up Wallet",
   "wallet__topup_section_title": "Top Up Wallet (CIB / Edahabia)",
-  "wallet__topup_section_subtitle": "Choose a pack to credit your wallet securely via Silk Pay.",
+  "wallet__topup_section_subtitle": "Choose a pack to top up your balance securely with CIB or Edahabia.",
   "wallet__topup_btn": "Top Up",
-  "wallet__topup_error": "Unable to initiate Silk Pay payment.",
-  "ads__story_viewer_boost_btn": "Boost Story"
+  "wallet__topup_error": "Unable to initiate card payment.",
+  "ads__story_viewer_boost_btn": "Boost Story",
+  "seller_kpi_ads_spend": "Ads / Boost Spend",
+  "seller_kpi_referral_gains": "Referral Gains",
+  "seller_kpi_topups": "Card Top-Ups",
+  "seller_kpi_wallet_balance": "Wallet Balance",
+  "seller_kpi_net_account_profit": "Net Account Profit",
+  "seller_cat_all": "All",
+  "seller_cat_sales": "Sales",
+  "seller_cat_ads": "Ads",
+  "seller_cat_referral": "Referrals",
+  "seller_cat_topup": "Top-Ups",
+  "seller_cat_wallet": "Wallet"
 }

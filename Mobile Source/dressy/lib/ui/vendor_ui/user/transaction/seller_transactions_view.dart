@@ -38,6 +38,7 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
   List<SellerTransaction> _transactions = <SellerTransaction>[];
 
   SellerDateFilterPreset _currentFilter = SellerDateFilterPreset.all;
+  String _selectedCategory = 'all';
   DateTime? _customStartDate;
   DateTime? _customEndDate;
 
@@ -351,10 +352,62 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildKpiCard(
-                  title: 'seller_kpi_realised_profit'.tr,
+                  title: 'seller_kpi_ads_spend'.tr,
                   value:
-                      '${Utils.getPriceFormat(_summary?.realisedProfit ?? '0', '#,##0')} $currency',
+                      '${Utils.getPriceFormat(_summary?.totalAdsSpend ?? '0', '#,##0')} $currency',
+                  icon: Icons.bolt_rounded,
+                  iconColor: const Color(0xFFD97706),
+                  iconBgColor: const Color(0xFFFEF3C7),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _buildKpiCard(
+                  title: 'seller_kpi_referral_gains'.tr,
+                  value:
+                      '${Utils.getPriceFormat(_summary?.totalAffiliationGains ?? '0', '#,##0')} $currency',
+                  icon: Icons.card_giftcard_outlined,
+                  iconColor: const Color(0xFF7C3AED),
+                  iconBgColor: const Color(0xFFF3E8FF),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildKpiCard(
+                  title: 'seller_kpi_topups'.tr,
+                  value:
+                      '${Utils.getPriceFormat(_summary?.totalTopups ?? '0', '#,##0')} $currency',
+                  icon: Icons.credit_card_outlined,
+                  iconColor: const Color(0xFF059669),
+                  iconBgColor: const Color(0xFFECFDF5),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _buildKpiCard(
+                  title: 'seller_kpi_wallet_balance'.tr,
+                  value:
+                      '${Utils.getPriceFormat(_summary?.walletBalance ?? '0', '#,##0')} $currency',
                   icon: Icons.account_balance_wallet_outlined,
+                  iconColor: const Color(0xFF2563EB),
+                  iconBgColor: const Color(0xFFEFF6FF),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildKpiCard(
+                  title: 'seller_kpi_net_account_profit'.tr,
+                  value:
+                      '${Utils.getPriceFormat(_summary?.netAccountProfit ?? _summary?.realisedProfit ?? '0', '#,##0')} $currency',
+                  icon: Icons.savings_outlined,
                   iconColor: const Color(0xFF10B981),
                   iconBgColor: const Color(0xFFECFDF5),
                   isHighlight: true,
@@ -363,6 +416,36 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryTabs() {
+    final List<Map<String, String>> tabs = <Map<String, String>>[
+      <String, String>{'key': 'all', 'label': 'seller_cat_all'.tr},
+      <String, String>{'key': 'sale', 'label': 'seller_cat_sales'.tr},
+      <String, String>{'key': 'ads', 'label': 'seller_cat_ads'.tr},
+      <String, String>{'key': 'referral', 'label': 'seller_cat_referral'.tr},
+      <String, String>{'key': 'topup', 'label': 'seller_cat_topup'.tr},
+      <String, String>{'key': 'wallet', 'label': 'seller_cat_wallet'.tr},
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: PsDimens.space16),
+      child: Row(
+        children: tabs.map((Map<String, String> t) {
+          final String key = t['key']!;
+          final bool active = _selectedCategory == key;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(t['label']!, style: TextStyle(fontSize: 11.5, fontWeight: active ? FontWeight.bold : FontWeight.w500)),
+              selected: active,
+              selectedColor: PsColors.primary500.withValues(alpha: 0.16),
+              onSelected: (_) => setState(() => _selectedCategory = key),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -451,6 +534,124 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
 
   Widget _buildTransactionItem(SellerTransaction item) {
     final String currency = item.currencySymbol ?? 'DA';
+    final String category = (item.category ?? '').toLowerCase();
+    final bool isLedgerItem = category == 'ads' ||
+        category == 'referral' ||
+        category == 'topup' ||
+        category == 'wallet';
+
+    if (isLedgerItem) {
+      final bool isCredit = (item.type ?? '').toLowerCase() == 'credit' ||
+          !(item.netAmount ?? '').startsWith('-');
+      final String cleanAmt = Utils.getPriceFormat(
+          (item.netAmount ?? item.grossAmount ?? '0').replaceAll('-', ''),
+          '#,##0');
+      final String amtText = '${isCredit ? '+' : '-'}$cleanAmt $currency';
+      Color badgeBg = const Color(0xFFECFDF5);
+      Color badgeText = const Color(0xFF059669);
+      IconData catIcon = Icons.account_balance_wallet_outlined;
+      if (category == 'ads') {
+        badgeBg = const Color(0xFFFEF3C7);
+        badgeText = const Color(0xFFD97706);
+        catIcon = Icons.bolt_rounded;
+      } else if (category == 'referral') {
+        badgeBg = const Color(0xFFF3E8FF);
+        badgeText = const Color(0xFF7C3AED);
+        catIcon = Icons.card_giftcard_outlined;
+      } else if (category == 'topup') {
+        badgeBg = const Color(0xFFECFDF5);
+        badgeText = const Color(0xFF059669);
+        catIcon = Icons.credit_card_outlined;
+      } else if (!isCredit) {
+        badgeBg = const Color(0xFFFEF2F2);
+        badgeText = const Color(0xFFDC2626);
+      }
+
+      return Container(
+        margin: const EdgeInsets.symmetric(
+            horizontal: PsDimens.space16, vertical: PsDimens.space6),
+        padding: const EdgeInsets.all(PsDimens.space12),
+        decoration: BoxDecoration(
+          color: Utils.isLightMode(context)
+              ? Colors.white
+              : PsColors.achromatic700,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: Utils.isLightMode(context)
+                ? const Color(0xFFE5E7EB)
+                : PsColors.achromatic600,
+          ),
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: badgeBg, shape: BoxShape.circle),
+              child: Icon(catIcon, color: badgeText, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      item.statusLabel ?? category.toUpperCase(),
+                      style: TextStyle(
+                        color: badgeText,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.itemTitle ?? item.itemName ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                  if ((item.deliveryDate ?? '').isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 2),
+                    Text(
+                      item.deliveryDate!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                            color: Utils.isLightMode(context)
+                                ? PsColors.text800.withValues(alpha: 0.5)
+                                : PsColors.achromatic50.withValues(alpha: 0.5),
+                          ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              amtText,
+              style: TextStyle(
+                color: isCredit
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFFDC2626),
+                fontWeight: FontWeight.bold,
+                fontSize: 13.5,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final String status = (item.statusType ?? item.status ?? '').toLowerCase();
     final bool isCancelled = status == 'cancelled';
     final bool isReturned = status == 'returned';
@@ -818,6 +1019,8 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
                 children: <Widget>[
                   const SizedBox(height: 8),
                   _buildFilterPills(),
+                  const SizedBox(height: 6),
+                  _buildCategoryTabs(),
                   const SizedBox(height: 12),
                   _buildKpiGrid(),
                   const SizedBox(height: 16),
@@ -832,37 +1035,56 @@ class _SellerTransactionsViewState extends State<SellerTransactionsView> {
                           ),
                     ),
                   ),
-                  if (_transactions.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(PsDimens.space32),
-                      alignment: Alignment.center,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Icon(
-                            Icons.receipt_long_outlined,
-                            size: 56,
-                            color: Utils.isLightMode(context)
-                                ? PsColors.achromatic300
-                                : PsColors.achromatic500,
+                  Builder(
+                    builder: (BuildContext bCtx) {
+                      final List<SellerTransaction> visibleTx =
+                          _selectedCategory == 'all'
+                              ? _transactions
+                              : _transactions.where((SellerTransaction t) {
+                                  final String c =
+                                      (t.category ?? 'sale').toLowerCase();
+                                  if (_selectedCategory == 'sale') {
+                                    return c == 'sale' || c == 'reversal';
+                                  }
+                                  return c == _selectedCategory;
+                                }).toList();
+                      if (visibleTx.isEmpty) {
+                        return Container(
+                          padding: const EdgeInsets.all(PsDimens.space32),
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              Icon(
+                                Icons.receipt_long_outlined,
+                                size: 56,
+                                color: Utils.isLightMode(context)
+                                    ? PsColors.achromatic300
+                                    : PsColors.achromatic500,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'seller_no_transactions_found'.tr,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: Utils.isLightMode(context)
+                                          ? PsColors.text800
+                                              .withValues(alpha: 0.5)
+                                          : PsColors.achromatic50
+                                              .withValues(alpha: 0.5),
+                                    ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'seller_no_transactions_found'.tr,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: Utils.isLightMode(context)
-                                      ? PsColors.text800.withValues(alpha: 0.5)
-                                      : PsColors.achromatic50.withValues(alpha: 0.5),
-                                ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    ..._transactions.map(_buildTransactionItem),
+                        );
+                      }
+                      return Column(
+                        children: visibleTx.map(_buildTransactionItem).toList(),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 24),
                 ],
               ),

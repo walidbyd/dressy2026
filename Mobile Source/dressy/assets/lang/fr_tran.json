@@ -1266,8 +1266,19 @@
   "ads__topup_prompt": "Rechargez votre portefeuille par carte CIB ou Edahabia pour activer ce boost.",
   "ads__go_topup_btn": "Créditer le portefeuille",
   "wallet__topup_section_title": "Créditer le portefeuille (CIB / Edahabia)",
-  "wallet__topup_section_subtitle": "Choisissez un pack pour recharger votre solde en toute sécurité via Silk Pay.",
+  "wallet__topup_section_subtitle": "Choisissez un pack pour recharger votre solde par carte CIB ou Edahabia.",
   "wallet__topup_btn": "Créditer",
-  "wallet__topup_error": "Impossible de lancer le paiement Silk Pay.",
-  "ads__story_viewer_boost_btn": "Booster la story"
+  "wallet__topup_error": "Impossible de lancer le paiement par carte.",
+  "ads__story_viewer_boost_btn": "Booster la story",
+  "seller_kpi_ads_spend": "Dépenses Pub / Boosts",
+  "seller_kpi_referral_gains": "Gains Parrainage",
+  "seller_kpi_topups": "Rechargements",
+  "seller_kpi_wallet_balance": "Solde Portefeuille",
+  "seller_kpi_net_account_profit": "Bénéfice Net Compte",
+  "seller_cat_all": "Tout",
+  "seller_cat_sales": "Ventes",
+  "seller_cat_ads": "Publicité",
+  "seller_cat_referral": "Parrainage",
+  "seller_cat_topup": "Rechargements",
+  "seller_cat_wallet": "Portefeuille"
 }

@@ -234,11 +234,10 @@ class VendorService extends PsService
                 $q->whereExists(function ($sub) {
                     $sub->select(\Illuminate\Support\Facades\DB::raw(1))
                         ->from('psx_items')
-                        ->whereColumn('psx_items.vendor_id', Vendor::tableName . '.' . Vendor::id)
                         ->where('psx_items.status', 1)
                         ->where(function ($subQ) {
-                            $subQ->where('psx_items.is_sold_out', 0)
-                                 ->orWhereNull('psx_items.is_sold_out');
+                            $subQ->whereColumn('psx_items.vendor_id', Vendor::tableName . '.' . Vendor::id)
+                                 ->orWhereColumn('psx_items.added_user_id', Vendor::tableName . '.' . Vendor::ownerUserId);
                         });
                 });
             })

@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Modules\Core\Entities\Item\Item;
 use Modules\Core\Entities\Vendor\Vendor;
-use Modules\Core\Transformers\Api\App\V1_0\Item\ItemApiResource;
+use Modules\Core\Transformers\Api\App\V1_0\Product\ProductApiResource;
 
 class StoryApiController extends Controller
 {
@@ -196,7 +196,7 @@ class StoryApiController extends Controller
                 ->limit(60)
                 ->get();
 
-            return ItemApiResource::collection($items);
+            return ProductApiResource::collection($items);
         } catch (\Throwable $e) {
             Log::error('Error fetching seller story items: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return response()->json([

@@ -1266,8 +1266,19 @@
   "ads__topup_prompt": "اشحن محفظتك ببطاقة CIB أو الذهبية لتفعيل هذا الترويج.",
   "ads__go_topup_btn": "شحن المحفظة",
   "wallet__topup_section_title": "شحن المحفظة (CIB / الذهبية)",
-  "wallet__topup_section_subtitle": "اختر باقة لشحن محفظتك بأمان عبر Silk Pay.",
+  "wallet__topup_section_subtitle": "اختر باقة لشحن محفظتك بأمان عبر بطاقة CIB أو الذهبية.",
   "wallet__topup_btn": "شحن",
-  "wallet__topup_error": "تعذر بدء الدفع عبر Silk Pay.",
-  "ads__story_viewer_boost_btn": "ترويج القصة"
+  "wallet__topup_error": "تعذر بدء الدفع بالبطاقة.",
+  "ads__story_viewer_boost_btn": "ترويج القصة",
+  "seller_kpi_ads_spend": "مصاريف الإعلانات",
+  "seller_kpi_referral_gains": "أرباح الإحالة",
+  "seller_kpi_topups": "شحن المحفظة",
+  "seller_kpi_wallet_balance": "رصيد المحفظة",
+  "seller_kpi_net_account_profit": "صافي ربح الحساب",
+  "seller_cat_all": "الكل",
+  "seller_cat_sales": "المبيعات",
+  "seller_cat_ads": "الإعلانات",
+  "seller_cat_referral": "الإحالة",
+  "seller_cat_topup": "الشحن",
+  "seller_cat_wallet": "المحفظة"
 }

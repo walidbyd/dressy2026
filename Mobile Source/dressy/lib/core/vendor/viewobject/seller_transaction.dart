@@ -12,6 +12,9 @@ class SellerTransaction extends PsObject<SellerTransaction> {
     this.status,
     this.statusType,
     this.statusLabel,
+    this.category,
+    this.type,
+    this.source,
     this.isDeliveredAndPaid,
     this.currencySymbol,
     this.grossAmount,
@@ -33,6 +36,9 @@ class SellerTransaction extends PsObject<SellerTransaction> {
   String? status;
   String? statusType;
   String? statusLabel;
+  String? category;
+  String? type;
+  String? source;
   String? isDeliveredAndPaid;
   String? currencySymbol;
   String? grossAmount;
@@ -72,6 +78,9 @@ class SellerTransaction extends PsObject<SellerTransaction> {
         status: st,
         statusType: st,
         statusLabel: dynamicData['status_label']?.toString(),
+        category: dynamicData['category']?.toString(),
+        type: dynamicData['type']?.toString(),
+        source: dynamicData['source']?.toString(),
         isDeliveredAndPaid: dynamicData['is_delivered_and_paid']?.toString(),
         currencySymbol: dynamicData['currency_symbol']?.toString(),
         grossAmount: dynamicData['gross_amount']?.toString(),

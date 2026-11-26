@@ -21,6 +21,11 @@ class ChatMessagesApiController extends Controller
             return response()->json(['status' => 'error', 'messages' => []], 422);
         }
 
+        $fallbackSessionId = trim((string) ($request->query('fallback_session_id') ?? ''));
+        if ($fallbackSessionId !== '' && !preg_match('/^[a-zA-Z0-9_\-]+$/', $fallbackSessionId)) {
+            $fallbackSessionId = '';
+        }
+
         $token = $this->chatService->getFirebaseOAuthToken();
         if (!$token) {
             return response()->json(['status' => 'error', 'messages' => []], 502);
@@ -33,6 +38,16 @@ class ChatMessagesApiController extends Controller
         }
 
         $raw = $response->json();
+        if (empty($raw) && $fallbackSessionId !== '' && $fallbackSessionId !== $sessionId) {
+            $fbUrl = "https://dressydz-default-rtdb.firebaseio.com/Message/{$fallbackSessionId}.json";
+            $fbResponse = Http::withToken($token)->timeout(10)->get($fbUrl);
+            if ($fbResponse->successful()) {
+                $fbRaw = $fbResponse->json();
+                if (!empty($fbRaw)) {
+                    $raw = $fbRaw;
+                }
+            }
+        }
         return response()->json([
             'status' => 'success',
             'messages' => is_array($raw) ? $raw : [],

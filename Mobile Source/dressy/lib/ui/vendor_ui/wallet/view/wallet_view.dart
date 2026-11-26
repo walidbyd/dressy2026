@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -195,23 +196,64 @@ class _WalletViewState extends State<WalletView> with WidgetsBindingObserver {
 
     final Future<PsResource<Wallet>> balanceFuture =
         apiService.getWalletBalance(loginUserId, languageCode);
-    final Future<PsResource<List<WalletTransaction>>> transactionsFuture =
-        apiService.getWalletTransactions(loginUserId, 50, 0, languageCode);
+    final Future<List<WalletTransaction>> transactionsFuture =
+        _fetchWalletTransactions(loginUserId, languageCode, valueHolder.headerToken ?? '');
 
     final List<dynamic> results =
         await Future.wait<dynamic>(<Future<dynamic>>[balanceFuture, transactionsFuture]);
 
     if (mounted) {
       final PsResource<Wallet> balanceRes = results[0] as PsResource<Wallet>;
-      final PsResource<List<WalletTransaction>> transactionsRes =
-          results[1] as PsResource<List<WalletTransaction>>;
+      final List<WalletTransaction> txList =
+          results[1] as List<WalletTransaction>;
 
       setState(() {
         _wallet = balanceRes.data;
-        _transactions = transactionsRes.data ?? <WalletTransaction>[];
+        _transactions = txList;
         _isLoading = false;
       });
     }
+  }
+
+  Future<List<WalletTransaction>> _fetchWalletTransactions(
+      String loginUserId, String languageCode, String headerToken) async {
+    try {
+      final http.Response res = await http.get(
+        Uri.parse(
+            '${PsConfig.ps_app_url}vendor/wallet/transactions?login_user_id=$loginUserId&limit=100&offset=0&language_symbol=$languageCode'),
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Authorization': PsConfig.ps_bearer_token,
+          'header-token': headerToken,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (res.statusCode == 200) {
+        final dynamic decoded = json.decode(res.body);
+        dynamic rawList;
+        if (decoded is List<dynamic>) {
+          rawList = decoded;
+        } else if (decoded is Map<String, dynamic>) {
+          if (decoded['transactions'] is List<dynamic>) {
+            rawList = decoded['transactions'];
+          } else if (decoded['data'] is List<dynamic>) {
+            rawList = decoded['data'];
+          } else if (decoded['data'] is Map<String, dynamic> &&
+              (decoded['data'] as Map<String, dynamic>)['transactions']
+                  is List<dynamic>) {
+            rawList = (decoded['data'] as Map<String, dynamic>)['transactions'];
+          }
+        }
+        if (rawList is List<dynamic>) {
+          return WalletTransaction().fromMapList(rawList);
+        }
+      }
+    } catch (_) {}
+    final PsApiService apiService =
+        Provider.of<PsApiService>(context, listen: false);
+    final PsResource<List<WalletTransaction>> fallback =
+        await apiService.getWalletTransactions(loginUserId, 100, 0, languageCode);
+    return fallback.data ?? <WalletTransaction>[];
   }
 
   void _showWithdrawDialog() {
@@ -483,9 +525,14 @@ class _WalletViewState extends State<WalletView> with WidgetsBindingObserver {
     final String source = (item.source ?? '').toLowerCase();
     final bool isReversal = source == 'sale_reversal';
     final bool isRefund = source == 'order_refund';
-    final bool isAffiliation = source == 'affiliation_reward';
+    final bool isAffiliation =
+        source == 'affiliation_reward' || source == 'referral_bonus';
     final bool isSilkpayTopup = source == 'silkpay_topup';
-    final bool isAdBoost = source == 'ad_story_boost' || source == 'ad_item_boost';
+    final bool isAdBoost = source == 'ad_story_boost' ||
+        source == 'ad_item_boost' ||
+        source == 'story_boost' ||
+        source == 'article_boost';
+    final bool isOrderPayment = source == 'order_payment';
 
     Color iconBgColor = isCredit ? PsColors.success50 : PsColors.error50;
     Color iconColor = isCredit ? PsColors.success500 : PsColors.error500;
@@ -511,6 +558,10 @@ class _WalletViewState extends State<WalletView> with WidgetsBindingObserver {
       iconBgColor = const Color(0xFFEFF6FF);
       iconColor = const Color(0xFF2563EB);
       txIcon = Icons.undo;
+    } else if (isOrderPayment) {
+      iconBgColor = const Color(0xFFFEF2F2);
+      iconColor = const Color(0xFFDC2626);
+      txIcon = Icons.shopping_bag_outlined;
     }
 
     String txTitle;
@@ -522,6 +573,10 @@ class _WalletViewState extends State<WalletView> with WidgetsBindingObserver {
       txTitle = (item.description != null && item.description!.trim().isNotEmpty)
           ? item.description!.trim()
           : (item.note ?? 'Publicité / Boost');
+    } else if (isOrderPayment) {
+      txTitle = (item.orderCode != null && item.orderCode!.isNotEmpty)
+          ? 'Paiement commande #${item.orderCode}'
+          : (item.description ?? item.note ?? 'Paiement commande');
     } else if (isAffiliation) {
       txTitle = (item.description != null && item.description!.trim().isNotEmpty)
           ? item.description!.trim()
@@ -704,9 +759,6 @@ class _WalletViewState extends State<WalletView> with WidgetsBindingObserver {
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(Icons.credit_card_rounded,
-                  color: PsColors.primary500, size: 20),
-              const SizedBox(width: PsDimens.space8),
               Expanded(
                 child: Text(
                   'wallet__topup_section_title'.tr,
@@ -715,6 +767,10 @@ class _WalletViewState extends State<WalletView> with WidgetsBindingObserver {
                       ),
                 ),
               ),
+              const SizedBox(width: PsDimens.space8),
+              SvgPicture.asset('assets/images/cib_logo.svg', height: 24),
+              const SizedBox(width: 6),
+              SvgPicture.asset('assets/images/edahabia_logo.svg', height: 24),
             ],
           ),
           const SizedBox(height: 4),

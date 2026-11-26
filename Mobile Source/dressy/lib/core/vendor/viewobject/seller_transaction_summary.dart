@@ -7,6 +7,12 @@ class SellerTransactionSummary extends PsObject<SellerTransactionSummary> {
     this.grossSalesTotal,
     this.totalCommission,
     this.realisedProfit,
+    this.totalAdsSpend,
+    this.totalAffiliationGains,
+    this.totalTopups,
+    this.totalWalletPayments,
+    this.netAccountProfit,
+    this.walletBalance,
     this.currencySymbol,
   });
 
@@ -14,6 +20,12 @@ class SellerTransactionSummary extends PsObject<SellerTransactionSummary> {
   String? grossSalesTotal;
   String? totalCommission;
   String? realisedProfit;
+  String? totalAdsSpend;
+  String? totalAffiliationGains;
+  String? totalTopups;
+  String? totalWalletPayments;
+  String? netAccountProfit;
+  String? walletBalance;
   String? currencySymbol;
 
   @override
@@ -40,6 +52,12 @@ class SellerTransactionSummary extends PsObject<SellerTransactionSummary> {
         grossSalesTotal: (dynamicData['gross_sales_total'] ?? dynamicData['total_sales_amount'])?.toString() ?? '0.00',
         totalCommission: dynamicData['total_commission']?.toString() ?? '0.00',
         realisedProfit: dynamicData['realised_profit']?.toString() ?? '0.00',
+        totalAdsSpend: dynamicData['total_ads_spend']?.toString() ?? '0.00',
+        totalAffiliationGains: dynamicData['total_affiliation_gains']?.toString() ?? '0.00',
+        totalTopups: dynamicData['total_topups']?.toString() ?? '0.00',
+        totalWalletPayments: dynamicData['total_wallet_payments']?.toString() ?? '0.00',
+        netAccountProfit: dynamicData['net_account_profit']?.toString() ?? dynamicData['realised_profit']?.toString() ?? '0.00',
+        walletBalance: dynamicData['wallet_balance']?.toString() ?? '0.00',
         currencySymbol: dynamicData['currency_symbol']?.toString() ?? 'DA',
       );
     }
@@ -54,6 +72,12 @@ class SellerTransactionSummary extends PsObject<SellerTransactionSummary> {
       data['gross_sales_total'] = object.grossSalesTotal;
       data['total_commission'] = object.totalCommission;
       data['realised_profit'] = object.realisedProfit;
+      data['total_ads_spend'] = object.totalAdsSpend;
+      data['total_affiliation_gains'] = object.totalAffiliationGains;
+      data['total_topups'] = object.totalTopups;
+      data['total_wallet_payments'] = object.totalWalletPayments;
+      data['net_account_profit'] = object.netAccountProfit;
+      data['wallet_balance'] = object.walletBalance;
       data['currency_symbol'] = object.currencySymbol;
       return data;
     }

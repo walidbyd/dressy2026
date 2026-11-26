@@ -51,7 +51,7 @@ class VendorSearchParameterHolder
       ownerUserId: '',
       orderBy: PsConst.FILTERING__ADDED_DATE,
       orderType: PsConst.FILTERING__DESC,
-      status: '2',
+      status: '',
       productRelation: <VendorProductRelation>[]
     );
   }

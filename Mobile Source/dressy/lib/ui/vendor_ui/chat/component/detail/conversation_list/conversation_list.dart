@@ -77,21 +77,30 @@ class _ConversationListState extends State<ConversationList> {
       return true;
     }).toList();
 
+    final List<Message> result =
+        filtered.isNotEmpty ? filtered : list;
+
     // Sort newest first because ListView.builder uses reverse: true
-    filtered.sort((Message a, Message b) {
+    result.sort((Message a, Message b) {
       final int tsB = b.addedDateTimeStamp ?? 0;
       final int tsA = a.addedDateTimeStamp ?? 0;
       return tsB.compareTo(tsA);
     });
 
-    return filtered;
+    return result;
   }
 
   Future<List<Message>> _fetchViaBackend(
       String sessionId, bool isOrderScopedSession, String effectiveItemId) async {
     final PsValueHolder vh = Provider.of<PsValueHolder>(context, listen: false);
+    final String fallbackSession = isOrderScopedSession && sessionId.contains('_order_')
+        ? sessionId.split('_order_').first
+        : '';
+    final String fbParam = fallbackSession.isNotEmpty
+        ? '&fallback_session_id=$fallbackSession'
+        : '';
     final Uri uri = Uri.parse(
-        '${PsConfig.ps_app_url}chat/messages?session_id=$sessionId');
+        '${PsConfig.ps_app_url}chat/messages?session_id=$sessionId$fbParam');
     final http.Response res = await http.get(
       uri,
       headers: <String, String>{
@@ -234,6 +243,24 @@ class _ConversationListState extends State<ConversationList> {
               isOrderScopedSession,
               effectiveItemId,
             );
+
+            if (messages.isEmpty) {
+              if (_restFallbackSessionId != sessionId ||
+                  _restFallbackFuture == null) {
+                _restFallbackSessionId = sessionId;
+                _restFallbackFuture = _fetchViaBackend(
+                    sessionId, isOrderScopedSession, effectiveItemId);
+              }
+              return FutureBuilder<List<Message>>(
+                future: _restFallbackFuture,
+                builder: (BuildContext ctx, AsyncSnapshot<List<Message>> restSnap) {
+                  if (restSnap.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  return _buildMessageList(restSnap.data ?? <Message>[]);
+                },
+              );
+            }
 
             return _buildMessageList(messages);
           },

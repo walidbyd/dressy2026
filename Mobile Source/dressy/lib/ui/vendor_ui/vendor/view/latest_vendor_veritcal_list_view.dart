@@ -184,11 +184,9 @@ class _LatestVendorVerticalListView extends State<LatestVendorVerticalListView>
                 final VendorSearchParameterHolder vendorSearchParameterHolder =
                     VendorSearchParameterHolder().getAllVendor();
                 vendorSearchProvider!.loadDataList(
-                    // dataConfig: DataConfiguration(
-                    //   dataSourceType: DataSourceType.SERVER_DIRECT),
                     requestPathHolder: RequestPathHolder(
                         loginUserId: Utils.checkUserLoginId(valueHolder),
-                        ownerUserId: Utils.checkUserLoginId(valueHolder)),
+                        ownerUserId: ''),
                     requestBodyHolder: vendorSearchParameterHolder);
                 return vendorSearchProvider;
               }),

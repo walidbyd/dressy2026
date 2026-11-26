@@ -412,7 +412,10 @@ class WalletService
     {
         $wallet = $this->getOrCreateWalletForUser($userId);
 
-        $query = WalletTransaction::where('wallet_id', $wallet->id)->latest('id');
+        $query = WalletTransaction::where(function ($q) use ($wallet, $userId) {
+            $q->where('wallet_id', $wallet->id)
+              ->orWhere('user_id', $userId);
+        })->latest('id');
         $total = $query->count();
 
         $transactions = $query->skip($offset)->take($limit)->get();
@@ -553,13 +556,84 @@ class WalletService
         $totalCommission = round(max(0, $totalCommission), 2);
         $realisedProfit = round(max(0, ($grossSalesTotal - $totalCommission) - $totalReversalsDeducted), 2);
 
-        // Paginate transaction orders
-        $pagedOrders = $query->latest('updated_date')
-            ->skip($offset)
-            ->take($limit)
-            ->get();
+        // Include wallet ledger activity (ads/boosts, referral gains, CIB/Edahabia top-ups, wallet payments/withdrawals)
+        $wallet = $this->getOrCreateWalletForUser($userId, $vendor?->id);
+        $ledgerQuery = WalletTransaction::where(function ($q) use ($wallet, $userId) {
+            $q->where('wallet_id', $wallet->id)->orWhere('user_id', $userId);
+        })->whereNotIn('source', ['sale_earning', 'sale_reversal']);
 
-        $transactions = $pagedOrders->map(function ($order) {
+        if (!empty($dateFrom)) {
+            $ledgerQuery->whereDate('created_at', '>=', $dateFrom);
+        }
+        if (!empty($dateTo)) {
+            $ledgerQuery->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $ledgerRows = $ledgerQuery->latest('id')->get();
+        $totalAdsSpend = 0.0;
+        $totalAffiliationGains = 0.0;
+        $totalTopups = 0.0;
+        $totalWalletPayments = 0.0;
+
+        $ledgerItems = $ledgerRows->map(function ($tx) use (&$totalAdsSpend, &$totalAffiliationGains, &$totalTopups, &$totalWalletPayments) {
+            $src = strtolower((string) ($tx->source ?? ''));
+            $isCredit = strtolower((string) $tx->type) === 'credit';
+            $amt = (float) $tx->amount;
+
+            if (in_array($src, ['ad_story_boost', 'ad_item_boost', 'story_boost', 'article_boost'], true)) {
+                $category = 'ads';
+                $statusLabel = 'Publicité / Boost';
+                $totalAdsSpend += $amt;
+            } elseif (in_array($src, ['affiliation_reward', 'referral_bonus'], true)) {
+                $category = 'referral';
+                $statusLabel = 'Gain Parrainage';
+                $totalAffiliationGains += $amt;
+            } elseif ($src === 'silkpay_topup') {
+                $category = 'topup';
+                $statusLabel = 'Rechargement CIB / Edahabia';
+                $totalTopups += $amt;
+            } else {
+                $category = 'wallet';
+                $statusLabel = $isCredit ? 'Crédit Portefeuille' : 'Paiement / Retrait';
+                if (!$isCredit) {
+                    $totalWalletPayments += $amt;
+                }
+            }
+
+            $ts = $tx->created_at ? \Carbon\Carbon::parse($tx->created_at) : now();
+            $netFormatted = ($isCredit ? '' : '-') . number_format($amt, 2, '.', '');
+            $title = trim((string) ($tx->description ?? $tx->note ?? $statusLabel));
+
+            return [
+                'id' => 'wt_' . $tx->id,
+                'order_id' => '',
+                'order_code' => (string) ($tx->order_code ?? $tx->reference_id ?? ''),
+                'order_date' => (string) $ts->format('M d, Y'),
+                'delivery_date' => (string) $ts->format('M d, Y H:i'),
+                'timestamp' => (int) $ts->timestamp,
+                'category' => $category,
+                'type' => (string) $tx->type,
+                'source' => $src,
+                'status' => $category,
+                'status_type' => $category,
+                'status_label' => $statusLabel,
+                'is_delivered_and_paid' => $isCredit ? '1' : '0',
+                'currency_symbol' => 'DA',
+                'gross_amount' => number_format($amt, 2, '.', ''),
+                'commission_amount' => '0.00',
+                'net_amount' => $netFormatted,
+                'item_name' => $title,
+                'item_title' => $title,
+                'item_count' => 1,
+                'image_url' => '',
+                'item_image' => '',
+                'default_photo' => null,
+            ];
+        })->values()->all();
+
+        $allOrderRows = $allOrders->sortByDesc('updated_date')->values();
+
+        $orderItems = $allOrderRows->map(function ($order) {
             $isDelivered = ((int) $order->order_status_id === (int) \Modules\Core\Constants\Constants::orderDeliveredStatus);
             $isCancelled = ((int) $order->order_status_id === (int) \Modules\Core\Constants\Constants::orderCancelledStatus);
             $isReturned = ((int) $order->order_status_id === (int) \Modules\Core\Constants\Constants::orderReturnedStatus);
@@ -654,12 +728,22 @@ class WalletService
                 $isDeliveredAndPaid = '1';
             }
 
+            $displayCarbon = !empty($order->wallet_reversed_at)
+                ? \Carbon\Carbon::parse($order->wallet_reversed_at)
+                : (!empty($order->wallet_credited_at)
+                    ? \Carbon\Carbon::parse($order->wallet_credited_at)
+                    : \Carbon\Carbon::parse($order->updated_date ?? now()));
+
             return [
                 'id' => (string) $order->id,
                 'order_id' => (string) $order->id,
                 'order_code' => (string) $order->order_code,
                 'order_date' => (string) \Carbon\Carbon::parse($order->order_date ?? $order->added_date)->format('M d, Y'),
                 'delivery_date' => $displayDate,
+                'timestamp' => (int) $displayCarbon->timestamp,
+                'category' => ($isCancelled || $isReturned) ? 'reversal' : 'sale',
+                'type' => ($isCancelled || $isReturned) ? 'debit' : 'credit',
+                'source' => ($isCancelled || $isReturned) ? 'sale_reversal' : 'sale_earning',
                 'status' => $statusSlug,
                 'status_type' => $statusSlug,
                 'status_label' => $statusLabel,
@@ -675,7 +759,14 @@ class WalletService
                 'item_image' => (string) $imageUrl,
                 'default_photo' => $defaultPhoto,
             ];
-        });
+        })->values()->all();
+
+        $merged = array_merge($orderItems, $ledgerItems);
+        usort($merged, fn ($a, $b) => ($b['timestamp'] ?? 0) <=> ($a['timestamp'] ?? 0));
+        $totalCount = count($merged);
+        $pagedMerged = array_slice($merged, $offset, $limit);
+
+        $netAccountProfit = round($realisedProfit + $totalAffiliationGains - $totalAdsSpend, 2);
 
         return [
             'summary' => [
@@ -684,10 +775,16 @@ class WalletService
                 'gross_sales_total' => number_format($grossSalesTotal, 2, '.', ''),
                 'total_commission' => number_format($totalCommission, 2, '.', ''),
                 'realised_profit' => number_format($realisedProfit, 2, '.', ''),
+                'total_ads_spend' => number_format(round($totalAdsSpend, 2), 2, '.', ''),
+                'total_affiliation_gains' => number_format(round($totalAffiliationGains, 2), 2, '.', ''),
+                'total_topups' => number_format(round($totalTopups, 2), 2, '.', ''),
+                'total_wallet_payments' => number_format(round($totalWalletPayments, 2), 2, '.', ''),
+                'net_account_profit' => number_format($netAccountProfit, 2, '.', ''),
+                'wallet_balance' => number_format(round((float) $wallet->balance, 2), 2, '.', ''),
                 'currency_symbol' => 'DA',
             ],
-            'transactions' => $transactions,
-            'total' => (int) $query->count(),
+            'transactions' => $pagedMerged,
+            'total' => $totalCount,
             'limit' => $limit,
             'offset' => $offset,
         ];

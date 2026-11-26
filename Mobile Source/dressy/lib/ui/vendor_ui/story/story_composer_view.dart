@@ -205,7 +205,8 @@ class _StoryComposerViewState extends State<StoryComposerView> {
                       final List<Product> ownOnly = res.data!
                           .where((Product p) =>
                               p.addedUserId == loginUserId ||
-                              p.user?.userId == loginUserId)
+                              p.user?.userId == loginUserId ||
+                              p.vendorUser?.ownerUserId == loginUserId)
                           .toList();
                       return PsResource<List<Product>>(
                         res.status,
