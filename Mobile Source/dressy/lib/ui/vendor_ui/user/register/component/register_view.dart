@@ -163,7 +163,7 @@ class _RegisterViewState extends State<RegisterView>
 
                           // Secondary CTA: Google Sign-In button
                           CustomLoginWithGoogleWidget(
-                            onGoogleSignInSelected: widget.onRegisterSelected,
+                            onGoogleSignInSelected: null,
                             callBackAfterLoginSuccess:
                                 callBackAfterLoginSuccess,
                           ),

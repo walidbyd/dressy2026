@@ -982,7 +982,12 @@ class UserProvider extends PsProvider<User> {
         } catch (_) {}
 
         if (onGoogleIdSignInSelected != null) {
-          await onGoogleIdSignInSelected(user.userId);
+          if (onGoogleIdSignInSelected is Function(User) ||
+              onGoogleIdSignInSelected is Function(User?)) {
+            await onGoogleIdSignInSelected(user);
+          } else {
+            await onGoogleIdSignInSelected(user.userId);
+          }
         }
         if (callBackAfterLoginSuccess != null) {
           await callBackAfterLoginSuccess(user);

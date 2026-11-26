@@ -110,6 +110,44 @@ class ChatMessagesApiController extends Controller
                 }
                 if (!empty($mapped)) {
                     $raw = $mapped;
+                } else {
+                    // Fallback to psx_chat_histories.latest_chat_message if RTDB & chat_notis have no rows
+                    $histQuery = DB::table('psx_chat_histories')
+                        ->where(function ($sub) use ($buyerId, $sellerId) {
+                            $sub->where(function ($s1) use ($buyerId, $sellerId) {
+                                $s1->where('buyer_user_id', $buyerId)->where('seller_user_id', $sellerId);
+                            })->orWhere(function ($s2) use ($buyerId, $sellerId) {
+                                $s2->where('buyer_user_id', $sellerId)->where('seller_user_id', $buyerId);
+                            });
+                        })
+                        ->whereNotNull('latest_chat_message')
+                        ->where('latest_chat_message', '!=', '');
+                    if ($orderId !== null) {
+                        $histQuery->where('order_id', $orderId);
+                    } elseif ($itemId !== '') {
+                        $histQuery->where('item_id', $itemId);
+                    }
+                    $histRows = $histQuery->orderBy('updated_date')->get();
+                    foreach ($histRows as $h) {
+                        $tsMs = !empty($h->updated_date) ? strtotime($h->updated_date) * 1000 : time() * 1000;
+                        $sendBy = (string) ($h->updated_user_id ?: $h->added_user_id ?: $h->buyer_user_id);
+                        $mapped['hist_' . $h->id] = [
+                            'id' => 'hist_' . $h->id,
+                            'sessionId' => $sessionId,
+                            'itemId' => (string) ($h->item_id ?? ''),
+                            'sendByUserId' => $sendBy,
+                            'message' => (string) $h->latest_chat_message,
+                            'type' => 0,
+                            'offerStatus' => (int) ($h->offer_status ?? 0),
+                            'addedDateTimeStamp' => $tsMs,
+                            'orderId' => $h->order_id ? (string) $h->order_id : '',
+                            'orderCode' => (string) ($h->order_code ?? ''),
+                            'actionStatus' => (string) ($h->action_status ?? ''),
+                        ];
+                    }
+                    if (!empty($mapped)) {
+                        $raw = $mapped;
+                    }
                 }
             }
         }

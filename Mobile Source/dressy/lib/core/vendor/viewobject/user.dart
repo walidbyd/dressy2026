@@ -108,7 +108,7 @@ class User extends PsObject<User> {
 
   @override
   User fromMap(dynamic dynamicData) {
-    if (dynamicData != null) {
+    if (dynamicData != null && dynamicData is Map) {
       return User(
         userId: dynamicData['id'],
         userIsSysAdmin: dynamicData['user_is_sys_admin'],
