@@ -99,8 +99,10 @@ class _ConversationListState extends State<ConversationList> {
     final String fbParam = fallbackSession.isNotEmpty
         ? '&fallback_session_id=$fallbackSession'
         : '';
+    final String participants =
+        '&buyer_user_id=${widget.buyerUserId ?? ''}&seller_user_id=${widget.sellerUserId ?? ''}&item_id=$effectiveItemId';
     final Uri uri = Uri.parse(
-        '${PsConfig.ps_app_url}chat/messages?session_id=$sessionId$fbParam');
+        '${PsConfig.ps_app_url}chat/messages?session_id=$sessionId$fbParam$participants');
     final http.Response res = await http.get(
       uri,
       headers: <String, String>{

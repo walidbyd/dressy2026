@@ -1080,14 +1080,27 @@ class UserApiController extends Controller
             return responseMsgApi($validator->errors(), $this->badRequestStatusCode);
         }
 
+        $baseUsername = preg_replace('/[^a-z0-9_]/', '', strtolower(str_replace(' ', '_', $request->name ?: explode('@', $email)[0] ?: 'user')));
+        if (empty($baseUsername)) {
+            $baseUsername = 'user';
+        }
+        $candidateUsername = substr($baseUsername, 0, 24);
+        $suffix = 1;
+        while (User::where('username', $candidateUsername)->exists()) {
+            $candidateUsername = substr($baseUsername, 0, 18) . '_' . $suffix;
+            $suffix++;
+        }
+
         $user_data = new \stdClass;
         $user_data->name = $request->name;
+        $user_data->username = $candidateUsername;
         $user_data->email = $email;
         $user_data->google_id = $googleId;
         $user_data->permissions = $this->normalUserRoleId;
         $user_data->status = $this->publish;
         $user_data->verify_types = $this->googleVerify;
         $user_data->code = '';
+        $user_data->added_user_id = 0;
         $added_date = Carbon::now();
         $user_data->added_date = $added_date;
         $user_data->added_date_timestamp = strtotime($added_date);
@@ -1100,6 +1113,9 @@ class UserApiController extends Controller
         }
 
         $user = $this->userService->storeFromApi($user_data);
+        if (empty($user) || $user === 'error' || (is_array($user) && isset($user['error']))) {
+            return responseMsgApi(__('core__api_db_error', [], $request->language_symbol), $this->internalServerErrorStatusCode);
+        }
         $userModel = ($user instanceof UserApiResource) ? $user->resource : $user;
         $userId = $userModel->id ?? $user->id;
 

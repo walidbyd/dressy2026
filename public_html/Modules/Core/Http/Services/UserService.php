@@ -481,10 +481,16 @@ class UserService extends PsService
 
         if (isset($request->name) && ! empty($request->name)) {
             $user->name = $request->name;
+            if (empty($request->username)) {
+                $user->username = $request->name;
+            }
         }
 
         if (isset($request->username) && ! empty($request->username)) {
             $user->username = $request->username;
+            if (empty($request->name)) {
+                $user->name = $request->username;
+            }
         }
 
         if (isset($request->email) && ! empty($request->email)) {
@@ -590,6 +596,7 @@ class UserService extends PsService
         }
 
         $user->update();
+        self::syncUserToVendor($user);
         if (! empty($user->user_cover_photo)) {
             self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
         }
@@ -610,10 +617,16 @@ class UserService extends PsService
 
         if (isset($request->name) && ! empty($request->name)) {
             $user->name = $request->name;
+            if (empty($request->username)) {
+                $user->username = $request->name;
+            }
         }
 
         if (isset($request->username) && ! empty($request->username)) {
             $user->username = $request->username;
+            if (empty($request->name)) {
+                $user->name = $request->username;
+            }
         }
 
         if (isset($request->email) && ! empty($request->email)) {
@@ -695,6 +708,7 @@ class UserService extends PsService
         }
 
         $user->update();
+        self::syncUserToVendor($user);
         if (! empty($user->user_cover_photo)) {
             self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
         }
@@ -1091,6 +1105,7 @@ class UserService extends PsService
                 $fileName = $this->imageService->insertImageToStorage($file, $user->user_cover_photo);
                 $user->user_cover_photo = $fileName;
                 $user->update();
+        self::syncUserToVendor($user);
         if (! empty($user->user_cover_photo)) {
             self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
         }
@@ -1315,6 +1330,7 @@ class UserService extends PsService
         $user->user_cover_photo = null;
 
         $user->update();
+        self::syncUserToVendor($user);
         if (! empty($user->user_cover_photo)) {
             self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
         }
@@ -1331,6 +1347,7 @@ class UserService extends PsService
             $fileName = $this->imageService->insertImageToStorage($file, $user->user_cover_photo);
             $user->user_cover_photo = $fileName;
             $user->update();
+        self::syncUserToVendor($user);
         if (! empty($user->user_cover_photo)) {
             self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
         }
@@ -1359,6 +1376,7 @@ class UserService extends PsService
             }
 
             $user->update();
+        self::syncUserToVendor($user);
         if (! empty($user->user_cover_photo)) {
             self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
         }
@@ -1409,6 +1427,7 @@ class UserService extends PsService
                             return responseMsgApi('invalid password', $this->internalServerErrorStatusCode);
                         }
                         $user->update();
+        self::syncUserToVendor($user);
         if (! empty($user->user_cover_photo)) {
             self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
         }
@@ -1461,6 +1480,7 @@ class UserService extends PsService
                     $user->user_cover_photo = $img;
                 }
                 $user->update();
+        self::syncUserToVendor($user);
         if (! empty($user->user_cover_photo)) {
             self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
         }
@@ -1953,6 +1973,7 @@ class UserService extends PsService
         }
         $user->updated_user_id = Auth::user()->id;
         $user->update();
+        self::syncUserToVendor($user);
         if (! empty($user->user_cover_photo)) {
             self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
         }
@@ -2399,6 +2420,7 @@ class UserService extends PsService
 
             if (isset($request->id)) {
                 $user->update();
+        self::syncUserToVendor($user);
         if (! empty($user->user_cover_photo)) {
             self::syncUserProfileImageToVendor($user->id, $user->user_cover_photo);
         }
@@ -3470,6 +3492,49 @@ class UserService extends PsService
         return (new DailyActiveUserReportExport)->download($filename, \Maatwebsite\Excel\Excel::CSV, [
             'Content-Type' => 'text/csv',
         ]);
+    }
+
+    /**
+     * Keep user and vendor profile fields unified across the platform.
+     */
+    public static function syncUserToVendor($user): void
+    {
+        try {
+            $userId = is_numeric($user) ? (int) $user : (int) ($user->id ?? 0);
+            if ($userId <= 0) {
+                return;
+            }
+            $userModel = is_numeric($user) ? User::find($userId) : $user;
+            if (! $userModel) {
+                return;
+            }
+
+            $unifiedName = ! empty(trim((string) $userModel->name))
+                ? trim((string) $userModel->name)
+                : trim((string) ($userModel->username ?? ''));
+
+            $vendors = \Modules\Core\Entities\Vendor\Vendor::where('owner_user_id', $userId)->get();
+            foreach ($vendors as $vendor) {
+                if ($unifiedName !== '') {
+                    $vendor->name = $unifiedName;
+                }
+                if (! empty($userModel->email)) {
+                    $vendor->email = $userModel->email;
+                }
+                if (! empty($userModel->user_phone)) {
+                    $vendor->phone = $userModel->user_phone;
+                }
+                if (! empty($userModel->user_address)) {
+                    $vendor->address = $userModel->user_address;
+                }
+                if (! empty($userModel->user_about_me)) {
+                    $vendor->description = $userModel->user_about_me;
+                }
+                $vendor->save();
+            }
+        } catch (\Throwable $e) {
+            Log::warning('syncUserToVendor failed: ' . $e->getMessage());
+        }
     }
 
     public static function createApprovedVendorForUser($user)

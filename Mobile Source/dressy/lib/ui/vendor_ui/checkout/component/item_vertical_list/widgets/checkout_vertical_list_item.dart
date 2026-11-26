@@ -299,26 +299,6 @@ class _OrderSummaryWidgetState extends State<CheckoutVerticalListItem> {
                           isSoldOut ? PsColors.primary400 : PsColors.primary500,
                       fontSize: 16),
                 ),
-                if (widget.shoppingCartItem.discountPrice == '0' ||
-                    widget.shoppingCartItem.discountPrice == '0.00' ||
-                    widget.shoppingCartItem.discountPrice == null ||
-                    widget.shoppingCartItem.discountPrice == '')
-                  const SizedBox()
-                else
-                  Text(
-                    '${Utils.getPriceFormat(widget.shoppingCartItem.originalPrice ?? '', psValueHolder.priceFormat!)} ${widget.shoppingCartItem.vendorCurrencySymbol ?? 'DA'}',
-                    textAlign: TextAlign.start,
-                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        fontWeight: FontWeight.normal,
-                        color: isSoldOut
-                            ? PsColors.text400
-                            : Utils.isLightMode(context)
-                                ? PsColors.text500
-                                : PsColors.text200,
-                        decoration: TextDecoration.lineThrough,
-                        fontSize: 14),
-                  ),
-
                 const Spacer(),
 
                 if (!widget.isSingleItemCheckout)

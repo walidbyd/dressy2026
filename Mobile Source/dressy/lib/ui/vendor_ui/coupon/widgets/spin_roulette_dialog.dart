@@ -34,8 +34,8 @@ class _SpinRouletteDialogState extends State<SpinRouletteDialog>
   String? _couponCode;
   String? _errorMsg;
 
-  // 6 alternating segments: 5%, 10%, 5%, 10%, 5%, 10%
-  static const List<int> _segments = <int>[5, 10, 5, 10, 5, 10];
+  // 6 visual slices: 5%, 20%, 10%, 50%, 5%, 10% (awarded prize is always 5% or 10%)
+  static const List<int> _segments = <int>[5, 20, 10, 50, 5, 10];
 
   @override
   void initState() {
@@ -91,7 +91,7 @@ class _SpinRouletteDialogState extends State<SpinRouletteDialog>
         final String code = (coupon?['code'] ?? '').toString();
 
         // Pick a segment index matching the server-assigned reward (5 or 10)
-        final int targetIdx = reward == 10 ? 1 : 0;
+        final int targetIdx = reward == 10 ? 2 : 0;
         const double segAngle = (2 * math.pi) / 6;
         // Pointer is at top (-pi/2); align center of targetIdx under top pointer
         final double targetCenterAngle = -(targetIdx * segAngle) - (segAngle / 2);
