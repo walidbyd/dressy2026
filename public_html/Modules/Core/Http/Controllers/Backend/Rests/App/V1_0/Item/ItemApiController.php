@@ -1211,6 +1211,24 @@ class ItemApiController extends PsApiController
         }
     }
 
+    public function republishFromApi(Request $request)
+    {
+        $itemId = (int) ($request->input('item_id') ?? 0);
+        $loginUserId = (int) ($request->input('login_user_id') ?: Auth::id());
+        if ($itemId <= 0 || $loginUserId <= 0) {
+            return responseMsgApi('Paramètres invalides.', Constants::badRequestStatusCode);
+        }
+
+        try {
+            $result = $this->itemService->republishFromApi($itemId, $loginUserId);
+            return responseDataApi($result, Constants::createdStatusCode, Constants::successStatus);
+        } catch (PsApiException $e) {
+            return responseMsgApi($e->getMessage(), $e->getStatusCode());
+        } catch (Throwable $e) {
+            return responseMsgApi($e->getMessage(), Constants::internalServerErrorStatusCode);
+        }
+    }
+
     private function checkVendorCurrency($itemObj, $langSymbol)
     {
         if (! empty($itemObj->vendor_id)) {

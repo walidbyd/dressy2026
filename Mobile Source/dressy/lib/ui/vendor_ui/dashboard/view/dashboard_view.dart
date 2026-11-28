@@ -396,23 +396,33 @@ class _HomeViewState extends State<DashboardView>
     if (isFirstTime) {
       appBarTitle = 'app_name'.tr;
       if (psValueHolder!.notiSetting ?? true) {
-        if (Platform.isIOS) {
-          FirebaseMessaging.instance.requestPermission(
-            alert: true,
-            announcement: false,
-            badge: true,
-            carPlay: false,
-            criticalAlert: false,
-            provisional: false,
-            sound: true,
-          );
-        }
+        FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          announcement: false,
+          badge: true,
+          carPlay: false,
+          criticalAlert: false,
+          provisional: false,
+          sound: true,
+        );
         subscribeTopicProvider = SubscribeTopicProvider(context: context);
         subscribeTopicProvider?.postData(
             requestBodyHolder: SubscripeTopicParameterHolder(
                 token: psValueHolder?.deviceToken, topic: 'broadcast'),
             requestPathHolder: RequestPathHolder(
                 languageCode: psValueHolder?.languageCode ?? 'en'));
+      }
+      // Always sync active FCM token when authenticated and listen for token refresh
+      if (!Utils.isLoginUserEmpty(psValueHolder)) {
+        final NotificationProvider syncNotiProvider = NotificationProvider(
+            repo: Provider.of<NotificationRepository>(context, listen: false),
+            psValueHolder: psValueHolder);
+        Utils.saveDeviceToken(syncNotiProvider, langProvider);
+        FirebaseMessaging.instance.onTokenRefresh.listen((String _) {
+          if (!Utils.isLoginUserEmpty(psValueHolder)) {
+            Utils.saveDeviceToken(syncNotiProvider, langProvider);
+          }
+        });
       }
       // Utils.subscribeToTopic(psValueHolder!.notiSetting ?? true);
       Utils.fcmConfigure(context, _fcm, psValueHolder!.loginUserId, () {

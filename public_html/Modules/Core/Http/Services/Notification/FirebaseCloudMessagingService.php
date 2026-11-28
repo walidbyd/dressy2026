@@ -387,18 +387,27 @@ class FirebaseCloudMessagingService extends PsService implements FirebaseCloudMe
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
         $result = curl_exec($ch);
         if ($result === false) {
-            exit('Curl failed: '.curl_error($ch));
+            \Illuminate\Support\Facades\Log::error('FCM curl failed: ' . curl_error($ch));
+            curl_close($ch);
+            return null;
         }
 
         $response = json_decode($result, true);
         if (isset($response['error'])) {
             $error = $response['error'];
+            \Illuminate\Support\Facades\Log::warning('FCM send error', [
+                'status' => $error['status'] ?? null,
+                'message' => $error['message'] ?? null,
+                'details' => $error['details'] ?? null,
+            ]);
 
-            if ($error['status'] === 'NOT_FOUND' &&
-              isset($error['details'][0]['errorCode']) &&
-              $error['details'][0]['errorCode'] === 'UNREGISTERED') {
-                $invalidToken = $fields['message']['token'];
-                $this->pushNotificationTokenService->delete(token: $invalidToken);
+            $errCode = $error['details'][0]['errorCode'] ?? null;
+            if (in_array($error['status'] ?? '', ['NOT_FOUND', 'INVALID_ARGUMENT'], true) &&
+                in_array($errCode, ['UNREGISTERED', 'INVALID_ARGUMENT'], true)) {
+                $invalidToken = $fields['message']['token'] ?? null;
+                if ($invalidToken) {
+                    $this->pushNotificationTokenService->delete(token: $invalidToken);
+                }
             }
         }
 

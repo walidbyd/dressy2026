@@ -196,6 +196,8 @@ class CouponService
                 $slices = (is_array($decoded) && count($decoded) >= 2) ? array_values($decoded) : $defaultSlices;
                 return [
                     'is_enabled' => (bool) $row->is_enabled,
+                    'daily_limit' => (int) ($row->daily_limit ?? 0),
+                    'total_limit' => (int) ($row->total_limit ?? 0),
                     'slices' => $slices,
                 ];
             }
@@ -205,11 +207,13 @@ class CouponService
 
         return [
             'is_enabled' => true,
+            'daily_limit' => 0,
+            'total_limit' => 0,
             'slices' => $defaultSlices,
         ];
     }
 
-    public function updateRouletteConfig(bool $isEnabled, array $slices): array
+    public function updateRouletteConfig(bool $isEnabled, array $slices, int $dailyLimit = 0, int $totalLimit = 0): array
     {
         $normalized = [];
         foreach ($slices as $slice) {
@@ -228,23 +232,35 @@ class CouponService
             ];
         }
 
+        $dailyLimit = max(0, $dailyLimit);
+        $totalLimit = max(0, $totalLimit);
+
         $existing = DB::table('psx_roulette_settings')->orderBy('id')->first();
-        if ($existing) {
-            DB::table('psx_roulette_settings')->where('id', $existing->id)->update([
-                'is_enabled' => $isEnabled,
-                'slices' => json_encode($normalized),
-                'updated_at' => Carbon::now(),
-            ]);
-        } else {
-            DB::table('psx_roulette_settings')->insert([
-                'is_enabled' => $isEnabled,
-                'slices' => json_encode($normalized),
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now(),
-            ]);
+        $payload = [
+            'is_enabled' => $isEnabled,
+            'slices' => json_encode($normalized),
+            'updated_at' => Carbon::now(),
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('psx_roulette_settings', 'daily_limit')) {
+            $payload['daily_limit'] = $dailyLimit;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('psx_roulette_settings', 'total_limit')) {
+            $payload['total_limit'] = $totalLimit;
         }
 
-        return ['is_enabled' => $isEnabled, 'slices' => $normalized];
+        if ($existing) {
+            DB::table('psx_roulette_settings')->where('id', $existing->id)->update($payload);
+        } else {
+            $payload['created_at'] = Carbon::now();
+            DB::table('psx_roulette_settings')->insert($payload);
+        }
+
+        return [
+            'is_enabled' => $isEnabled,
+            'daily_limit' => $dailyLimit,
+            'total_limit' => $totalLimit,
+            'slices' => $normalized,
+        ];
     }
 
     public function checkRouletteEligibility(?int $userId): array
@@ -256,6 +272,24 @@ class CouponService
                 'is_enabled' => false,
                 'slices' => $config['slices'],
                 'reason' => 'disabled',
+            ];
+        }
+
+        if (($config['total_limit'] ?? 0) > 0 && Coupon::where('source', 'roulette')->count() >= $config['total_limit']) {
+            return [
+                'eligible' => false,
+                'is_enabled' => false,
+                'slices' => $config['slices'],
+                'reason' => 'total_limit_reached',
+            ];
+        }
+
+        if (($config['daily_limit'] ?? 0) > 0 && Coupon::where('source', 'roulette')->whereDate('created_at', Carbon::today())->count() >= $config['daily_limit']) {
+            return [
+                'eligible' => false,
+                'is_enabled' => false,
+                'slices' => $config['slices'],
+                'reason' => 'daily_limit_reached',
             ];
         }
 

@@ -88,8 +88,10 @@ class UploadSubmitButtonState extends State<UploadSubmitButton> {
     bool isValid = true;
     bool hasOngoingWarning = false;
 
-    if (!itemEntryProvider.isImageSelected.contains(true) &&
-        galleryProvider.galleryList.data!.isEmpty) {
+    final bool hasNewImage = itemEntryProvider.isImageSelected.contains(true);
+    final bool hasExistingImage = widget.flag == PsConst.EDIT_ITEM &&
+        (galleryProvider.galleryList.data?.isNotEmpty ?? false);
+    if (!hasNewImage && !hasExistingImage) {
       showMandatoryAlert('item_entry_need_image'.tr);
       return false;
     }

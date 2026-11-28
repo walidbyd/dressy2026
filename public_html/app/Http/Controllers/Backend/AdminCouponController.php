@@ -198,6 +198,8 @@ class AdminCouponController extends PsController
     {
         $validated = $request->validate([
             'is_enabled' => 'required|boolean',
+            'daily_limit' => 'nullable|integer|min:0|max:100000',
+            'total_limit' => 'nullable|integer|min:0|max:1000000',
             'slices' => 'required|array|min:2|max:12',
             'slices.*.percent' => 'required|integer|min:1|max:95',
             'slices.*.label' => 'nullable|string|max:24',
@@ -207,7 +209,9 @@ class AdminCouponController extends PsController
 
         $this->couponService->updateRouletteConfig(
             (bool) $validated['is_enabled'],
-            $validated['slices']
+            $validated['slices'],
+            (int) ($validated['daily_limit'] ?? 0),
+            (int) ($validated['total_limit'] ?? 0)
         );
 
         return redirect()->route('admin.coupons.index')->with('status', [

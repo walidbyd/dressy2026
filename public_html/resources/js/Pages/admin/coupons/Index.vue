@@ -87,7 +87,7 @@
         </div>
 
         <!-- Spin Wheel Admin Settings -->
-        <div class="bg-white dark:bg-secondary-800 rounded-xl border border-gray-100 dark:border-secondary-700 p-5 mb-6 shadow-sm">
+        <div id="spin-wheel-config" class="bg-white dark:bg-secondary-800 rounded-xl border border-gray-100 dark:border-secondary-700 p-5 mb-6 shadow-sm">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
                 <div>
                     <h2 class="text-base font-bold text-secondary-800 dark:text-white flex items-center gap-2">
@@ -98,10 +98,20 @@
                         </span>
                     </h2>
                     <p class="text-xs text-secondary-500 dark:text-secondary-400 mt-1">
-                        Activez ou désactivez la roue sur l'application mobile et ajustez les tranches (% remise et probabilité de gain).
+                        Activez ou désactivez la roue sur l'application mobile et ajustez les tranches (% remise, probabilité et limites).
                     </p>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-[11px] font-medium text-secondary-500">Limite/jour (0=∞)</label>
+                        <input type="number" min="0" v-model.number="rouletteForm.daily_limit"
+                            class="w-20 px-2 py-1 text-xs rounded border border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-900 text-secondary-800 dark:text-white" />
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-[11px] font-medium text-secondary-500">Limite totale (0=∞)</label>
+                        <input type="number" min="0" v-model.number="rouletteForm.total_limit"
+                            class="w-20 px-2 py-1 text-xs rounded border border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-900 text-secondary-800 dark:text-white" />
+                    </div>
                     <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-secondary-700 dark:text-secondary-300">
                         <input type="checkbox" v-model="rouletteForm.is_enabled"
                             class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500" />
@@ -580,6 +590,8 @@ export default defineComponent({
 
         const rouletteForm = ref({
             is_enabled: props.rouletteSettings ? Boolean(props.rouletteSettings.is_enabled) : true,
+            daily_limit: props.rouletteSettings ? Number(props.rouletteSettings.daily_limit || 0) : 0,
+            total_limit: props.rouletteSettings ? Number(props.rouletteSettings.total_limit || 0) : 0,
             slices: (props.rouletteSettings && Array.isArray(props.rouletteSettings.slices) && props.rouletteSettings.slices.length >= 2)
                 ? JSON.parse(JSON.stringify(props.rouletteSettings.slices))
                 : defaultSlices,
@@ -599,6 +611,8 @@ export default defineComponent({
             savingRoulette.value = true;
             router.post(route('admin.coupons.rouletteSettings'), {
                 is_enabled: rouletteForm.value.is_enabled,
+                daily_limit: rouletteForm.value.daily_limit,
+                total_limit: rouletteForm.value.total_limit,
                 slices: rouletteForm.value.slices,
             }, {
                 preserveScroll: true,

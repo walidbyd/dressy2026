@@ -78,17 +78,15 @@ Future<void> main() async {
   }
 
   try {
-    if (Platform.isIOS) {
-      FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
-    }
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    ).timeout(const Duration(seconds: 4));
 
     /// Update the iOS foreground notification presentation options to allow
     /// heads up notifications.

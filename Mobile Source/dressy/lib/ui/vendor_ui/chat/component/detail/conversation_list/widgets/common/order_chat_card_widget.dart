@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
@@ -553,11 +555,67 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
+                          // Copyable Reference Number Badge
+                          if (orderCode.isNotEmpty)
+                            InkWell(
+                              onTap: () {
+                                Clipboard.setData(ClipboardData(text: orderCode));
+                                Fluttertoast.showToast(
+                                  msg: 'Référence #$orderCode copiée',
+                                  toastLength: Toast.LENGTH_SHORT,
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: const Color(0xFFF59E0B)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Text(
+                                      'Réf : #$orderCode',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12.5,
+                                        color: Color(0xFF92400E),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Icon(Icons.copy_rounded,
+                                        size: 14, color: Color(0xFFB45309)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 8),
                           Text(
-                            'order_chat__deposit_instructions'
+                            'order_chat__deposit_step_1'.tr,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.35,
+                              color: Color(0xFF78350F),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'order_chat__deposit_step_2'
                                 .tr
                                 .replaceAll('{code}', orderCode),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.35,
+                              color: Color(0xFF78350F),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'order_chat__deposit_step_3'.tr,
                             style: const TextStyle(
                               fontSize: 12,
                               height: 1.35,
@@ -579,11 +637,16 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
                             ..._yalidineAgencies!.map((Map<String, dynamic> ag) {
                               final String agName =
                                   (ag['name'] ?? '').toString();
+                              final String agCommune =
+                                  (ag['commune_name'] ?? '').toString();
                               final String agAddr =
-                                  (ag['address'] ?? ag['commune_name'] ?? '')
-                                      .toString();
+                                  (ag['address'] ?? '').toString();
+                              final String details = <String>[
+                                if (agCommune.isNotEmpty) agCommune,
+                                if (agAddr.isNotEmpty) agAddr,
+                              ].join(' • ');
                               return Padding(
-                                padding: const EdgeInsets.only(bottom: 3),
+                                padding: const EdgeInsets.only(bottom: 4),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
@@ -592,8 +655,8 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
                                     const SizedBox(width: 4),
                                     Expanded(
                                       child: Text(
-                                        agAddr.isNotEmpty
-                                            ? '$agName — $agAddr'
+                                        details.isNotEmpty
+                                            ? '$agName ($details)'
                                             : agName,
                                         style: const TextStyle(
                                           fontSize: 11,
@@ -611,21 +674,46 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
                     );
                   }),
                   const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5C1A2B),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF5C1A2B),
+                            side: const BorderSide(color: Color(0xFF5C1A2B)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () =>
+                              _navigateToOrderDetail(context, orderId, true),
+                          icon: const Icon(Icons.local_shipping_outlined,
+                              size: 16),
+                          label: Text(
+                            'order_chat__track_order'.tr,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
                       ),
-                      onPressed: () =>
-                          _navigateToOrderDetail(context, orderId, true),
-                      icon: const Icon(Icons.local_shipping_outlined, size: 17),
-                      label: Text('order_chat__track_or_bordereau'.tr),
-                    ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5C1A2B),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () =>
+                              _navigateToOrderDetail(context, orderId, true),
+                          icon: const Icon(Icons.print_outlined, size: 16),
+                          label: Text(
+                            'order_chat__print_bordereau'.tr,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ] else if (actionStatus == 'delivering') ...<Widget>[
                   SizedBox(

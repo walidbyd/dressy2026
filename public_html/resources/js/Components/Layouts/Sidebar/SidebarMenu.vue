@@ -101,7 +101,14 @@
                         :class="{ 'bg-primary-500 !text-white font-semibold shadow-sm': route().current('admin.coupons.*') }">
                         <ps-icon name="tag" w="18" h="18" />
                         <span :class="{ 'inline': sideMenuStore.isFullSideMenu, 'hidden xl:hidden': !sideMenuStore.isFullSideMenu }">
-                            {{ $t('dressy_coupons_module') || 'Coupons Management' }}
+                            {{ $t('dressy_coupons_module') || 'Coupons & Spin Wheel' }}
+                        </span>
+                    </Link>
+                    <Link :href="route('admin.coupons.index') + '#spin-wheel-config'" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-secondary-700 dark:text-secondary-300 hover:bg-primary-100 dark:hover:bg-secondary-800"
+                        :class="{ 'bg-amber-500 !text-white font-semibold shadow-sm': route().current('admin.coupons.*') && $page.url.includes('spin-wheel') }">
+                        <ps-icon name="refresh" w="18" h="18" />
+                        <span :class="{ 'inline': sideMenuStore.isFullSideMenu, 'hidden xl:hidden': !sideMenuStore.isFullSideMenu }">
+                            {{ $t('dressy_spin_wheel_module') || 'Spin Wheel Config' }}
                         </span>
                     </Link>
                     <Link :href="route('admin.affiliation.index')" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-secondary-700 dark:text-secondary-300 hover:bg-primary-100 dark:hover:bg-secondary-800"

@@ -1286,5 +1286,11 @@
   "order_chat__yalidine_agencies_title": "Agences Yalidine dans votre wilaya",
   "order_chat__track_or_bordereau": "Suivre / Imprimer Bordereau",
   "order_chat__track_order": "Suivre la commande",
-  "item_detail__sell_again": "Vendre à nouveau"
+  "item_detail__sell_again": "Vendre à nouveau",
+  "order_chat__print_bordereau": "Imprimer Bordereau",
+  "order_chat__deposit_step_1": "1. Emballez soigneusement l'article.",
+  "order_chat__deposit_step_2": "2. Présentez le colis avec la référence #{code} dans une agence Yalidine de votre wilaya.",
+  "order_chat__deposit_step_3": "3. L'agent Yalidine imprimera le bordereau sur place et enregistrera votre dépôt.",
+  "item_detail__sell_again_pending_approval": "Article publié et en attente de validation par l'admin",
+  "item_detail__sell_again_error": "Impossible de republier l'article."
 }

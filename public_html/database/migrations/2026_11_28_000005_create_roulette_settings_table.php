@@ -13,6 +13,8 @@ return new class extends Migration
             Schema::create('psx_roulette_settings', function (Blueprint $table) {
                 $table->id();
                 $table->boolean('is_enabled')->default(true);
+                $table->unsignedInteger('daily_limit')->default(0);
+                $table->unsignedInteger('total_limit')->default(0);
                 $table->json('slices')->nullable();
                 $table->timestamps();
             });

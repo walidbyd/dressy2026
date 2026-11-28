@@ -1286,5 +1286,11 @@
   "order_chat__yalidine_agencies_title": "وكالات ياليدين في ولايتك",
   "order_chat__track_or_bordereau": "تتبع / طباعة البوليصة",
   "order_chat__track_order": "تتبع الطلب",
-  "item_detail__sell_again": "البيع مجدداً"
+  "item_detail__sell_again": "البيع مجدداً",
+  "order_chat__print_bordereau": "طباعة البوليصة",
+  "order_chat__deposit_step_1": "1. غلّف المنتج جيداً.",
+  "order_chat__deposit_step_2": "2. قدّم الطرد مع الرقم المرجعي #{code} في إحدى وكالات ياليدين بولايتك.",
+  "order_chat__deposit_step_3": "3. سيقوم موظف ياليدين بطباعة البوليصة وتسجيل الإيداع.",
+  "item_detail__sell_again_pending_approval": "تم رفع المنتج وهو بانتظار موافقة الإدارة",
+  "item_detail__sell_again_error": "تعذر إعادة نشر المنتج."
 }

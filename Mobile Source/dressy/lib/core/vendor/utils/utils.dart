@@ -43,6 +43,7 @@ import '../provider/user/user_provider.dart';
 import '../repository/user_repository.dart';
 import '../viewobject/common/ps_value_holder.dart';
 import '../viewobject/holder/intent_holder/chat_history_intent_holder.dart';
+import '../viewobject/holder/intent_holder/product_detail_intent_holder.dart';
 import '../viewobject/holder/noti_register_holder.dart';
 import '../viewobject/holder/widget_provider_dyanmic.dart';
 import '../viewobject/product.dart';
@@ -870,19 +871,15 @@ mixin Utils {
 
   static void fcmConfigure(BuildContext context, FirebaseMessaging _fcm,
       String? loginUserId, Function onMessageReceived) {
-    // final FirebaseMessaging _fcm = FirebaseMessaging();
-    if (Platform.isIOS) {
-      // _fcm.requestNotificationPermissions(const IosNotificationSettings());
-      _fcm.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
-    }
+    _fcm.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
     // On Init
     FirebaseMessaging.instance
         .getInitialMessage()
@@ -1047,6 +1044,37 @@ mixin Utils {
 
     if (isReachChatView && (isSameOrder || isSameChat)) {
       // User is actively in this chat screen; suppress the banner so chat feels clean!
+      return;
+    }
+
+    final String? effectiveFlag = (message['flag'] ?? data['flag'])?.toString();
+    if (effectiveFlag != 'chat' && notiOrderId != null && notiOrderId.isNotEmpty) {
+      final bool openSeller = notiSellerId != null &&
+          notiSellerId.isNotEmpty &&
+          notiSellerId == currentUserId;
+      Navigator.pushNamed(
+        context,
+        openSeller ? RoutePaths.sellerOrderDetail : RoutePaths.orderDetail,
+        arguments: <String, dynamic>{'orderId': notiOrderId},
+      );
+      return;
+    }
+    if ((effectiveFlag == 'follow' || effectiveFlag == 'new_item') &&
+        notiItemId != null &&
+        notiItemId.isNotEmpty) {
+      Navigator.pushNamed(
+        context,
+        RoutePaths.productDetail,
+        arguments: ProductDetailIntentHolder(
+          productId: notiItemId,
+          heroTagImage: '',
+          heroTagTitle: '',
+        ),
+      );
+      return;
+    }
+    if (effectiveFlag == 'wallet') {
+      Navigator.pushNamed(context, RoutePaths.wallet);
       return;
     }
 

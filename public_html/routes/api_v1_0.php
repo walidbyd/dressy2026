@@ -82,6 +82,7 @@ Route::middleware(['auth:sanctum', 'isUserMobileToken', 'checkAuthUserForApi'])-
         Route::post('/delete_item', 'delete');
         Route::post('/sold_out_item_detail', 'soldOutFromItemDetail');
         Route::post('/item_status_change', 'statusChangeFromApi');
+        Route::post('/republish', 'republishFromApi');
         Route::post('/all_search', 'allSearch');
 
         // Custom Field

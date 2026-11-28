@@ -12,33 +12,51 @@ class OrderSummaryApiResource extends JsonResource
     {
         $itemInfoArr = [];
         $currencySymbol = $this->vendorTransaction?->currency?->currency_symbol ?? 'DA ';
-        $paymentAmount = $this->vendorTransaction?->payment_amount ?? $this->total_price ?? 0;
-        $totalAmount = $currencySymbol.$paymentAmount;
-        $deliveryFee = $currencySymbol.($this->delivery_fee ?? 0);
+        $deliveryFeeNum = round((float) ($this->delivery_fee ?? 0), 2);
+        $deliveryFee = $currencySymbol . $deliveryFeeNum;
 
         $discountPriceArr = [];
         $subTotalPriceArr = [];
 
         if (!empty($this->orderItems)) {
             foreach ($this->orderItems as $orderItem) {
+                $qty = max(1, (float) ($orderItem->quantity ?? 1));
+                $origPrice = (float) ($orderItem->original_price ?? 0);
+                $salePrice = (float) ($orderItem->sale_price ?? 0);
+                $effectiveUnitPrice = ($salePrice > 0) ? $salePrice : $origPrice;
+                $genuineItemDiscount = ($salePrice > 0 && $origPrice > $salePrice)
+                    ? round(($origPrice - $salePrice) * $qty, 2)
+                    : 0.0;
+                $itemSub = (float) ($orderItem->sub_total ?? 0);
+                if ($itemSub <= 0) {
+                    $itemSub = round($effectiveUnitPrice * $qty, 2);
+                }
+
                 $itemInfoObj = new stdClass;
                 $itemInfoObj->item_id = (string) $orderItem->item_id;
                 $itemInfoObj->item_name = (string) $orderItem->item_name;
-                $itemInfoObj->original_price = (string) $currencySymbol.$orderItem->original_price;
-                $itemInfoObj->sale_price = (string) $currencySymbol.$orderItem->sale_price;
-                $itemInfoObj->discount_price = (string) $currencySymbol.$orderItem->discount_price;
+                $itemInfoObj->original_price = (string) $currencySymbol . $origPrice;
+                $itemInfoObj->sale_price = (string) $currencySymbol . $effectiveUnitPrice;
+                $itemInfoObj->discount_price = (string) $currencySymbol . $genuineItemDiscount;
                 $itemInfoObj->quantity = (string) $orderItem->quantity;
-                $itemInfoObj->sub_total = (string) $currencySymbol.$orderItem->sub_total;
+                $itemInfoObj->sub_total = (string) $currencySymbol . $itemSub;
                 $defaultPhoto = (isset($orderItem->item?->cover[0]) && $orderItem->item?->cover[0]) ? $orderItem->item->cover[0] : [];
                 $itemInfoObj->default_photo = new CoreImageApiResource($defaultPhoto);
                 array_push($itemInfoArr, $itemInfoObj);
-                array_push($discountPriceArr, (float) ($orderItem->discount_price ?? 0));
-                array_push($subTotalPriceArr, (float) ($orderItem->sub_total ?? 0));
+                array_push($discountPriceArr, $genuineItemDiscount);
+                array_push($subTotalPriceArr, $itemSub);
             }
         }
 
-        $allItemSubTotalFromCart = $currencySymbol.round(array_sum($subTotalPriceArr), 2);
-        $allItemDiscountFromCart = $currencySymbol.round(array_sum($discountPriceArr), 2);
+        $subTotalNum = round(array_sum($subTotalPriceArr), 2);
+        $couponDiscountNum = round((float) ($this->coupon_discount ?? 0) + (float) ($this->affiliation_discount ?? 0), 2);
+        $walletPaidNum = round((float) ($this->wallet_paid ?? $this->wallet_amount_used ?? 0), 2);
+        $totalDiscountNum = round(array_sum($discountPriceArr) + $couponDiscountNum + $walletPaidNum, 2);
+        $computedTotalNum = round(max(0.0, $subTotalNum - $totalDiscountNum) + $deliveryFeeNum, 2);
+
+        $allItemSubTotalFromCart = $currencySymbol . $subTotalNum;
+        $allItemDiscountFromCart = $currencySymbol . $totalDiscountNum;
+        $totalAmount = $currencySymbol . $computedTotalNum;
 
         $orderSummaryObj = new stdClass;
         $orderSummaryObj->id = (string) $this->id;

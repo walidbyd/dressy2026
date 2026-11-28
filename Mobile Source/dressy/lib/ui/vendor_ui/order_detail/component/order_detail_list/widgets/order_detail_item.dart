@@ -68,30 +68,21 @@ class OrderDetailItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: PsDimens.space4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Text(
-                itemInfo.salePrice ?? '',
+                (itemInfo.salePrice != null &&
+                        itemInfo.salePrice!.replaceAll(RegExp(r'[^0-9]'), '') !=
+                            '0' &&
+                        itemInfo.salePrice!.isNotEmpty)
+                    ? itemInfo.salePrice!
+                    : (itemInfo.originalPrice ?? ''),
                 textAlign: TextAlign.start,
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium!
                     .copyWith(color: PsColors.primary500, fontSize: 16),
               ),
-              if (itemInfo.discountPrice?.replaceAll(RegExp(r'[^0-9]'), '') ==
-                  '0')
-                const SizedBox()
-              else
-                Text(
-                  itemInfo.originalPrice ?? '',
-                  textAlign: TextAlign.start,
-                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      fontWeight: FontWeight.normal,
-                      color: Utils.isLightMode(context)
-                          ? PsColors.text500
-                          : PsColors.text200,
-                      decoration: TextDecoration.lineThrough,
-                      fontSize: 14),
-                ),
             ],
           ),
         )

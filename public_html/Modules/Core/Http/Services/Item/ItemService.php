@@ -1296,4 +1296,75 @@ class ItemService extends PsService implements ItemServiceInterface
         }
         $this->itemInfoService->update($itemId, $relationalData);
     }
+
+    public function republishFromApi(int $itemId, int $loginUserId): array
+    {
+        $sourceItem = Item::find($itemId);
+        if (!$sourceItem) {
+            throw new PsApiException('Article introuvable.', Constants::notFoundStatusCode);
+        }
+
+        if ((int) $sourceItem->added_user_id !== (int) $loginUserId) {
+            throw new PsApiException('Non autorisé à republier cet article.', Constants::forbiddenStatusCode);
+        }
+
+        $newItem = DB::transaction(function () use ($sourceItem, $loginUserId) {
+            $clone = $sourceItem->replicate();
+            $clone->is_sold_out = 0;
+            $clone->is_available = 1;
+            $clone->status = Constants::pendingItem;
+            $clone->is_boosted = 0;
+            $clone->boost_expires_at = null;
+            $clone->item_touch_count = 0;
+            $clone->favourite_count = 0;
+            $clone->dynamic_link = null;
+            $clone->added_user_id = $loginUserId;
+            $clone->added_date = Carbon::now();
+            $clone->updated_date = null;
+            $clone->updated_user_id = null;
+            $clone->save();
+
+            // Duplicate all gallery/cover/video images
+            $images = \Modules\Core\Entities\Utilities\CoreImage::where('img_parent_id', $sourceItem->id)->get();
+            foreach ($images as $img) {
+                $imgClone = $img->replicate();
+                $imgClone->img_parent_id = $clone->id;
+                $imgClone->added_user_id = $loginUserId;
+                $imgClone->added_date = Carbon::now();
+                $imgClone->updated_date = null;
+                $imgClone->updated_user_id = null;
+                $imgClone->save();
+            }
+
+            // Duplicate custom fields (brand, size, condition, etc.)
+            $infos = ItemInfo::where('item_id', $sourceItem->id)->get();
+            foreach ($infos as $info) {
+                $infoClone = $info->replicate();
+                $infoClone->item_id = $clone->id;
+                $infoClone->added_user_id = $loginUserId;
+                $infoClone->added_date = Carbon::now();
+                $infoClone->updated_date = null;
+                $infoClone->updated_user_id = null;
+                $infoClone->save();
+            }
+
+            return $clone;
+        });
+
+        try {
+            $this->itemDeeplinkGenerate($newItem->id);
+        } catch (Throwable $e) {
+            // Non-blocking deeplink generation
+        }
+
+        PsCache::clear(ItemCache::BASE);
+        PsCache::clear(VendorCache::BASE);
+        PsCache::clear(CategoryCache::BASE);
+
+        return [
+            'item_id' => $newItem->id,
+            'status' => (int) $newItem->status,
+            'message' => 'Item uploaded and waiting for admin approval',
+        ];
+    }
 }

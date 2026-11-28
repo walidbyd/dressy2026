@@ -2809,14 +2809,17 @@ class _CheckoutViewState extends State<CheckoutView>
                   final ShoppingCartItem cart = availableShoppingCartList[0];
                   originalPrice =
                       double.tryParse(cart.originalPrice.toString()) ?? 0.0;
-                  currentPrice =
+                  final double parsedSale =
                       double.tryParse(cart.salePrice.toString()) ?? 0.0;
+                  currentPrice = (parsedSale > 0) ? parsedSale : originalPrice;
                   final double qty =
                       double.tryParse(cart.quantity.toString()) ?? 1.0;
                   currency = cart.vendorCurrencySymbol ?? 'DA';
                   subTotal = (originalPrice * qty).toStringAsFixed(0);
-                  discountPrice =
-                      ((originalPrice - currentPrice) * qty).toStringAsFixed(0);
+                  final double itemDisc = (originalPrice > currentPrice)
+                      ? (originalPrice - currentPrice) * qty
+                      : 0.0;
+                  discountPrice = itemDisc.toStringAsFixed(0);
                   final double itemSub = currentPrice * qty;
                   final double afterCoupon =
                       (itemSub - _couponDiscountDzd - _affiliationDiscountDzd) >
