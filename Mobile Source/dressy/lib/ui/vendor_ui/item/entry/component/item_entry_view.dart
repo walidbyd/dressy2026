@@ -165,7 +165,8 @@ class ItemEntryViewState<T extends ItemEntryView> extends State<ItemEntryView> {
               lazy: false,
               create: (BuildContext context) {
                 galleryProvider = GalleryProvider(repo: galleryRepository!);
-                if (widget.flag == PsConst.EDIT_ITEM) {
+                if (widget.flag == PsConst.EDIT_ITEM ||
+                    (widget.item?.defaultPhoto?.imgParentId ?? '').isNotEmpty) {
                   galleryProvider.loadDataList(
                       requestPathHolder: RequestPathHolder(
                           languageCode: langProvider.currentLocale.languageCode,

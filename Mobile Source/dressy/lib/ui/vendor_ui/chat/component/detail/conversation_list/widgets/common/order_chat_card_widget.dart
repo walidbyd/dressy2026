@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
+import '../../../../../../../../config/ps_config.dart';
 import '../../../../../../../../config/route/route_paths.dart';
 import '../../../../../../../../core/vendor/api/common/ps_resource.dart';
 import '../../../../../../../../core/vendor/api/common/ps_status.dart';
@@ -38,6 +42,41 @@ class OrderChatCardWidget extends StatefulWidget {
 
 class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
   bool _isLoading = false;
+  List<Map<String, dynamic>>? _yalidineAgencies;
+  String? _loadedWilayaId;
+  String? _wilayaName;
+  bool _loadingAgencies = false;
+
+  Future<void> _loadWilayaAgenciesIfNeeded(String wilayaId) async {
+    final String cleanWilaya = wilayaId.trim().isNotEmpty ? wilayaId.trim() : '16';
+    if (_loadedWilayaId == cleanWilaya || _loadingAgencies) {
+      return;
+    }
+    _loadedWilayaId = cleanWilaya;
+    _loadingAgencies = true;
+    try {
+      final http.Response res = await http
+          .get(Uri.parse('${PsConfig.ps_app_url}yalidine/centers/$cleanWilaya'))
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200 && mounted) {
+        final dynamic decoded = json.decode(res.body);
+        if (decoded is Map<String, dynamic>) {
+          final List<dynamic> raw =
+              (decoded['all_wilaya_centers'] as List<dynamic>?) ??
+                  (decoded['centers'] as List<dynamic>?) ??
+                  <dynamic>[];
+          setState(() {
+            _wilayaName = decoded['wilaya_name_fr']?.toString() ??
+                decoded['wilaya_name']?.toString();
+            _yalidineAgencies =
+                raw.whereType<Map<String, dynamic>>().take(6).toList();
+          });
+        }
+      }
+    } catch (_) {} finally {
+      _loadingAgencies = false;
+    }
+  }
 
   Future<void> _handleSellerAction(
       BuildContext context, String action, {String? reason}) async {
@@ -477,6 +516,127 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  Builder(builder: (BuildContext ctx) {
+                    final String wilayaId =
+                        itemDetailProvider?.product.itemLocationId ?? '16';
+                    if (_loadedWilayaId != wilayaId) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _loadWilayaAgenciesIfNeeded(wilayaId);
+                      });
+                    }
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFBF2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Row(
+                            children: <Widget>[
+                              const Icon(Icons.local_shipping_outlined,
+                                  color: Color(0xFFB45309), size: 18),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'order_chat__deposit_title'.tr,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                    color: Color(0xFF92400E),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'order_chat__deposit_instructions'
+                                .tr
+                                .replaceAll('{code}', orderCode),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.35,
+                              color: Color(0xFF78350F),
+                            ),
+                          ),
+                          if (_yalidineAgencies != null &&
+                              _yalidineAgencies!.isNotEmpty) ...<Widget>[
+                            const SizedBox(height: 8),
+                            Text(
+                              '${'order_chat__yalidine_agencies_title'.tr}${_wilayaName != null ? ' ($_wilayaName)' : ''}:',
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF92400E),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            ..._yalidineAgencies!.map((Map<String, dynamic> ag) {
+                              final String agName =
+                                  (ag['name'] ?? '').toString();
+                              final String agAddr =
+                                  (ag['address'] ?? ag['commune_name'] ?? '')
+                                      .toString();
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 3),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    const Icon(Icons.location_on_outlined,
+                                        size: 13, color: Color(0xFFB45309)),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        agAddr.isNotEmpty
+                                            ? '$agName — $agAddr'
+                                            : agName,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF78350F),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        ],
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5C1A2B),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () =>
+                          _navigateToOrderDetail(context, orderId, true),
+                      icon: const Icon(Icons.local_shipping_outlined, size: 17),
+                      label: Text('order_chat__track_or_bordereau'.tr),
+                    ),
+                  ),
+                ] else if (actionStatus == 'delivering') ...<Widget>[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          _navigateToOrderDetail(context, orderId, true),
+                      icon: const Icon(Icons.local_shipping_outlined, size: 17),
+                      label: Text('order_chat__track_order'.tr),
+                    ),
+                  ),
                 ] else if (actionStatus == 'delivered') ...<Widget>[
                   Container(
                     width: double.infinity,
@@ -530,6 +690,25 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
                     ),
                   ),
                 ],
+              if (!isSeller && orderId.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF5C1A2B),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () =>
+                        _navigateToOrderDetail(context, orderId, false),
+                    icon: const Icon(Icons.local_shipping_outlined, size: 17),
+                    label: Text('order_chat__track_order'.tr),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

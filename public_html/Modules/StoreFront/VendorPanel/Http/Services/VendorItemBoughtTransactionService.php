@@ -399,16 +399,35 @@ class VendorItemBoughtTransactionService extends PsService
                     'wallet_id' => $lockedWallet->id,
                     'user_id' => $userId,
                     'type' => 'debit',
+                    'source' => 'order_payment',
+                    'order_code' => (string) ($order?->order_code ?? ''),
                     'amount' => $walletAmountUsed,
+                    'gross_amount' => $walletAmountUsed,
+                    'commission_amount' => 0,
                     'balance_after' => $newBalance,
                     'reference_type' => 'order_payment',
                     'reference_id' => (string) ($order?->order_code ?? $orderId),
                     'note' => "Paiement commande #" . ($order?->order_code ?? $orderId),
+                    'description' => "Paiement commande #" . ($order?->order_code ?? $orderId),
                     'added_user_id' => $userId,
                 ]);
 
+                \App\Services\PushHelper::sendToUser(
+                    (int) $userId,
+                    "Paiement de {$walletAmountUsed} DA débité de votre portefeuille pour la commande #" . ($order?->order_code ?? $orderId) . ".",
+                    'wallet',
+                    ['title' => 'Paiement Portefeuille']
+                );
+
                 if (!empty($order)) {
                     $order->wallet_amount_used = $walletAmountUsed;
+                    $codRemaining = max(0.0, round((float) $order->total_price - $walletAmountUsed, 2));
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'wallet_paid')) {
+                        $order->wallet_paid = $walletAmountUsed;
+                    }
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('psx_orders', 'cod_remaining')) {
+                        $order->cod_remaining = $codRemaining;
+                    }
                     $order->save();
                 }
             }

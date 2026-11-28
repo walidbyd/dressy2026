@@ -539,12 +539,18 @@ class _PlaceOrderButtonState extends State<PlaceOrderButton> {
       String? orderId,
       VendorItemBoughtProvider? vendorItemBoughtProvider) async {
     try {
+      final double grossVal = double.tryParse(totalPrice ?? '0') ?? 0.0;
+      final double walletVal =
+          double.tryParse(widget.walletAmountUsed ?? '0') ?? 0.0;
+      final double codRemaining =
+          (grossVal - walletVal) > 0 ? (grossVal - walletVal) : 0.0;
+
       final VendorItemBoughtParameterHolder vendorItemBoughtParameterHolder =
           VendorItemBoughtParameterHolder(
               currencyId: itemCurrencyId,
               isPaystack: '',
               orderId: orderId,
-              paymentAmount: totalPrice,
+              paymentAmount: codRemaining.toStringAsFixed(0),
               paymentMethod: widget.isWalletOnly ? 'wallet' : PsConst.CASH_ON_DELIVERY_METHOD,
               paymentMethodNonce: '',
               razorId: '',

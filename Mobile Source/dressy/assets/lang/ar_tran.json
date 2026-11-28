@@ -1194,7 +1194,7 @@
   "roulette__spinning": "جاري الدوران...",
   "roulette__won_prefix": "مبروك! لقد ربحت خصم",
   "roulette__valid_24h": "أنت محظوظ للحصول على هذه المكافأة • استخدام لمرة واحدة على حسابك",
-  "roulette__unavailable": "العجلة غير متاحة حالياً.",
+  "roulette__unavailable": "عجلة الحظ غير متاحة حالياً.",
   "coupon__discount_label": "خصم كود الترويج",
   "checkout__total_payable": "المبلغ الإجمالي للدفع",
   "chat_view__load_error": "تعذر تحميل الرسائل.",
@@ -1280,5 +1280,11 @@
   "seller_cat_ads": "الإعلانات",
   "seller_cat_referral": "الإحالة",
   "seller_cat_topup": "الشحن",
-  "seller_cat_wallet": "المحفظة"
+  "seller_cat_wallet": "المحفظة",
+  "order_chat__deposit_title": "تعليمات إيداع الطرد (ياليدين)",
+  "order_chat__deposit_instructions": "غلّف المنتج جيداً وقم بإيداعه في إحدى وكالات ياليدين في ولايتك أدناه:",
+  "order_chat__yalidine_agencies_title": "وكالات ياليدين في ولايتك",
+  "order_chat__track_or_bordereau": "تتبع / طباعة البوليصة",
+  "order_chat__track_order": "تتبع الطلب",
+  "item_detail__sell_again": "البيع مجدداً"
 }

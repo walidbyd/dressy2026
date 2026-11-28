@@ -178,28 +178,131 @@ class CouponService
         return $result;
     }
 
+    public function getRouletteConfig(): array
+    {
+        $defaultSlices = [
+            ['percent' => 5, 'label' => '-5%', 'weight' => 50, 'color' => '#3B82F6'],
+            ['percent' => 20, 'label' => '-20%', 'weight' => 0, 'color' => '#EC4899'],
+            ['percent' => 10, 'label' => '-10%', 'weight' => 50, 'color' => '#10B981'],
+            ['percent' => 50, 'label' => '-50%', 'weight' => 0, 'color' => '#F59E0B'],
+            ['percent' => 5, 'label' => '-5%', 'weight' => 0, 'color' => '#8B5CF6'],
+            ['percent' => 10, 'label' => '-10%', 'weight' => 0, 'color' => '#EF4444'],
+        ];
+
+        try {
+            $row = DB::table('psx_roulette_settings')->orderBy('id')->first();
+            if ($row) {
+                $decoded = is_string($row->slices) ? json_decode($row->slices, true) : $row->slices;
+                $slices = (is_array($decoded) && count($decoded) >= 2) ? array_values($decoded) : $defaultSlices;
+                return [
+                    'is_enabled' => (bool) $row->is_enabled,
+                    'slices' => $slices,
+                ];
+            }
+        } catch (\Throwable $e) {
+            // Table may not exist yet before migration
+        }
+
+        return [
+            'is_enabled' => true,
+            'slices' => $defaultSlices,
+        ];
+    }
+
+    public function updateRouletteConfig(bool $isEnabled, array $slices): array
+    {
+        $normalized = [];
+        foreach ($slices as $slice) {
+            $percent = max(1, min(95, (int) ($slice['percent'] ?? 5)));
+            $label = trim((string) ($slice['label'] ?? ('-' . $percent . '%')));
+            if ($label === '') {
+                $label = '-' . $percent . '%';
+            }
+            $weight = max(0, (int) ($slice['weight'] ?? 0));
+            $color = trim((string) ($slice['color'] ?? '#3B82F6'));
+            $normalized[] = [
+                'percent' => $percent,
+                'label' => $label,
+                'weight' => $weight,
+                'color' => $color !== '' ? $color : '#3B82F6',
+            ];
+        }
+
+        $existing = DB::table('psx_roulette_settings')->orderBy('id')->first();
+        if ($existing) {
+            DB::table('psx_roulette_settings')->where('id', $existing->id)->update([
+                'is_enabled' => $isEnabled,
+                'slices' => json_encode($normalized),
+                'updated_at' => Carbon::now(),
+            ]);
+        } else {
+            DB::table('psx_roulette_settings')->insert([
+                'is_enabled' => $isEnabled,
+                'slices' => json_encode($normalized),
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]);
+        }
+
+        return ['is_enabled' => $isEnabled, 'slices' => $normalized];
+    }
+
     public function checkRouletteEligibility(?int $userId): array
     {
+        $config = $this->getRouletteConfig();
+        if (!$config['is_enabled']) {
+            return [
+                'eligible' => false,
+                'is_enabled' => false,
+                'slices' => $config['slices'],
+                'reason' => 'disabled',
+            ];
+        }
+
         if (!$userId) {
-            return ['eligible' => false, 'reason' => 'unauthenticated'];
+            return [
+                'eligible' => false,
+                'is_enabled' => true,
+                'slices' => $config['slices'],
+                'reason' => 'unauthenticated',
+            ];
         }
 
         $user = DB::table('users')->select('id', 'last_roulette_spun_at')->where('id', $userId)->first();
         if (!$user) {
-            return ['eligible' => false, 'reason' => 'user_not_found'];
+            return [
+                'eligible' => false,
+                'is_enabled' => true,
+                'slices' => $config['slices'],
+                'reason' => 'user_not_found',
+            ];
         }
 
         if (empty($user->last_roulette_spun_at)) {
-            return ['eligible' => true, 'next_spin_at' => null, 'remaining_seconds' => 0];
+            return [
+                'eligible' => true,
+                'is_enabled' => true,
+                'slices' => $config['slices'],
+                'next_spin_at' => null,
+                'remaining_seconds' => 0,
+            ];
         }
 
         $nextSpinAt = Carbon::parse($user->last_roulette_spun_at)->addHours(24);
         if (Carbon::now()->gte($nextSpinAt)) {
-            return ['eligible' => true, 'next_spin_at' => null, 'remaining_seconds' => 0];
+            return [
+                'eligible' => true,
+                'is_enabled' => true,
+                'slices' => $config['slices'],
+                'next_spin_at' => null,
+                'remaining_seconds' => 0,
+            ];
         }
 
         return [
             'eligible' => false,
+            'is_enabled' => true,
+            'slices' => $config['slices'],
             'next_spin_at' => $nextSpinAt->toIso8601String(),
             'remaining_seconds' => max(0, Carbon::now()->diffInSeconds($nextSpinAt, false)),
         ];
@@ -208,17 +311,49 @@ class CouponService
     public function spinRoulette(int $userId): array
     {
         $eligibility = $this->checkRouletteEligibility($userId);
+        if (empty($eligibility['is_enabled'])) {
+            return [
+                'success' => false,
+                'eligible' => false,
+                'is_enabled' => false,
+                'message' => 'La roue de la fortune est actuellement désactivée.',
+            ];
+        }
         if (empty($eligibility['eligible'])) {
             return [
                 'success' => false,
                 'eligible' => false,
+                'is_enabled' => true,
                 'message' => 'Vous avez déjà tourné la roue aujourd\'hui. Revenez dans 24 heures.',
                 'next_spin_at' => $eligibility['next_spin_at'] ?? null,
                 'remaining_seconds' => $eligibility['remaining_seconds'] ?? 0,
             ];
         }
 
-        $rewardPercent = random_int(0, 1) === 0 ? 5 : 10;
+        $slices = $eligibility['slices'] ?? [];
+        $totalWeight = 0;
+        foreach ($slices as $s) {
+            $totalWeight += max(0, (int) ($s['weight'] ?? 0));
+        }
+
+        $selectedIdx = 0;
+        if ($totalWeight > 0) {
+            $roll = random_int(1, $totalWeight);
+            $acc = 0;
+            foreach ($slices as $idx => $s) {
+                $acc += max(0, (int) ($s['weight'] ?? 0));
+                if ($roll <= $acc) {
+                    $selectedIdx = (int) $idx;
+                    break;
+                }
+            }
+        } elseif (!empty($slices)) {
+            $selectedIdx = random_int(0, count($slices) - 1);
+        }
+
+        $rewardPercent = !empty($slices[$selectedIdx]['percent'])
+            ? (int) $slices[$selectedIdx]['percent']
+            : 5;
         $code = $this->generateUniqueCode('SPIN' . $rewardPercent);
         $expiresAt = Carbon::now()->addHours(24);
 
@@ -247,6 +382,7 @@ class CouponService
             'success' => true,
             'eligible' => false,
             'reward_percent' => $rewardPercent,
+            'slice_index' => $selectedIdx,
             'coupon' => $this->formatCoupon($coupon),
             'next_spin_at' => Carbon::now()->addHours(24)->toIso8601String(),
         ];

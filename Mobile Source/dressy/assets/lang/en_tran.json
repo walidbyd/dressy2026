@@ -1194,7 +1194,7 @@
   "roulette__spinning": "Spinning...",
   "roulette__won_prefix": "Congratulations! You won",
   "roulette__valid_24h": "You are lucky to get this reward • Single use on your account",
-  "roulette__unavailable": "Spin unavailable right now. Try again later.",
+  "roulette__unavailable": "Spin wheel is currently unavailable.",
   "coupon__discount_label": "Promo Code Discount",
   "checkout__total_payable": "Total Payable",
   "chat_view__load_error": "Failed to load messages.",
@@ -1280,5 +1280,11 @@
   "seller_cat_ads": "Ads",
   "seller_cat_referral": "Referrals",
   "seller_cat_topup": "Top-Ups",
-  "seller_cat_wallet": "Wallet"
+  "seller_cat_wallet": "Wallet",
+  "order_chat__deposit_title": "Shipping Deposit Instructions",
+  "order_chat__deposit_instructions": "Pack the item securely and drop it off at one of the Yalidine agencies below in your wilaya:",
+  "order_chat__yalidine_agencies_title": "Yalidine Agencies in Your Wilaya",
+  "order_chat__track_or_bordereau": "Track / Print Bordereau",
+  "order_chat__track_order": "Track Order",
+  "item_detail__sell_again": "Sell Again"
 }

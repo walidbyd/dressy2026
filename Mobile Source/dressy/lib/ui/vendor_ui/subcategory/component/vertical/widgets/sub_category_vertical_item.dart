@@ -112,19 +112,25 @@ class _SubCategoryGridItemState extends State<SubCategoryGridItem> {
                                 height: PsDimens.space8,
                               ),
                               Flexible(
-                                child: Text(
-                                  widget.subCategory.name ?? '',
-                                  textAlign: TextAlign.center,
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyLarge!
-                                      .copyWith(
-                                          color: Utils.isLightMode(context)
-                                              ? PsColors.text600
-                                              : Utils.isLightMode(context) ? PsColors.text300: PsColors.text50,
-                                          fontSize: 16),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: Text(
+                                    widget.subCategory.name ?? '',
+                                    textAlign: TextAlign.center,
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 2,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium!
+                                        .copyWith(
+                                            color: Utils.isLightMode(context)
+                                                ? PsColors.text700
+                                                : PsColors.text50,
+                                            fontSize: 12.5,
+                                            height: 1.2,
+                                            fontWeight: FontWeight.w600),
+                                  ),
                                 ),
                               ),
                             ],

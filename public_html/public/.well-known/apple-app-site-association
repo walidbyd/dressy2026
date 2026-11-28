@@ -6,7 +6,9 @@
         "appID": "8282564142.com.dressy.app",
         "paths": [
           "/item/*",
-          "/profile/*"
+          "/profile/*",
+          "/story/*",
+          "/referral/*"
         ]
       }
     ]

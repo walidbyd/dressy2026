@@ -86,6 +86,66 @@
             </div>
         </div>
 
+        <!-- Spin Wheel Admin Settings -->
+        <div class="bg-white dark:bg-secondary-800 rounded-xl border border-gray-100 dark:border-secondary-700 p-5 mb-6 shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                <div>
+                    <h2 class="text-base font-bold text-secondary-800 dark:text-white flex items-center gap-2">
+                        <span>🎡 Configuration de la Roue de la Fortune (24h)</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full"
+                            :class="rouletteForm.is_enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
+                            {{ rouletteForm.is_enabled ? 'Activée' : 'Désactivée' }}
+                        </span>
+                    </h2>
+                    <p class="text-xs text-secondary-500 dark:text-secondary-400 mt-1">
+                        Activez ou désactivez la roue sur l'application mobile et ajustez les tranches (% remise et probabilité de gain).
+                    </p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-secondary-700 dark:text-secondary-300">
+                        <input type="checkbox" v-model="rouletteForm.is_enabled"
+                            class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500" />
+                        <span>Roue active</span>
+                    </label>
+                    <button type="button" @click="addRouletteSlice"
+                        class="px-3 py-1.5 text-xs font-semibold bg-gray-100 dark:bg-secondary-700 hover:bg-gray-200 text-secondary-800 dark:text-white rounded-lg">
+                        + Tranche
+                    </button>
+                    <button type="button" @click="saveRouletteSettings" :disabled="savingRoulette"
+                        class="px-4 py-1.5 text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white rounded-lg shadow-sm disabled:opacity-50">
+                        {{ savingRoulette ? 'Enregistrement...' : 'Enregistrer la Roue' }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div v-for="(slice, idx) in rouletteForm.slices" :key="idx"
+                    class="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 dark:border-secondary-700 bg-gray-50 dark:bg-secondary-900">
+                    <div class="flex-1 grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-[10px] text-secondary-500 mb-0.5">Libellé</label>
+                            <input type="text" v-model="slice.label" placeholder="-10%"
+                                class="w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-800 dark:text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-secondary-500 mb-0.5">Remise (%)</label>
+                            <input type="number" min="1" max="95" v-model.number="slice.percent"
+                                class="w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-800 dark:text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-secondary-500 mb-0.5">Poids (Gain)</label>
+                            <input type="number" min="0" max="1000" v-model.number="slice.weight"
+                                class="w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-800 dark:text-white" />
+                        </div>
+                    </div>
+                    <button v-if="rouletteForm.slices.length > 2" type="button" @click="removeRouletteSlice(idx)"
+                        class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="Supprimer">
+                        <ps-icon name="trash" w="14" h="14" />
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Filter & Search Section -->
         <div class="bg-white dark:bg-secondary-800 rounded-xl border border-gray-100 dark:border-secondary-700 p-4 mb-6 shadow-sm">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -499,6 +559,7 @@ export default defineComponent({
         users: Array,
         filters: Object,
         stats: Object,
+        rouletteSettings: Object,
     },
     setup(props) {
         const searchQuery = ref(props.filters.search || '');
@@ -506,6 +567,46 @@ export default defineComponent({
         const isEditing = ref(false);
         const editingCouponId = ref(null);
         const submitting = ref(false);
+        const savingRoulette = ref(false);
+
+        const defaultSlices = [
+            { percent: 5, label: '-5%', weight: 50, color: '#3B82F6' },
+            { percent: 20, label: '-20%', weight: 0, color: '#EC4899' },
+            { percent: 10, label: '-10%', weight: 50, color: '#10B981' },
+            { percent: 50, label: '-50%', weight: 0, color: '#F59E0B' },
+            { percent: 5, label: '-5%', weight: 0, color: '#8B5CF6' },
+            { percent: 10, label: '-10%', weight: 0, color: '#EF4444' },
+        ];
+
+        const rouletteForm = ref({
+            is_enabled: props.rouletteSettings ? Boolean(props.rouletteSettings.is_enabled) : true,
+            slices: (props.rouletteSettings && Array.isArray(props.rouletteSettings.slices) && props.rouletteSettings.slices.length >= 2)
+                ? JSON.parse(JSON.stringify(props.rouletteSettings.slices))
+                : defaultSlices,
+        });
+
+        const addRouletteSlice = () => {
+            if (rouletteForm.value.slices.length >= 12) return;
+            rouletteForm.value.slices.push({ percent: 10, label: '-10%', weight: 10, color: '#3B82F6' });
+        };
+
+        const removeRouletteSlice = (idx) => {
+            if (rouletteForm.value.slices.length <= 2) return;
+            rouletteForm.value.slices.splice(idx, 1);
+        };
+
+        const saveRouletteSettings = () => {
+            savingRoulette.value = true;
+            router.post(route('admin.coupons.rouletteSettings'), {
+                is_enabled: rouletteForm.value.is_enabled,
+                slices: rouletteForm.value.slices,
+            }, {
+                preserveScroll: true,
+                onFinish: () => {
+                    savingRoulette.value = false;
+                },
+            });
+        };
 
         const form = ref({
             code: '',
@@ -701,6 +802,11 @@ export default defineComponent({
             isEditing,
             editingCouponId,
             submitting,
+            savingRoulette,
+            rouletteForm,
+            addRouletteSlice,
+            removeRouletteSlice,
+            saveRouletteSettings,
             form,
             openCreateModal,
             openEditModal,

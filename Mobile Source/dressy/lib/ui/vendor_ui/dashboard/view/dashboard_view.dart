@@ -200,13 +200,21 @@ class _HomeViewState extends State<DashboardView>
         return;
       }
       final dynamic decoded = json.decode(res.body);
-      if (decoded is Map<String, dynamic> && decoded['eligible'] == true) {
+      if (decoded is Map<String, dynamic> &&
+          decoded['is_enabled'] != false &&
+          decoded['eligible'] == true) {
+        final List<Map<String, dynamic>>? slices = decoded['slices'] is List
+            ? (decoded['slices'] as List<dynamic>)
+                .whereType<Map<String, dynamic>>()
+                .toList()
+            : null;
         showDialog<void>(
           context: context,
           barrierDismissible: true,
           builder: (BuildContext ctx) => SpinRouletteDialog(
             userId: userId,
             headerToken: psValueHolder?.headerToken ?? '',
+            slices: slices,
           ),
         );
       }

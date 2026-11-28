@@ -351,6 +351,15 @@ class FirebaseCloudMessagingService extends PsService implements FirebaseCloudMe
                 orderCode: $data['order_code'] ?? null
             );
 
+        } else {
+            $noti_arr = $this->prepareNotiArr($data['title'] ?? __('site_name'), $message);
+            $noti_data = $this->prepareTokenNotiData(
+                type: $flag,
+                message: $message,
+                flag: $flag,
+                itemId: $data['item_id'] ?? null,
+                clickAction: $click_action
+            );
         }
 
         $message_data = $this->prepareTokenNotiMessageData($registatoin_id, $noti_arr, $noti_data);

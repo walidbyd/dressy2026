@@ -171,6 +171,13 @@ class SilkpayService
                     'reference_id' => $refKey,
                     'description' => "Rechargement CIB / Edahabia (Silk Pay) • {$lockedTx->reference}",
                 ]);
+
+                PushHelper::sendToUser(
+                    (int) $lockedTx->user_id,
+                    "Votre portefeuille a été rechargé de {$amount} DA via CIB / Edahabia (Silk Pay).",
+                    'wallet',
+                    ['title' => 'Portefeuille rechargé']
+                );
             }
 
             $lockedTx->status = 'credited';

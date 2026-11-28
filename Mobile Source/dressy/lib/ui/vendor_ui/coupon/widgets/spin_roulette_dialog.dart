@@ -14,10 +14,12 @@ class SpinRouletteDialog extends StatefulWidget {
     Key? key,
     required this.userId,
     required this.headerToken,
+    this.slices,
   }) : super(key: key);
 
   final String userId;
   final String headerToken;
+  final List<Map<String, dynamic>>? slices;
 
   @override
   State<SpinRouletteDialog> createState() => _SpinRouletteDialogState();
@@ -34,8 +36,31 @@ class _SpinRouletteDialogState extends State<SpinRouletteDialog>
   String? _couponCode;
   String? _errorMsg;
 
-  // 6 visual slices: 5%, 20%, 10%, 50%, 5%, 10% (awarded prize is always 5% or 10%)
-  static const List<int> _segments = <int>[5, 20, 10, 50, 5, 10];
+  static const List<int> _defaultSegments = <int>[5, 20, 10, 50, 5, 10];
+
+  List<int> get _segments {
+    if (widget.slices != null && widget.slices!.length >= 2) {
+      return widget.slices!
+          .map((Map<String, dynamic> s) =>
+              int.tryParse(s['percent']?.toString() ?? '5') ?? 5)
+          .toList();
+    }
+    return _defaultSegments;
+  }
+
+  List<String> get _segmentLabels {
+    if (widget.slices != null && widget.slices!.length >= 2) {
+      return widget.slices!.map((Map<String, dynamic> s) {
+        final String lbl = (s['label'] ?? '').toString().trim();
+        if (lbl.isNotEmpty) {
+          return lbl;
+        }
+        final int pct = int.tryParse(s['percent']?.toString() ?? '5') ?? 5;
+        return '-$pct%';
+      }).toList();
+    }
+    return _defaultSegments.map((int p) => '-$p%').toList();
+  }
 
   @override
   void initState() {
@@ -90,9 +115,15 @@ class _SpinRouletteDialogState extends State<SpinRouletteDialog>
             decoded['coupon'] as Map<String, dynamic>?;
         final String code = (coupon?['code'] ?? '').toString();
 
-        // Pick a segment index matching the server-assigned reward (5 or 10)
-        final int targetIdx = reward == 10 ? 2 : 0;
-        const double segAngle = (2 * math.pi) / 6;
+        final int segCount = _segments.length;
+        int targetIdx = int.tryParse(decoded['slice_index']?.toString() ?? '') ?? -1;
+        if (targetIdx < 0 || targetIdx >= segCount) {
+          targetIdx = _segments.indexOf(reward);
+          if (targetIdx < 0) {
+            targetIdx = 0;
+          }
+        }
+        final double segAngle = (2 * math.pi) / segCount;
         // Pointer is at top (-pi/2); align center of targetIdx under top pointer
         final double targetCenterAngle = -(targetIdx * segAngle) - (segAngle / 2);
         const double fullTurns = 8 * 2 * math.pi;
@@ -233,7 +264,10 @@ class _SpinRouletteDialogState extends State<SpinRouletteDialog>
                     child: Transform.rotate(
                       angle: _currentAngle,
                       child: CustomPaint(
-                        painter: _RouletteWheelPainter(segments: _segments),
+                        painter: _RouletteWheelPainter(
+                          segments: _segments,
+                          labels: _segmentLabels,
+                        ),
                       ),
                     ),
                   ),
@@ -371,9 +405,10 @@ class _SpinRouletteDialogState extends State<SpinRouletteDialog>
 }
 
 class _RouletteWheelPainter extends CustomPainter {
-  _RouletteWheelPainter({required this.segments});
+  _RouletteWheelPainter({required this.segments, this.labels});
 
   final List<int> segments;
+  final List<String>? labels;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -411,9 +446,11 @@ class _RouletteWheelPainter extends CustomPainter {
         center.dx + radius * 0.62 * math.cos(textAngle),
         center.dy + radius * 0.62 * math.sin(textAngle),
       );
+      final String sliceLabel =
+          (labels != null && i < labels!.length) ? labels![i] : '-${segments[i]}%';
       final TextPainter tp = TextPainter(
         text: TextSpan(
-          text: '-${segments[i]}%',
+          text: sliceLabel,
           style: TextStyle(
             color: i.isEven ? Colors.white : const Color(0xFF1F1635),
             fontSize: 20,

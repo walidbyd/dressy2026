@@ -1194,7 +1194,7 @@
   "roulette__spinning": "Rotation en cours...",
   "roulette__won_prefix": "Félicitations ! Vous avez gagné",
   "roulette__valid_24h": "Vous avez de la chance d'obtenir cette récompense • Usage unique sur votre compte",
-  "roulette__unavailable": "Roulette indisponible pour le moment.",
+  "roulette__unavailable": "La roue de la fortune est actuellement indisponible.",
   "coupon__discount_label": "Réduction Code Promo",
   "checkout__total_payable": "Total à payer",
   "chat_view__load_error": "Impossible de charger les messages.",
@@ -1280,5 +1280,11 @@
   "seller_cat_ads": "Publicité",
   "seller_cat_referral": "Parrainage",
   "seller_cat_topup": "Rechargements",
-  "seller_cat_wallet": "Portefeuille"
+  "seller_cat_wallet": "Portefeuille",
+  "order_chat__deposit_title": "Instructions de dépôt Yalidine",
+  "order_chat__deposit_instructions": "Emballez soigneusement l'article et déposez-le dans l'une des agences Yalidine de votre wilaya ci-dessous :",
+  "order_chat__yalidine_agencies_title": "Agences Yalidine dans votre wilaya",
+  "order_chat__track_or_bordereau": "Suivre / Imprimer Bordereau",
+  "order_chat__track_order": "Suivre la commande",
+  "item_detail__sell_again": "Vendre à nouveau"
 }

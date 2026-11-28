@@ -228,6 +228,13 @@ class AffiliationService
                     'reference_id' => 'aff_' . $referral->id,
                     'description' => "Commission parrainage ({$commissionPct}%) pour la commande livrée #{$order->order_code}",
                 ]);
+
+                PushHelper::sendToUser(
+                    (int) $referral->issuer_user_id,
+                    "Vous avez reçu +{$commissionAmount} DA de commission parrainage pour la commande #{$order->order_code}.",
+                    'wallet',
+                    ['title' => 'Commission parrainage reçue']
+                );
             }
 
             $referral->issuer_commission_amount = $commissionAmount;

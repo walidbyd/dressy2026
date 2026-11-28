@@ -37,6 +37,9 @@ class CategoryIllustrationWidget extends StatelessWidget {
     if (n.contains('dress') || n.contains('robe') || n.contains('فستان') || n.contains('فساتين')) {
       return Icons.dry_cleaning;
     }
+    if (n.contains('maquillage') || n.contains('makeup') || n.contains('cosmetic') || n.contains('مكياج')) {
+      return Icons.face_retouching_natural;
+    }
     if (n.contains('top') || n.contains('t-shirt') || n.contains('haut') || n.contains('قميص') || n.contains('تيشرت')) {
       return Icons.checkroom;
     }

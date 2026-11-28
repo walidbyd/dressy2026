@@ -61,6 +61,7 @@ class AdminCouponController extends PsController
                 'status' => $request->input('status', 'all'),
             ],
             'stats' => $stats,
+            'rouletteSettings' => $this->couponService->getRouletteConfig(),
         ]);
     }
 
@@ -190,6 +191,28 @@ class AdminCouponController extends PsController
         return redirect()->route('admin.coupons.index')->with('status', [
             'flag' => 'success',
             'msg' => 'Coupon supprimé avec succès.',
+        ]);
+    }
+
+    public function updateRouletteSettings(Request $request)
+    {
+        $validated = $request->validate([
+            'is_enabled' => 'required|boolean',
+            'slices' => 'required|array|min:2|max:12',
+            'slices.*.percent' => 'required|integer|min:1|max:95',
+            'slices.*.label' => 'nullable|string|max:24',
+            'slices.*.weight' => 'required|integer|min:0|max:1000',
+            'slices.*.color' => 'nullable|string|max:16',
+        ]);
+
+        $this->couponService->updateRouletteConfig(
+            (bool) $validated['is_enabled'],
+            $validated['slices']
+        );
+
+        return redirect()->route('admin.coupons.index')->with('status', [
+            'flag' => 'success',
+            'msg' => 'Configuration de la Roue de la Fortune enregistrée !',
         ]);
     }
 }

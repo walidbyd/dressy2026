@@ -68,7 +68,7 @@ class ChatService extends PsService implements ChatServiceInterface
 
         $conds = $this->prepareChatHistoryGetCondsData($chatData);
         $chatHistory = $this->chatHistoryService->get(conds: $conds);
-        $chatNotiMessage = 'chatting__api_new_message_received';
+        $chatNotiMessage = !empty($chatData['message']) ? (string) $chatData['message'] : 'chatting__api_new_message_received';
 
         if (empty($chatHistory)) {
             // Guard: Require an existing order for this item between buyer and seller
@@ -109,6 +109,7 @@ class ChatService extends PsService implements ChatServiceInterface
                 try {
                     $chatHistoryData = $this->prepareChatHistoryData($chatData, 0, 0, 1, 0);
                     $chatHistory = $this->chatHistoryService->save($chatHistoryData, $loginUserId);
+                    $this->saveChatNoti($chatData, $chatNotiMessage, $loginUserId, Constants::chatMessageType);
                 } catch (Throwable $e) {
                     throw new PsApiException($e->getMessage(), Constants::internalServerErrorStatusCode);
                 }
@@ -133,6 +134,7 @@ class ChatService extends PsService implements ChatServiceInterface
                 // if user is online, no need to send noti and no need to add unread count
                 try {
                     $this->chatHistoryService->update($chatHistory->id, $chatHistoryData, $loginUserId);
+                    $this->saveChatNoti($chatData, $chatNotiMessage, $loginUserId, Constants::chatMessageType);
                 } catch (Throwable $e) {
                     $message = __('chatting__api_db_error', [], $langSymbol);
                     throw new PsApiException($message, Constants::internalServerErrorStatusCode);

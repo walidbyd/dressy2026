@@ -169,8 +169,9 @@ class _CustomFieldEntryContainerState
         locationTownshipController.text =
             itemEntryProvider.locationTownshipName ?? '';
 
-        if (widget.flag == PsConst.EDIT_ITEM &&
-            itemEntryProvider.item!.id != null) {
+        if (itemEntryProvider.item!.id != null &&
+            (widget.flag == PsConst.EDIT_ITEM ||
+                (itemEntryProvider.item!.title ?? '').isNotEmpty)) {
           bindItemData();
         }
         bindDataFirstTime = false;
@@ -350,7 +351,8 @@ class _CustomFieldEntryContainerState
                       idTextController = TextEditingController();
 
                       if (customField.coreKeyId != null) {
-                        if (widget.flag == PsConst.EDIT_ITEM) {
+                        if (widget.flag == PsConst.EDIT_ITEM ||
+                            (widget.item?.title ?? '').isNotEmpty) {
                           widget.item!.productRelation
                               ?.forEach((ProductRelation element) {
                             if (element.coreKeyId == customField.coreKeyId &&

@@ -71,8 +71,12 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="dressy-dz.com" android:pathPrefix="/item" />
                 <data android:scheme="https" android:host="dressy-dz.com" android:pathPrefix="/profile" />
+                <data android:scheme="https" android:host="dressy-dz.com" android:pathPrefix="/story" />
+                <data android:scheme="https" android:host="dressy-dz.com" android:pathPrefix="/referral" />
                 <data android:scheme="https" android:host="www.dressy-dz.com" android:pathPrefix="/item" />
                 <data android:scheme="https" android:host="www.dressy-dz.com" android:pathPrefix="/profile" />
+                <data android:scheme="https" android:host="www.dressy-dz.com" android:pathPrefix="/story" />
+                <data android:scheme="https" android:host="www.dressy-dz.com" android:pathPrefix="/referral" />
             </intent-filter>
 
             <!-- Custom URI Scheme dressy:// -->
@@ -81,13 +85,6 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="dressy" />
-            </intent-filter>
-           
-            <intent-filter>
-                <data android:scheme="com.dressy.app.app" android:host="open" />
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
             </intent-filter>
         </activity>
 

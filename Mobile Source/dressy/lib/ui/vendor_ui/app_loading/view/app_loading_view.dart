@@ -51,6 +51,16 @@ MobileTheme? _mobileTheme;
 
 // ignore: must_be_immutable
 class AppLoadingView extends StatelessWidget {
+  bool _hasNavigated = false;
+
+  void _safeNavigate(BuildContext context, String routeName, {Object? arguments}) {
+    if (_hasNavigated || !context.mounted) {
+      return;
+    }
+    _hasNavigated = true;
+    Navigator.pushReplacementNamed(context, routeName, arguments: arguments);
+  }
+
   Future<dynamic> callDateFunction(
       AppInfoProvider provider,
       ClearAllDataProvider? clearAllDataProvider,
@@ -307,9 +317,9 @@ class AppLoadingView extends StatelessWidget {
             Provider.of<PsValueHolder>(context, listen: false);
         final String uid = Utils.checkUserLoginId(vHolder);
         if (uid.isEmpty || uid == 'nologinuser') {
-          Navigator.pushReplacementNamed(context, RoutePaths.login_container);
+          _safeNavigate(context, RoutePaths.login_container);
         } else {
-          Navigator.pushReplacementNamed(context, RoutePaths.home);
+          _safeNavigate(context, RoutePaths.home);
         }
       } catch (_) {}
     }
@@ -337,27 +347,26 @@ class AppLoadingView extends StatelessWidget {
 
     // If already authenticated, always go directly to Home
     if (isAuthenticated) {
-      Navigator.pushReplacementNamed(context, RoutePaths.home);
+      _safeNavigate(context, RoutePaths.home);
       return;
     }
 
     if (isFirstTime) {
       if (valueHolder.showOnboardLanguage == true) {
-        Navigator.pushReplacementNamed(context, RoutePaths.languagesetting);
+        _safeNavigate(context, RoutePaths.languagesetting);
       } else if (valueHolder.isToShowIntroSlider == true) {
-        Navigator.pushReplacementNamed(context, RoutePaths.introSlider,
-            arguments: false);
+        _safeNavigate(context, RoutePaths.introSlider, arguments: false);
       } else if (!isAuthenticated) {
-        Navigator.pushReplacementNamed(context, RoutePaths.login_container);
+        _safeNavigate(context, RoutePaths.login_container);
       } else {
-        Navigator.pushReplacementNamed(context, RoutePaths.home);
+        _safeNavigate(context, RoutePaths.home);
       }
     } else {
       // Returning user (2nd launch & beyond): Enforce Authentication
       if (!isAuthenticated) {
-        Navigator.pushReplacementNamed(context, RoutePaths.login_container);
+        _safeNavigate(context, RoutePaths.login_container);
       } else {
-        Navigator.pushReplacementNamed(context, RoutePaths.home);
+        _safeNavigate(context, RoutePaths.home);
       }
     }
   }
@@ -406,7 +415,7 @@ class AppLoadingView extends StatelessWidget {
   } catch (e) {
       Utils.psPrint('Error in checkVersionNumber: $e');
       try {
-        Navigator.pushReplacementNamed(context, RoutePaths.home);
+        _safeNavigate(context, RoutePaths.home);
       } catch (_) {}
     }
   }

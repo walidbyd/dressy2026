@@ -111,6 +111,13 @@ class AdBoostService
                     'reference_id' => 'story_boost_' . $story->id . '_' . time(),
                     'description' => 'Boost Story 24h',
                 ]);
+
+                PushHelper::sendToUser(
+                    (int) $userId,
+                    "Boost Story 24h activé (-{$price} DA débités de votre portefeuille).",
+                    'wallet',
+                    ['title' => 'Boost Story activé']
+                );
             }
 
             $expiresAt = $now->copy()->addHours(24);
@@ -206,6 +213,13 @@ class AdBoostService
                     'reference_id' => 'item_boost_' . $item->id . '_' . time(),
                     'description' => "Boost Article - {$plan->title}",
                 ]);
+
+                PushHelper::sendToUser(
+                    (int) $userId,
+                    "Boost Article ({$plan->title}) activé (-{$price} DA débités de votre portefeuille).",
+                    'wallet',
+                    ['title' => 'Boost Article activé', 'item_id' => (string) $item->id]
+                );
             }
 
             $expiresAt = $now->copy()->addDays((int) $plan->duration_days);

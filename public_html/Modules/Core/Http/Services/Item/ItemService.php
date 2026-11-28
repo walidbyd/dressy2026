@@ -611,6 +611,33 @@ class ItemService extends PsService implements ItemServiceInterface
 
             \App\Services\Chabit\ChabitItemModerator::dispatchForItem($item->id);
 
+            try {
+                if ((int) $item->status === (int) Constants::publishItem && !empty($item->added_user_id)) {
+                    $followerIds = \Modules\Core\Entities\User\FollowUser::where('followed_user_id', $item->added_user_id)
+                        ->pluck('user_id')
+                        ->unique()
+                        ->filter(fn ($fid) => (int) $fid > 0 && (int) $fid !== (int) $item->added_user_id);
+
+                    if ($followerIds->isNotEmpty()) {
+                        $vendorName = DB::table('users')->where('id', $item->added_user_id)->value('name') ?: 'Boutique';
+                        $msg = "Nouvel article publié par {$vendorName} : {$item->title}";
+                        foreach ($followerIds as $followerId) {
+                            \App\Services\PushHelper::sendToUser(
+                                (int) $followerId,
+                                $msg,
+                                Constants::followNotiFlag,
+                                [
+                                    'title' => $vendorName,
+                                    'item_id' => (string) $item->id,
+                                ]
+                            );
+                        }
+                    }
+                }
+            } catch (\Throwable $pushErr) {
+                \Illuminate\Support\Facades\Log::warning('Follower new item push failed: ' . $pushErr->getMessage());
+            }
+
             return $item;
         } catch (\Throwable $e) {
             DB::rollBack();

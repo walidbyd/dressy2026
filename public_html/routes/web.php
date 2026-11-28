@@ -1099,6 +1099,7 @@ Route::middleware(['isInstall'])->group(function () {
         Route::prefix('coupons')->controller(\App\Http\Controllers\Backend\AdminCouponController::class)->group(function () {
             Route::get('/', 'index')->name('admin.coupons.index');
             Route::get('/generate-code', 'generateCode')->name('admin.coupons.generateCode');
+            Route::post('/roulette-settings', 'updateRouletteSettings')->name('admin.coupons.rouletteSettings');
             Route::post('/', 'store')->name('admin.coupons.store');
             Route::put('/{id}', 'update')->name('admin.coupons.update');
             Route::post('/{id}/toggle', 'toggle')->name('admin.coupons.toggle');
@@ -1377,5 +1378,21 @@ Route::get('/profile/{id}', function ($id) {
 
     return redirect('/');
 })->name('public.profile.preview');
+
+Route::get('/.well-known/assetlinks.json', function () {
+    $path = public_path('.well-known/assetlinks.json');
+    if (file_exists($path)) {
+        return response()->file($path, ['Content-Type' => 'application/json']);
+    }
+    return response()->json([]);
+});
+
+Route::get('/.well-known/apple-app-site-association', function () {
+    $path = public_path('.well-known/apple-app-site-association');
+    if (file_exists($path)) {
+        return response()->file($path, ['Content-Type' => 'application/json']);
+    }
+    return response()->json([]);
+});
 
 Route::get('/{shortCode}', [DynamicLinkController::class, 'redirect'])->name('shortcode');
