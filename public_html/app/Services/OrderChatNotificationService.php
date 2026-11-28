@@ -349,6 +349,7 @@ class OrderChatNotificationService
                 'messageType' => 'order_status_update',
                 'orderId' => (string) $order->id,
                 'orderCode' => (string) $order->order_code,
+                'yalidineTracking' => (string) ($order->yalidine_tracking ?? ''),
                 'actionStatus' => 'status_update',
             ];
             $this->writeToFirebase($sessionId, $messageKey, $firebaseMessage);
@@ -359,6 +360,7 @@ class OrderChatNotificationService
                 'message' => $messageText,
                 'order_id' => (string) $order->id,
                 'order_code' => (string) $order->order_code,
+                'yalidine_tracking' => (string) ($order->yalidine_tracking ?? ''),
                 'item_id' => (string) $itemId,
                 'buyer_user_id' => (string) $buyerId,
                 'seller_user_id' => (string) $sellerId,
@@ -411,7 +413,7 @@ class OrderChatNotificationService
 
                 // Find & patch matching messages in Firebase RTDB
                 $sessionId = $this->getSessionId($buyerId, $sellerId, $order->id);
-                $this->patchFirebaseOrderMessages($sessionId, (string)$order->id, $actionStatus);
+                $this->patchFirebaseOrderMessages($sessionId, (string)$order->id, $actionStatus, (string) ($order->yalidine_tracking ?? ''));
             }
         } catch (\Throwable $e) {
             Log::error('updateOrderActionStatus error: ' . $e->getMessage());
@@ -421,7 +423,7 @@ class OrderChatNotificationService
     /**
      * Patch existing order messages in Firebase RTDB with new action status.
      */
-    protected function patchFirebaseOrderMessages(string $sessionId, string $orderId, string $actionStatus): void
+    protected function patchFirebaseOrderMessages(string $sessionId, string $orderId, string $actionStatus, string $yalidineTracking = ''): void
     {
         try {
             $token = $this->getFirebaseOAuthToken();
@@ -436,9 +438,11 @@ class OrderChatNotificationService
                 if (is_array($messages)) {
                     foreach ($messages as $msgKey => $msgData) {
                         if (is_array($msgData) && isset($msgData['orderId']) && (string)$msgData['orderId'] === $orderId) {
-                            $this->patchFirebaseMessage($sessionId, (string)$msgKey, [
-                                'actionStatus' => $actionStatus,
-                            ]);
+                            $patch = ['actionStatus' => $actionStatus];
+                            if ($yalidineTracking !== '') {
+                                $patch['yalidineTracking'] = $yalidineTracking;
+                            }
+                            $this->patchFirebaseMessage($sessionId, (string)$msgKey, $patch);
                         }
                     }
                 }

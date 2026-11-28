@@ -1077,5 +1077,8 @@
   "order_chat__deposit_step_2": "2. Present the parcel with reference #{code} at any Yalidine agency in your wilaya.",
   "order_chat__deposit_step_3": "3. The Yalidine agent will print the bordereau on-site and register your deposit.",
   "item_detail__sell_again_pending_approval": "Item uploaded and waiting for admin approval",
-  "item_detail__sell_again_error": "Unable to republish item."
+  "item_detail__sell_again_error": "Unable to republish item.",
+  "order_chat__order_placed": "Order Placed",
+  "order_chat__waiting_vendor_confirmation": "Waiting for vendor confirmation",
+  "order_chat__yalidine_ref_copied": "Yalidine tracking reference copied"
 }

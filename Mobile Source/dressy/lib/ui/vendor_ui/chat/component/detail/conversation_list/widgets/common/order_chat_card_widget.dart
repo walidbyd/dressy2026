@@ -266,23 +266,17 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
          (loginUserId == historySellerId ||
           loginUserId == itemSellerId ||
           (widget.sellerUserId != null && widget.sellerUserId!.isNotEmpty && loginUserId == widget.sellerUserId)));
-    final bool isBuyer = (widget.chatFlag == PsConst.CHAT_FROM_BUYER) ||
-        (widget.buyerUserId != null && widget.buyerUserId!.isNotEmpty && loginUserId == widget.buyerUserId);
 
     final String messageType = widget.messageObj.messageType ?? '';
     final String actionStatus = widget.messageObj.actionStatus ?? 'none';
     final String orderCode = widget.messageObj.orderCode ?? '';
     final String orderId = widget.messageObj.orderId ?? '';
+    final String yalidineTracking = widget.messageObj.yalidineTracking ?? '';
 
     final bool isConfirmationRequest =
         messageType == 'order_confirmation_request' ||
             (widget.messageObj.message?.contains('Nouvelle commande #') ?? false) ||
             (widget.messageObj.message?.contains('confirmer la disponibilité') ?? false);
-
-    // Rule: Initial confirmation request goes ONLY to the seller. The buyer must never see it.
-    if (isConfirmationRequest && (!isSeller || isBuyer)) {
-      return const SizedBox.shrink();
-    }
 
     final String dateStr = Utils.convertTimeStampToDate(
       widget.messageObj.addedDateTimeStamp,
@@ -341,7 +335,9 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
                       children: <Widget>[
                         Text(
                           isConfirmationRequest
-                              ? 'Nouvelle commande reçue'
+                              ? (isSeller
+                                  ? 'Nouvelle commande reçue'
+                                  : 'order_chat__order_placed'.tr)
                               : 'Mise à jour commande',
                           style: const TextStyle(
                             fontFamily: 'PlayfairDisplay',
@@ -415,6 +411,37 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
               ),
 
               const SizedBox(height: 14),
+
+              // Buyer Pending Status Badge
+              if (isConfirmationRequest && !isSeller && actionStatus == 'pending') ...<Widget>[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      const Icon(Icons.hourglass_top_rounded,
+                          color: Color(0xFFB45309), size: 17),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'order_chat__waiting_vendor_confirmation'.tr,
+                          style: const TextStyle(
+                            color: Color(0xFF92400E),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
 
               // Interactive Action Section
               if (isConfirmationRequest && isSeller)
@@ -492,7 +519,7 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
                         ),
                       ],
                     ),
-                ] else if (actionStatus == 'accepted') ...<Widget>[
+                ] else if (actionStatus == 'accepted' || actionStatus == 'in_delivery') ...<Widget>[
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
@@ -556,43 +583,86 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          // Copyable Reference Number Badge
-                          if (orderCode.isNotEmpty)
-                            InkWell(
-                              onTap: () {
-                                Clipboard.setData(ClipboardData(text: orderCode));
-                                Fluttertoast.showToast(
-                                  msg: 'Référence #$orderCode copiée',
-                                  toastLength: Toast.LENGTH_SHORT,
-                                );
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: const Color(0xFFF59E0B)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    Text(
-                                      'Réf : #$orderCode',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 12.5,
-                                        color: Color(0xFF92400E),
-                                      ),
+                          // Copyable Order & Yalidine Reference Badges
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: <Widget>[
+                              if (orderCode.isNotEmpty)
+                                InkWell(
+                                  onTap: () {
+                                    Clipboard.setData(ClipboardData(text: orderCode));
+                                    Fluttertoast.showToast(
+                                      msg: 'Référence #$orderCode copiée',
+                                      toastLength: Toast.LENGTH_SHORT,
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color: const Color(0xFFF59E0B)),
                                     ),
-                                    const SizedBox(width: 6),
-                                    const Icon(Icons.copy_rounded,
-                                        size: 14, color: Color(0xFFB45309)),
-                                  ],
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        Text(
+                                          'Réf : #$orderCode',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 12.5,
+                                            color: Color(0xFF92400E),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const Icon(Icons.copy_rounded,
+                                            size: 14, color: Color(0xFFB45309)),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
+                              if (yalidineTracking.isNotEmpty)
+                                InkWell(
+                                  onTap: () {
+                                    Clipboard.setData(
+                                        ClipboardData(text: yalidineTracking));
+                                    Fluttertoast.showToast(
+                                      msg: 'order_chat__yalidine_ref_copied'.tr,
+                                      toastLength: Toast.LENGTH_SHORT,
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFECFDF5),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color: const Color(0xFF10B981)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        Text(
+                                          'Yalidine : $yalidineTracking',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 12.5,
+                                            color: Color(0xFF065F46),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const Icon(Icons.copy_rounded,
+                                            size: 14, color: Color(0xFF059669)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             'order_chat__deposit_step_1'.tr,
@@ -778,6 +848,43 @@ class _OrderChatCardWidgetState extends State<OrderChatCardWidget> {
                     ),
                   ),
                 ],
+              if (!isSeller && yalidineTracking.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: yalidineTracking));
+                    Fluttertoast.showToast(
+                      msg: 'order_chat__yalidine_ref_copied'.tr,
+                      toastLength: Toast.LENGTH_SHORT,
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF10B981)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          'Yalidine : $yalidineTracking',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.5,
+                            color: Color(0xFF065F46),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.copy_rounded,
+                            size: 14, color: Color(0xFF059669)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               if (!isSeller && orderId.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 10),
                 SizedBox(

@@ -19,6 +19,7 @@ class Message extends PsObject<Message?> {
       this.messageType,
       this.orderId,
       this.orderCode,
+      this.yalidineTracking,
       this.actionStatus});
 
   Map<String, String>? addedDate;
@@ -36,6 +37,7 @@ class Message extends PsObject<Message?> {
   String? messageType;
   String? orderId;
   String? orderCode;
+  String? yalidineTracking;
   String? actionStatus;
 
   @override
@@ -98,6 +100,7 @@ class Message extends PsObject<Message?> {
         messageType: (dynamicData['messageType'] ?? dynamicData['message_type'])?.toString(),
         orderId: dynamicData['orderId'] != null ? dynamicData['orderId'].toString() : (dynamicData['order_id'] != null ? dynamicData['order_id'].toString() : null),
         orderCode: dynamicData['orderCode'] != null ? dynamicData['orderCode'].toString() : (dynamicData['order_code'] != null ? dynamicData['order_code'].toString() : null),
+        yalidineTracking: (dynamicData['yalidineTracking'] ?? dynamicData['yalidine_tracking'])?.toString(),
         actionStatus: (dynamicData['actionStatus'] ?? dynamicData['action_status'])?.toString(),
       );
     } else {
@@ -122,6 +125,7 @@ class Message extends PsObject<Message?> {
     data['messageType'] = object.messageType;
     data['orderId'] = object.orderId;
     data['orderCode'] = object.orderCode;
+    data['yalidineTracking'] = object.yalidineTracking;
     data['actionStatus'] = object.actionStatus;
     return data;
     // } else {
@@ -146,6 +150,7 @@ class Message extends PsObject<Message?> {
     data['messageType'] = object.messageType;
     data['orderId'] = object.orderId;
     data['orderCode'] = object.orderCode;
+    data['yalidineTracking'] = object.yalidineTracking;
     data['actionStatus'] = object.actionStatus;
     return data;
     // } else {
@@ -170,6 +175,7 @@ class Message extends PsObject<Message?> {
     data['messageType'] = object.messageType;
     data['orderId'] = object.orderId;
     data['orderCode'] = object.orderCode;
+    data['yalidineTracking'] = object.yalidineTracking;
     data['actionStatus'] = object.actionStatus;
     return data;
     // } else {
